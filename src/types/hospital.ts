@@ -1,9 +1,12 @@
+
 export interface Leito {
+  id: string;
   codigoLeito: string;
   leitoPCP: boolean;
   leitoIsolamento: boolean;
-  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienização';
+  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
   dataAtualizacaoStatus: string;
+  motivoBloqueio?: string;
 }
 
 export interface Setor {

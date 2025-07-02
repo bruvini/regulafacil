@@ -1,4 +1,5 @@
 
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -16,7 +17,7 @@ const Index = () => {
   const calcularTaxaOcupacao = (leitos: any[]) => {
     if (leitos.length === 0) return 0;
     const leitosOcupados = leitos.filter(
-      leito => !['Vago', 'Higienização', 'Bloqueado'].includes(leito.statusLeito)
+      leito => !['Vago', 'Higienizacao', 'Bloqueado'].includes(leito.statusLeito)
     ).length;
     return Math.round((leitosOcupados / leitos.length) * 100);
   };
@@ -125,8 +126,8 @@ const Index = () => {
                           <div className="pt-4">
                             {setor.leitos.length > 0 ? (
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {setor.leitos.map((leito, index) => (
-                                  <LeitoCard key={index} leito={leito} />
+                                {setor.leitos.map((leito) => (
+                                  <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
                                 ))}
                               </div>
                             ) : (
@@ -172,3 +173,4 @@ const Index = () => {
 };
 
 export default Index;
+

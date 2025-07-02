@@ -1,15 +1,16 @@
+
 // Firebase configuration for RegulaFacil
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  // Add your Firebase config here
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
+  apiKey: "AIzaSyBvgWppRYjPIP22U9-vu-J2dwrhJ2Klvpc",
+  authDomain: "pmj-hmsj.firebaseapp.com",
+  projectId: "pmj-hmsj",
+  storageBucket: "pmj-hmsj.firebasestorage.app",
+  messagingSenderId: "226296836721",
+  appId: "1:226296836721:web:b2429cd730ef22b4e6e1d0",
+  measurementId: "G-ZCS2BWPBE7"
 };
 
 // Initialize Firebase

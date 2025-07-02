@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -118,6 +119,7 @@ export const useSetores = () => {
       if (!setor) throw new Error('Setor não encontrado');
 
       const novoLeito: Leito = {
+        id: crypto.randomUUID(),
         ...leitoData,
         statusLeito: 'Vago',
         dataAtualizacaoStatus: new Date().toISOString()
@@ -202,6 +204,42 @@ export const useSetores = () => {
     }
   };
 
+  const atualizarStatusLeito = async (setorId: string, leitoId: string, status: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao', motivo?: string) => {
+    try {
+      setLoading(true);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitoIndex = setor.leitos.findIndex(l => l.id === leitoId);
+      if (leitoIndex === -1) throw new Error('Leito não encontrado');
+
+      const leitosAtualizados = [...setor.leitos];
+      leitosAtualizados[leitoIndex] = {
+        ...leitosAtualizados[leitoIndex],
+        statusLeito: status,
+        dataAtualizacaoStatus: new Date().toISOString(),
+        ...(status === 'Bloqueado' && motivo ? { motivoBloqueio: motivo } : {})
+      };
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+      
+      toast({
+        title: 'Sucesso',
+        description: `Status do leito atualizado para ${status}!`,
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar status do leito:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o status do leito.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     setores,
     loading,
@@ -211,5 +249,6 @@ export const useSetores = () => {
     adicionarLeito,
     atualizarLeito,
     excluirLeito,
+    atualizarStatusLeito,
   };
 };

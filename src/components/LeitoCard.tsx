@@ -1,14 +1,32 @@
-import { Star, Bug, ShieldAlert } from 'lucide-react';
+
+import { Star, ShieldAlert, Lock, Paintbrush } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Leito } from '@/types/hospital';
 import StatusBadge from './StatusBadge';
 import DurationDisplay from './DurationDisplay';
+import { useSetores } from '@/hooks/useSetores';
 
 interface LeitoCardProps {
   leito: Leito;
+  setorId: string;
 }
 
-const LeitoCard = ({ leito }: LeitoCardProps) => {
+const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
+  const { atualizarStatusLeito } = useSetores();
+
+  const handleBloquear = () => {
+    const motivo = prompt('Informe o motivo do bloqueio:');
+    if (motivo) {
+      atualizarStatusLeito(setorId, leito.id, 'Bloqueado', motivo);
+    }
+  };
+
+  const handleHigienizar = () => {
+    atualizarStatusLeito(setorId, leito.id, 'Higienizacao');
+  };
+
   return (
     <Card className="p-4 shadow-card hover:shadow-medical transition-all duration-200 border border-border/50">
       <div className="space-y-3">
@@ -47,6 +65,46 @@ const LeitoCard = ({ leito }: LeitoCardProps) => {
                 Isolamento
               </span>
             )}
+          </div>
+        )}
+
+        {leito.statusLeito === 'Vago' && (
+          <div className="flex justify-center space-x-2 pt-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={handleBloquear}
+                    className="h-8 w-8"
+                  >
+                    <Lock className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Bloquear Leito</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={handleHigienizar}
+                    className="h-8 w-8"
+                  >
+                    <Paintbrush className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Higienizar Leito</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
       </div>

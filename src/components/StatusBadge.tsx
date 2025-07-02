@@ -1,7 +1,8 @@
+
 import { Badge } from '@/components/ui/badge';
 
 interface StatusBadgeProps {
-  status: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienização';
+  status: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
 }
 
 const StatusBadge = ({ status }: StatusBadgeProps) => {
@@ -20,12 +21,12 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
       case 'Bloqueado':
         return {
           variant: 'secondary' as const,
-          className: 'bg-medical-warning/10 text-medical-warning border-medical-warning/20'
+          className: 'bg-yellow-100 text-yellow-800 border-yellow-200'
         };
-      case 'Higienização':
+      case 'Higienizacao':
         return {
           variant: 'outline' as const,
-          className: 'bg-medical-accent/10 text-medical-accent border-medical-accent/20'
+          className: 'bg-blue-100 text-blue-800 border-blue-200'
         };
       default:
         return {
