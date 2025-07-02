@@ -38,11 +38,11 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
 
   return (
     <>
-      <Card className="p-4 shadow-card hover:shadow-medical transition-all duration-200 border border-border/50">
-        <div className="space-y-3">
+      <Card className="p-3 shadow-card hover:shadow-medical transition-all duration-200 border border-border/50 flex flex-col h-full">
+        <div className="flex flex-col h-full space-y-2">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-2">
-              <h4 className="font-semibold text-foreground">{leito.codigoLeito}</h4>
+              <h4 className="font-semibold text-sm text-foreground">{leito.codigoLeito}</h4>
               <div className="flex space-x-1">
                 {leito.leitoPCP && (
                   <div className="p-1 bg-medical-warning/10 rounded-full">
@@ -59,12 +59,8 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
             <StatusBadge status={leito.statusLeito} />
           </div>
           
-          <div className="pt-2 border-t border-border/30">
-            <DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} />
-          </div>
-          
           {(leito.leitoPCP || leito.leitoIsolamento) && (
-            <div className="flex flex-wrap gap-2 text-xs">
+            <div className="flex flex-wrap gap-1 text-xs">
               {leito.leitoPCP && (
                 <span className="px-2 py-1 bg-medical-warning/10 text-medical-warning rounded-md">
                   PCP
@@ -78,127 +74,135 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
             </div>
           )}
 
-          {leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio && (
-            <div className="flex items-start space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-              <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-yellow-800">
-                <p className="font-medium">Motivo do bloqueio:</p>
-                <p>{leito.motivoBloqueio}</p>
+          <div className="flex-grow">
+            {leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio && (
+              <div className="flex items-start space-x-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+                <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-yellow-800">
+                  <p className="font-medium">Motivo do bloqueio:</p>
+                  <p>{leito.motivoBloqueio}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {leito.statusLeito === 'Vago' && (
-            <div className="flex justify-center space-x-2 pt-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => setMotivoBloqueioModalOpen(true)}
-                      className="h-8 w-8"
-                    >
-                      <Lock className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Bloquear Leito</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={handleHigienizar}
-                      className="h-8 w-8"
-                    >
-                      <Paintbrush className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Higienizar Leito</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+          <div className="mt-auto space-y-2">
+            <div className="pt-2 border-t border-border/30">
+              <DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} />
             </div>
-          )}
 
-          {leito.statusLeito === 'Bloqueado' && (
-            <div className="flex justify-center pt-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Unlock className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Desbloquear Leito</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Desbloquear Leito</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Deseja realmente desbloquear o leito {leito.codigoLeito}? 
-                      Ele ficará disponível para ocupação.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDesbloquear}>
-                      Desbloquear
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
+            {leito.statusLeito === 'Vago' && (
+              <div className="flex justify-center space-x-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => setMotivoBloqueioModalOpen(true)}
+                        className="h-8 w-8"
+                      >
+                        <Lock className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Bloquear Leito</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-          {leito.statusLeito === 'Higienizacao' && (
-            <div className="flex justify-center pt-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Finalizar Higienização</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Finalizar Higienização</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Confirmar a finalização da higienização do leito {leito.codigoLeito}? 
-                      Ele ficará disponível para ocupação.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleFinalizarHigienizacao}>
-                      Finalizar
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={handleHigienizar}
+                        className="h-8 w-8"
+                      >
+                        <Paintbrush className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Higienizar Leito</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+
+            {leito.statusLeito === 'Bloqueado' && (
+              <div className="flex justify-center">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Unlock className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Desbloquear Leito</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Desbloquear Leito</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Deseja realmente desbloquear o leito {leito.codigoLeito}? 
+                        Ele ficará disponível para ocupação.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDesbloquear}>
+                        Desbloquear
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+
+            {leito.statusLeito === 'Higienizacao' && (
+              <div className="flex justify-center">
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Finalizar Higienização</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Finalizar Higienização</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Confirmar a finalização da higienização do leito {leito.codigoLeito}? 
+                        Ele ficará disponível para ocupação.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleFinalizarHigienizacao}>
+                        Finalizar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+          </div>
         </div>
       </Card>
 

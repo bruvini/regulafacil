@@ -4,8 +4,16 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import HomePage from "./pages/HomePage";
+import RegulacaoLeitos from "./pages/RegulacaoLeitos";
+import GestaoIsolamentos from "./pages/GestaoIsolamentos";
+import MarcacaoCirurgica from "./pages/MarcacaoCirurgica";
+import Huddle from "./pages/Huddle";
+import GestaoEstrategica from "./pages/GestaoEstrategica";
+import Auditoria from "./pages/Auditoria";
+import GestaoUsuarios from "./pages/GestaoUsuarios";
 import NotFound from "./pages/NotFound";
+import AppLayout from "./components/AppLayout";
 import Footer from "./components/Footer";
 
 const queryClient = new QueryClient();
@@ -17,11 +25,19 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppLayout>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/regulacao-leitos" element={<RegulacaoLeitos />} />
+              <Route path="/gestao-isolamentos" element={<GestaoIsolamentos />} />
+              <Route path="/marcacao-cirurgica" element={<MarcacaoCirurgica />} />
+              <Route path="/huddle" element={<Huddle />} />
+              <Route path="/gestao-estrategica" element={<GestaoEstrategica />} />
+              <Route path="/auditoria" element={<Auditoria />} />
+              <Route path="/gestao-usuarios" element={<GestaoUsuarios />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppLayout>
         </BrowserRouter>
         <Footer />
       </div>
