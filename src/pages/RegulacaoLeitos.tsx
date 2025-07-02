@@ -144,7 +144,7 @@ const RegulacaoLeitos = () => {
         const worksheet = workbook.Sheets[sheetName];
 
         // Converte a planilha para um array de arrays
-        const json_data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const json_data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
         
         console.log('Dados extraídos da planilha:', json_data);
         setIsProcessing(false);

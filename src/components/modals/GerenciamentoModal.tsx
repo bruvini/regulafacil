@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useForm, FormProvider } from 'react-hook-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,10 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     excluirLeito,
   } = useSetores();
 
+  // Form methods for react-hook-form
+  const setorFormMethods = useForm<SetorFormData>();
+  const leitoFormMethods = useForm<LeitoFormData>();
+
   const [editingSetor, setEditingSetor] = useState<{ id: string; data: SetorFormData } | null>(null);
   const [editingLeito, setEditingLeito] = useState<{ 
     setorId: string; 
@@ -42,6 +47,8 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     } else {
       await criarSetor(data);
     }
+    setorFormMethods.reset();
+    setTimeout(() => setorFormMethods.setFocus('nomeSetor'), 100);
   };
 
   const handleLeitoSubmit = async (setorId: string, data: LeitoFormData) => {
@@ -51,33 +58,43 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     } else {
       await adicionarLeito(setorId, data);
     }
+    leitoFormMethods.reset();
+    setTimeout(() => leitoFormMethods.setFocus('codigoLeito'), 100);
   };
 
   const handleEditSetor = (setor: any) => {
+    const editData = { nomeSetor: setor.nomeSetor, siglaSetor: setor.siglaSetor };
     setEditingSetor({
       id: setor.id,
-      data: { nomeSetor: setor.nomeSetor, siglaSetor: setor.siglaSetor }
+      data: editData
     });
+    setorFormMethods.reset(editData);
   };
 
   const handleEditLeito = (setorId: string, leitoIndex: number, leito: any) => {
+    const editData = {
+      codigoLeito: leito.codigoLeito,
+      leitoPCP: leito.leitoPCP,
+      leitoIsolamento: leito.leitoIsolamento
+    };
     setEditingLeito({
       setorId,
       leitoIndex,
-      data: {
-        codigoLeito: leito.codigoLeito,
-        leitoPCP: leito.leitoPCP,
-        leitoIsolamento: leito.leitoIsolamento
-      }
+      data: editData
     });
+    leitoFormMethods.reset(editData);
   };
 
   const handleResetSetorForm = () => {
     setEditingSetor(null);
+    setorFormMethods.reset();
+    setTimeout(() => setorFormMethods.setFocus('nomeSetor'), 100);
   };
 
   const handleResetLeitoForm = () => {
     setEditingLeito(null);
+    leitoFormMethods.reset();
+    setTimeout(() => leitoFormMethods.setFocus('codigoLeito'), 100);
   };
 
   const selectedSetor = setores.find(s => s.id === selectedSetorForLeitos);
@@ -103,12 +120,14 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                 <h3 className="text-lg font-semibold mb-4">
                   {editingSetor ? 'Editar Setor' : 'Novo Setor'}
                 </h3>
-                <SetorForm
-                  onSubmit={handleSetorSubmit}
-                  initialData={editingSetor?.data}
-                  isLoading={loading}
-                  onReset={handleResetSetorForm}
-                />
+                <FormProvider {...setorFormMethods}>
+                  <SetorForm
+                    onSubmit={setorFormMethods.handleSubmit(handleSetorSubmit)}
+                    initialData={editingSetor?.data}
+                    isLoading={loading}
+                    onReset={handleResetSetorForm}
+                  />
+                </FormProvider>
               </div>
               
               <div>
@@ -156,14 +175,16 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                 <h3 className="text-lg font-semibold mb-4">
                   {editingLeito ? 'Editar Leito' : 'Novo Leito'}
                 </h3>
-                <LeitoForm
-                  onSubmit={handleLeitoSubmit}
-                  setores={setores}
-                  selectedSetorId={editingLeito?.setorId || selectedSetorForLeitos}
-                  initialData={editingLeito?.data}
-                  isLoading={loading}
-                  onReset={handleResetLeitoForm}
-                />
+                <FormProvider {...leitoFormMethods}>
+                  <LeitoForm
+                    onSubmit={leitoFormMethods.handleSubmit(handleLeitoSubmit)}
+                    setores={setores}
+                    selectedSetorId={editingLeito?.setorId || selectedSetorForLeitos}
+                    initialData={editingLeito?.data}
+                    isLoading={loading}
+                    onReset={handleResetLeitoForm}
+                  />
+                </FormProvider>
               </div>
               
               <div>
