@@ -13,16 +13,23 @@ interface ConstrutorRegrasFormProps {
 }
 
 const tiposRegra = [
-  { value: 'ATE_ALTA', label: 'Até alta hospitalar' },
-  { value: 'ATE_FECHAMENTO_FERIDA', label: 'Até fechamento da ferida' },
-  { value: 'ATE_FINALIZAR_TRATAMENTO', label: 'Até finalizar tratamento' },
-  { value: 'ATE_RESULTADO_EXAME_NEGATIVO', label: 'Após resultado de exame negativo' },
-  { value: 'APOS_X_DIAS_SINTOMA', label: 'Após X dias do início de sintoma' },
-  { value: 'APOS_X_DIAS_SEM_SINTOMA', label: 'Após X dias sem sintoma' },
-  { value: 'LIBERACAO_MEDICA', label: 'Mediante liberação médica' }
+  { value: 'EXAME_NEGATIVO', label: 'Baseado em Exames' },
+  { value: 'DIAS_COM_SINTOMA', label: 'Baseado em Sintomas (com sintoma)' },
+  { value: 'DIAS_SEM_SINTOMA', label: 'Baseado em Sintomas (sem sintoma)' },
+  { value: 'CONDICAO_ESPECIFICA', label: 'Até Condição Específica' },
+  { value: 'TRATAMENTO_COMPLETO', label: 'Baseado em Tempo de Tratamento' },
+  { value: 'REINTERNACAO_ALERT', label: 'Baseado em Reinternação' }
 ] as const;
 
+const condicoesEspecificas = [
+  { value: 'alta_hospitalar', label: 'Alta hospitalar' },
+  { value: 'fechamento_ferida', label: 'Fechamento da ferida operatória' },
+  { value: 'liberacao_medica', label: 'Liberação médica' }
+];
+
 const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) => {
+  const gerarId = () => crypto.randomUUID();
+
   const adicionarGrupo = () => {
     const novoGrupo: GrupoRegras = {
       logica: 'E',
@@ -45,8 +52,10 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
 
   const adicionarRegra = (indiceGrupo: number) => {
     const novaRegra: RegraIsolamento = {
-      tipo: 'ATE_ALTA',
-      parametro: null
+      id: gerarId(),
+      tipo: 'CONDICAO_ESPECIFICA',
+      descricao: 'Até Condição Específica',
+      parametros: []
     };
 
     const novosGrupos = [...regras.grupos];
@@ -70,10 +79,65 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
 
   const atualizarTipoRegra = (indiceGrupo: number, indiceRegra: number, novoTipo: string) => {
     const novosGrupos = [...regras.grupos];
-    novosGrupos[indiceGrupo].regras[indiceRegra].tipo = novoTipo as RegraIsolamento['tipo'];
+    const regra = novosGrupos[indiceGrupo].regras[indiceRegra];
     
-    // Reset parametro quando muda o tipo
-    novosGrupos[indiceGrupo].regras[indiceRegra].parametro = null;
+    regra.tipo = novoTipo as RegraIsolamento['tipo'];
+    regra.descricao = tiposRegra.find(t => t.value === novoTipo)?.label || '';
+    regra.parametros = []; // Reset parâmetros ao mudar o tipo
+    
+    // Adicionar parâmetros padrão baseado no tipo
+    switch (novoTipo) {
+      case 'EXAME_NEGATIVO':
+        regra.parametros = [{
+          id: gerarId(),
+          tipo: 'nome_exame',
+          valor: ''
+        }];
+        break;
+      case 'DIAS_COM_SINTOMA':
+      case 'DIAS_SEM_SINTOMA':
+        regra.parametros = [
+          {
+            id: gerarId(),
+            tipo: 'quantidade_dias',
+            valor: 0
+          },
+          {
+            id: gerarId(),
+            tipo: 'nome_sintoma',
+            valor: ''
+          }
+        ];
+        break;
+      case 'CONDICAO_ESPECIFICA':
+        regra.parametros = [{
+          id: gerarId(),
+          tipo: 'condicao_especifica',
+          valor: 'alta_hospitalar'
+        }];
+        break;
+      case 'TRATAMENTO_COMPLETO':
+        regra.parametros = [{
+          id: gerarId(),
+          tipo: 'nome_antimicrobiano',
+          valor: ''
+        }];
+        break;
+      case 'REINTERNACAO_ALERT':
+        regra.parametros = [
+          {
+            id: gerarId(),
+            tipo: 'periodo_alerta',
+            valor: 30
+          },
+          {
+            id: gerarId(),
+            tipo: 'cultura_referencia',
+            valor: ''
+          }
+        ];
+        break;
+    }
     
     onChange({
       ...regras,
@@ -81,27 +145,190 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
     });
   };
 
-  const atualizarParametro = (indiceGrupo: number, indiceRegra: number, campo: keyof ParametroRegra, valor: string | number) => {
+  const atualizarParametro = (indiceGrupo: number, indiceRegra: number, indiceParametro: number, valor: string | number) => {
     const novosGrupos = [...regras.grupos];
-    const regra = novosGrupos[indiceGrupo].regras[indiceRegra];
-    
-    if (!regra.parametro) {
-      regra.parametro = {};
-    }
-    
-    // Type-safe parameter update
-    if (campo === 'dias' && typeof valor === 'number') {
-      regra.parametro.dias = valor;
-    } else if (campo === 'sintoma' && typeof valor === 'string') {
-      regra.parametro.sintoma = valor;
-    } else if (campo === 'exame' && typeof valor === 'string') {
-      regra.parametro.exame = valor;
-    }
+    novosGrupos[indiceGrupo].regras[indiceRegra].parametros[indiceParametro].valor = valor;
     
     onChange({
       ...regras,
       grupos: novosGrupos
     });
+  };
+
+  const adicionarParametroExame = (indiceGrupo: number, indiceRegra: number) => {
+    const novosGrupos = [...regras.grupos];
+    novosGrupos[indiceGrupo].regras[indiceRegra].parametros.push({
+      id: gerarId(),
+      tipo: 'nome_exame',
+      valor: ''
+    });
+    
+    onChange({
+      ...regras,
+      grupos: novosGrupos
+    });
+  };
+
+  const removerParametro = (indiceGrupo: number, indiceRegra: number, indiceParametro: number) => {
+    const novosGrupos = [...regras.grupos];
+    novosGrupos[indiceGrupo].regras[indiceRegra].parametros = 
+      novosGrupos[indiceGrupo].regras[indiceRegra].parametros.filter((_, index) => index !== indiceParametro);
+    
+    onChange({
+      ...regras,
+      grupos: novosGrupos
+    });
+  };
+
+  const renderizarParametros = (regra: RegraIsolamento, indiceGrupo: number, indiceRegra: number) => {
+    switch (regra.tipo) {
+      case 'EXAME_NEGATIVO':
+        return (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Exames necessários:</label>
+            {regra.parametros.filter(p => p.tipo === 'nome_exame').map((parametro, indiceParametro) => (
+              <div key={parametro.id} className="flex gap-2 items-center">
+                <Input
+                  placeholder="Nome do exame (ex: Cultura de vigilância)"
+                  value={parametro.valor as string}
+                  onChange={(e) => atualizarParametro(indiceGrupo, indiceRegra, indiceParametro, e.target.value)}
+                  className="flex-1"
+                />
+                {regra.parametros.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removerParametro(indiceGrupo, indiceRegra, indiceParametro)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => adicionarParametroExame(indiceGrupo, indiceRegra)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Exame
+            </Button>
+          </div>
+        );
+
+      case 'DIAS_COM_SINTOMA':
+      case 'DIAS_SEM_SINTOMA':
+        const diasParam = regra.parametros.find(p => p.tipo === 'quantidade_dias');
+        const sintomaParam = regra.parametros.find(p => p.tipo === 'nome_sintoma');
+        return (
+          <div className="flex gap-2 items-center">
+            <Input
+              type="number"
+              placeholder="Dias"
+              className="w-20"
+              value={diasParam?.valor || ''}
+              onChange={(e) => {
+                const indiceParam = regra.parametros.findIndex(p => p.tipo === 'quantidade_dias');
+                if (indiceParam >= 0) {
+                  atualizarParametro(indiceGrupo, indiceRegra, indiceParam, parseInt(e.target.value) || 0);
+                }
+              }}
+            />
+            <span className="text-sm text-muted-foreground">
+              {regra.tipo === 'DIAS_COM_SINTOMA' ? 'com' : 'sem'}
+            </span>
+            <Input
+              placeholder="Nome do sintoma"
+              className="flex-1"
+              value={sintomaParam?.valor as string || ''}
+              onChange={(e) => {
+                const indiceParam = regra.parametros.findIndex(p => p.tipo === 'nome_sintoma');
+                if (indiceParam >= 0) {
+                  atualizarParametro(indiceGrupo, indiceRegra, indiceParam, e.target.value);
+                }
+              }}
+            />
+          </div>
+        );
+
+      case 'CONDICAO_ESPECIFICA':
+        const condicaoParam = regra.parametros.find(p => p.tipo === 'condicao_especifica');
+        return (
+          <Select
+            value={condicaoParam?.valor as string || 'alta_hospitalar'}
+            onValueChange={(value) => {
+              const indiceParam = regra.parametros.findIndex(p => p.tipo === 'condicao_especifica');
+              if (indiceParam >= 0) {
+                atualizarParametro(indiceGrupo, indiceRegra, indiceParam, value);
+              }
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {condicoesEspecificas.map((condicao) => (
+                <SelectItem key={condicao.value} value={condicao.value}>
+                  {condicao.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+
+      case 'TRATAMENTO_COMPLETO':
+        const antimicrobianoParam = regra.parametros.find(p => p.tipo === 'nome_antimicrobiano');
+        return (
+          <Input
+            placeholder="Nome do antimicrobiano (opcional)"
+            value={antimicrobianoParam?.valor as string || ''}
+            onChange={(e) => {
+              const indiceParam = regra.parametros.findIndex(p => p.tipo === 'nome_antimicrobiano');
+              if (indiceParam >= 0) {
+                atualizarParametro(indiceGrupo, indiceRegra, indiceParam, e.target.value);
+              }
+            }}
+          />
+        );
+
+      case 'REINTERNACAO_ALERT':
+        const periodoParam = regra.parametros.find(p => p.tipo === 'periodo_alerta');
+        const culturaParam = regra.parametros.find(p => p.tipo === 'cultura_referencia');
+        return (
+          <div className="space-y-2">
+            <div className="flex gap-2 items-center">
+              <Input
+                type="number"
+                placeholder="Período"
+                className="w-24"
+                value={periodoParam?.valor || ''}
+                onChange={(e) => {
+                  const indiceParam = regra.parametros.findIndex(p => p.tipo === 'periodo_alerta');
+                  if (indiceParam >= 0) {
+                    atualizarParametro(indiceGrupo, indiceRegra, indiceParam, parseInt(e.target.value) || 30);
+                  }
+                }}
+              />
+              <span className="text-sm text-muted-foreground">dias de alerta</span>
+            </div>
+            <Input
+              placeholder="Nome da cultura/exame de referência"
+              value={culturaParam?.valor as string || ''}
+              onChange={(e) => {
+                const indiceParam = regra.parametros.findIndex(p => p.tipo === 'cultura_referencia');
+                if (indiceParam >= 0) {
+                  atualizarParametro(indiceGrupo, indiceRegra, indiceParam, e.target.value);
+                }
+              }}
+            />
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
@@ -140,61 +367,41 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
                 </Button>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {grupo.regras.map((regra, indiceRegra) => (
-                  <div key={indiceRegra} className="flex gap-2 items-center">
-                    <Select
-                      value={regra.tipo}
-                      onValueChange={(value) => atualizarTipoRegra(indiceGrupo, indiceRegra, value)}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tiposRegra.map((tipo) => (
-                          <SelectItem key={tipo.value} value={tipo.value}>
-                            {tipo.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {(regra.tipo === 'APOS_X_DIAS_SINTOMA' || regra.tipo === 'APOS_X_DIAS_SEM_SINTOMA') && (
-                      <>
-                        <Input
-                          type="number"
-                          placeholder="Dias"
-                          className="w-20"
-                          value={regra.parametro?.dias || ''}
-                          onChange={(e) => atualizarParametro(indiceGrupo, indiceRegra, 'dias', parseInt(e.target.value) || 0)}
-                        />
-                        <Input
-                          placeholder="Sintoma"
-                          className="flex-1"
-                          value={regra.parametro?.sintoma || ''}
-                          onChange={(e) => atualizarParametro(indiceGrupo, indiceRegra, 'sintoma', e.target.value)}
-                        />
-                      </>
-                    )}
-
-                    {regra.tipo === 'ATE_RESULTADO_EXAME_NEGATIVO' && (
-                      <Input
-                        placeholder="Nome do exame"
-                        className="flex-1"
-                        value={regra.parametro?.exame || ''}
-                        onChange={(e) => atualizarParametro(indiceGrupo, indiceRegra, 'exame', e.target.value)}
-                      />
-                    )}
-
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removerRegra(indiceGrupo, indiceRegra)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Card key={regra.id} className="bg-muted/50">
+                    <CardContent className="p-3">
+                      <div className="space-y-3">
+                        <div className="flex gap-2 items-center">
+                          <Select
+                            value={regra.tipo}
+                            onValueChange={(value) => atualizarTipoRegra(indiceGrupo, indiceRegra, value)}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tiposRegra.map((tipo) => (
+                                <SelectItem key={tipo.value} value={tipo.value}>
+                                  {tipo.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removerRegra(indiceGrupo, indiceRegra)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {renderizarParametros(regra, indiceGrupo, indiceRegra)}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
 
                 <Button

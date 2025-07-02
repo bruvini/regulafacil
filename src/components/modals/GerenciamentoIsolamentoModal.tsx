@@ -73,31 +73,64 @@ const GerenciamentoIsolamentoModal = ({ open, onOpenChange }: GerenciamentoIsola
     setEditingIsolamento(isolamento);
   };
 
-  const formatarRegrasParaVisualizacao = (regrasPrecaucao: any) => {
+  const formatarRegrasParaVisualizacao = (regrasPrecaucao: RegrasPrecaucao) => {
     if (!regrasPrecaucao.grupos || regrasPrecaucao.grupos.length === 0) {
       return 'Nenhuma regra definida';
     }
 
-    const gruposFormatados = regrasPrecaucao.grupos.map((grupo: any, index: number) => {
-      const regrasFormatadas = grupo.regras.map((regra: any) => {
+    const gruposFormatados = regrasPrecaucao.grupos.map((grupo, index) => {
+      const regrasFormatadas = grupo.regras.map((regra) => {
+        let descricaoRegra = '';
+        
         switch (regra.tipo) {
-          case 'ATE_ALTA':
-            return 'Até alta hospitalar';
-          case 'ATE_FECHAMENTO_FERIDA':
-            return 'Até fechamento da ferida';
-          case 'ATE_FINALIZAR_TRATAMENTO':
-            return 'Até finalizar tratamento';
-          case 'ATE_RESULTADO_EXAME_NEGATIVO':
-            return `Até resultado negativo de ${regra.parametro?.exame || 'exame'}`;
-          case 'APOS_X_DIAS_SINTOMA':
-            return `Após ${regra.parametro?.dias || 'X'} dias de ${regra.parametro?.sintoma || 'sintoma'}`;
-          case 'APOS_X_DIAS_SEM_SINTOMA':
-            return `Após ${regra.parametro?.dias || 'X'} dias sem ${regra.parametro?.sintoma || 'sintoma'}`;
-          case 'LIBERACAO_MEDICA':
-            return 'Mediante liberação médica';
+          case 'EXAME_NEGATIVO':
+            const exames = regra.parametros
+              .filter(p => p.tipo === 'nome_exame')
+              .map(p => p.valor)
+              .join(', ');
+            descricaoRegra = `Até resultado negativo de: ${exames}`;
+            break;
+            
+          case 'DIAS_COM_SINTOMA':
+            const diasCom = regra.parametros.find(p => p.tipo === 'quantidade_dias')?.valor || 'X';
+            const sintomaCom = regra.parametros.find(p => p.tipo === 'nome_sintoma')?.valor || 'sintoma';
+            descricaoRegra = `Após ${diasCom} dias com ${sintomaCom}`;
+            break;
+            
+          case 'DIAS_SEM_SINTOMA':
+            const diasSem = regra.parametros.find(p => p.tipo === 'quantidade_dias')?.valor || 'X';
+            const sintomaSem = regra.parametros.find(p => p.tipo === 'nome_sintoma')?.valor || 'sintoma';
+            descricaoRegra = `Após ${diasSem} dias sem ${sintomaSem}`;
+            break;
+            
+          case 'CONDICAO_ESPECIFICA':
+            const condicao = regra.parametros.find(p => p.tipo === 'condicao_especifica')?.valor;
+            const condicaoTexto = {
+              'alta_hospitalar': 'Alta hospitalar',
+              'fechamento_ferida': 'Fechamento da ferida',
+              'liberacao_medica': 'Liberação médica'
+            }[condicao as string] || 'Condição específica';
+            descricaoRegra = `Até ${condicaoTexto}`;
+            break;
+            
+          case 'TRATAMENTO_COMPLETO':
+            const antimicrobiano = regra.parametros.find(p => p.tipo === 'nome_antimicrobiano')?.valor;
+            descricaoRegra = antimicrobiano 
+              ? `Até fim do tratamento com ${antimicrobiano}`
+              : 'Até fim do tratamento';
+            break;
+            
+          case 'REINTERNACAO_ALERT':
+            const periodo = regra.parametros.find(p => p.tipo === 'periodo_alerta')?.valor || 30;
+            const cultura = regra.parametros.find(p => p.tipo === 'cultura_referencia')?.valor || 'cultura';
+            descricaoRegra = `Alerta por ${periodo} dias (ref: ${cultura})`;
+            break;
+            
           default:
-            return 'Regra não definida';
+            descricaoRegra = 'Regra não definida';
         }
+        
+        return descricaoRegra;
       });
 
       return `Condição ${index + 1}: (${regrasFormatadas.join(' E ')})`;

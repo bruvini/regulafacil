@@ -1,13 +1,15 @@
 
 export interface ParametroRegra {
-  dias?: number;
-  sintoma?: string;
-  exame?: string;
+  id: string;
+  tipo: 'nome_exame' | 'quantidade_dias' | 'nome_sintoma' | 'condicao_especifica' | 'nome_antimicrobiano' | 'periodo_alerta' | 'cultura_referencia';
+  valor: string | number;
 }
 
 export interface RegraIsolamento {
-  tipo: 'ATE_ALTA' | 'ATE_FECHAMENTO_FERIDA' | 'ATE_FINALIZAR_TRATAMENTO' | 'ATE_RESULTADO_EXAME_NEGATIVO' | 'APOS_X_DIAS_SINTOMA' | 'APOS_X_DIAS_SEM_SINTOMA' | 'LIBERACAO_MEDICA';
-  parametro: ParametroRegra | null;
+  id: string;
+  tipo: 'EXAME_NEGATIVO' | 'DIAS_COM_SINTOMA' | 'DIAS_SEM_SINTOMA' | 'CONDICAO_ESPECIFICA' | 'TRATAMENTO_COMPLETO' | 'REINTERNACAO_ALERT';
+  descricao: string;
+  parametros: ParametroRegra[];
 }
 
 export interface GrupoRegras {
