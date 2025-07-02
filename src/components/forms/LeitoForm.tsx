@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,7 +69,7 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading 
             onCheckedChange={(checked) => handleInputChange('leitoPCP', checked as boolean)}
           />
           <Label htmlFor="leitoPCP" className="text-sm">
-            Leito PCP (Precaução de Contato Padrão)
+            Leito PCP (Plano de Capacidade Plena)
           </Label>
         </div>
         

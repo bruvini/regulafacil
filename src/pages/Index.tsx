@@ -1,9 +1,11 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import Header from '@/components/Header';
-import SetorCard from '@/components/SetorCard';
+import LeitoCard from '@/components/LeitoCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { useSetores } from '@/hooks/useSetores';
 
@@ -11,12 +13,20 @@ const Index = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { setores, loading } = useSetores();
 
+  const calcularTaxaOcupacao = (leitos: any[]) => {
+    if (leitos.length === 0) return 0;
+    const leitosOcupados = leitos.filter(
+      leito => !['Vago', 'Higienização', 'Bloqueado'].includes(leito.statusLeito)
+    ).length;
+    return Math.round((leitosOcupados / leitos.length) * 100);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <Header />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="flex flex-col space-y-8">
           {/* Bloco 1: Indicadores */}
           <Card className="shadow-card border border-border/50">
             <CardHeader>
@@ -71,19 +81,7 @@ const Index = () => {
             </CardContent>
           </Card>
 
-          {/* Bloco 3: Placeholder para extensão futura */}
-          <Card className="shadow-card border border-border/50">
-            <CardHeader>
-              <h2 className="text-xl font-semibold text-medical-primary">Ações Rápidas</h2>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Funcionalidades adicionais serão implementadas aqui</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Mapa de Setores */}
-        <div className="mt-8">
+          {/* Bloco 3: Mapa de Setores */}
           <Card className="shadow-card border border-border/50">
             <CardHeader>
               <h2 className="text-2xl font-bold text-medical-primary">Mapa de Setores</h2>
@@ -91,23 +89,57 @@ const Index = () => {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Card key={i} className="p-6">
-                      <Skeleton className="h-6 w-1/2 mb-4" />
-                      <div className="grid grid-cols-2 gap-3">
-                        <Skeleton className="h-20" />
-                        <Skeleton className="h-20" />
-                      </div>
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="p-4">
+                      <Skeleton className="h-6 w-1/3 mb-2" />
+                      <Skeleton className="h-4 w-1/4" />
                     </Card>
                   ))}
                 </div>
               ) : setores.length > 0 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {setores.map((setor) => (
-                    <SetorCard key={setor.id} setor={setor} />
-                  ))}
-                </div>
+                <Accordion type="multiple" className="w-full space-y-2">
+                  {setores.map((setor) => {
+                    const taxaOcupacao = calcularTaxaOcupacao(setor.leitos);
+                    return (
+                      <AccordionItem 
+                        key={setor.id} 
+                        value={setor.id!}
+                        className="border border-border/50 rounded-lg px-4"
+                      >
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex justify-between items-center w-full pr-4">
+                            <div className="flex flex-col items-start">
+                              <h3 className="text-lg font-semibold text-foreground">{setor.nomeSetor}</h3>
+                              <p className="text-sm text-muted-foreground font-mono">{setor.siglaSetor}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-medical-primary">
+                                {taxaOcupacao}%
+                              </div>
+                              <p className="text-xs text-muted-foreground">Ocupação</p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="pt-4">
+                            {setor.leitos.length > 0 ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {setor.leitos.map((leito, index) => (
+                                  <LeitoCard key={index} leito={leito} />
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <p>Nenhum leito cadastrado neste setor</p>
+                              </div>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
               ) : (
                 <div className="text-center py-12">
                   <div className="max-w-md mx-auto">
