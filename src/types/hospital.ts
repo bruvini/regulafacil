@@ -26,3 +26,30 @@ export interface LeitoFormData {
   leitoPCP: boolean;
   leitoIsolamento: boolean;
 }
+
+export interface SolicitacaoCirurgica {
+  id?: string;
+  nomeCompleto: string;
+  dataNascimento: Date;
+  sexo: 'Masculino' | 'Feminino';
+  especialidade: string;
+  medicoSolicitante: string;
+  tipoPreparo?: string;
+  dataPrevistaInternacao: Date;
+  dataPrevisaCirurgia: Date;
+  tipoLeitoNecessario: 'Enfermaria' | 'UTI';
+  dataCriacao: Date;
+  status: 'Pendente' | 'Agendada' | 'Realizada' | 'Cancelada';
+}
+
+export interface SolicitacaoCirurgicaFormData {
+  nomeCompleto: string;
+  dataNascimento: Date;
+  sexo: 'Masculino' | 'Feminino';
+  especialidade: string;
+  medicoSolicitante: string;
+  tipoPreparo?: string;
+  dataPrevistaInternacao: Date;
+  dataPrevisaCirurgia: Date;
+  tipoLeitoNecessario: 'Enfermaria' | 'UTI';
+}

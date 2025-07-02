@@ -3,7 +3,7 @@ import {
   BedDouble, 
   Shield, 
   Users, 
-  Calendar, 
+  Scissors, 
   TrendingUp, 
   FileText, 
   Settings,
@@ -48,7 +48,7 @@ const menuItems = [
   {
     title: 'Marcação Cirúrgica',
     url: '/marcacao-cirurgica',
-    icon: Calendar,
+    icon: Scissors,
   },
   {
     title: 'Huddle',
