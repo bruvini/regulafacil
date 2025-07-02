@@ -77,7 +77,7 @@ function AppSidebar() {
   const { state } = useSidebar();
   
   return (
-    <Sidebar className={state === 'collapsed' ? 'w-14' : 'w-60'} collapsible>
+    <Sidebar className={state === 'collapsed' ? 'w-14' : 'w-60'} collapsible="offcanvas">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-medical-primary font-semibold">
