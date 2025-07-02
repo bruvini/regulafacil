@@ -19,13 +19,11 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
-import { SolicitacaoCirurgicaFormData } from '@/types/hospital';
+import { SolicitacaoCirurgicaFormData, SolicitacaoCirurgica } from '@/types/hospital';
 
 const formSchema = z.object({
   nomeCompleto: z.string().min(3, 'Nome completo deve ter pelo menos 3 caracteres'),
-  dataNascimento: z.date({
-    required_error: 'Data de nascimento é obrigatória',
-  }),
+  dataNascimento: z.string().min(8, 'Data de nascimento é obrigatória'),
   sexo: z.enum(['Masculino', 'Feminino'], {
     required_error: 'Sexo é obrigatório',
   }),
@@ -47,16 +45,22 @@ interface SolicitacaoCirurgicaFormProps {
   onSubmit: (data: SolicitacaoCirurgicaFormData) => void;
   onCancel: () => void;
   loading?: boolean;
+  initialData?: SolicitacaoCirurgica | null;
 }
 
-const SolicitacaoCirurgicaForm = ({ onSubmit, onCancel, loading = false }: SolicitacaoCirurgicaFormProps) => {
+const SolicitacaoCirurgicaForm = ({ onSubmit, onCancel, loading = false, initialData }: SolicitacaoCirurgicaFormProps) => {
   const form = useForm<SolicitacaoCirurgicaFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nomeCompleto: '',
-      especialidade: '',
-      medicoSolicitante: '',
-      tipoPreparo: '',
+      nomeCompleto: initialData?.nomeCompleto || '',
+      dataNascimento: initialData?.dataNascimento || '',
+      sexo: initialData?.sexo,
+      especialidade: initialData?.especialidade || '',
+      medicoSolicitante: initialData?.medicoSolicitante || '',
+      tipoPreparo: initialData?.tipoPreparo || '',
+      dataPrevistaInternacao: initialData?.dataPrevistaInternacao,
+      dataPrevisaCirurgia: initialData?.dataPrevisaCirurgia,
+      tipoLeitoNecessario: initialData?.tipoLeitoNecessario,
     },
   });
 
@@ -86,38 +90,22 @@ const SolicitacaoCirurgicaForm = ({ onSubmit, onCancel, loading = false }: Solic
             control={form.control}
             name="dataNascimento"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
+              <FormItem>
                 <FormLabel>Data de Nascimento *</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "dd/MM/yyyy")
-                        ) : (
-                          <span>Selecione a data</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <FormControl>
+                  <Input 
+                    placeholder="DD/MM/AAAA" 
+                    {...field}
+                    maxLength={10}
+                    onChange={(e) => {
+                      // Aplicar máscara de data
+                      let value = e.target.value.replace(/\D/g, '');
+                      if (value.length >= 2) value = value.slice(0, 2) + '/' + value.slice(2);
+                      if (value.length >= 5) value = value.slice(0, 5) + '/' + value.slice(5, 9);
+                      field.onChange(value);
+                    }}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -315,7 +303,7 @@ const SolicitacaoCirurgicaForm = ({ onSubmit, onCancel, loading = false }: Solic
             Cancelar
           </Button>
           <Button type="submit" disabled={loading}>
-            {loading ? 'Salvando...' : 'Salvar Solicitação'}
+            {loading ? 'Salvando...' : initialData ? 'Atualizar Solicitação' : 'Salvar Solicitação'}
           </Button>
         </div>
       </form>

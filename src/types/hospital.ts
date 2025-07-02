@@ -30,7 +30,7 @@ export interface LeitoFormData {
 export interface SolicitacaoCirurgica {
   id?: string;
   nomeCompleto: string;
-  dataNascimento: Date;
+  dataNascimento: string; // Mudando para string para facilitar input
   sexo: 'Masculino' | 'Feminino';
   especialidade: string;
   medicoSolicitante: string;
@@ -40,11 +40,12 @@ export interface SolicitacaoCirurgica {
   tipoLeitoNecessario: 'Enfermaria' | 'UTI';
   dataCriacao: Date;
   status: 'Pendente' | 'Agendada' | 'Realizada' | 'Cancelada';
+  leitoReservado?: string; // Novo campo para armazenar código do leito
 }
 
 export interface SolicitacaoCirurgicaFormData {
   nomeCompleto: string;
-  dataNascimento: Date;
+  dataNascimento: string; // Mudando para string
   sexo: 'Masculino' | 'Feminino';
   especialidade: string;
   medicoSolicitante: string;
