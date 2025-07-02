@@ -260,23 +260,45 @@ export const useReconciliation = () => {
       const batch = writeBatch(db);
       const timestamp = new Date().toISOString();
 
+      // Buscar o estado atual dos setores para poder modificá-los
+      const setoresSnapshot = await getDocs(collection(db, 'setoresRegulaFacil'));
+      const setoresAtuais = setoresSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Setor[];
+
       // Executar novas admissões
       for (const admissao of plano.novasAdmissoes) {
+        console.log(`Nova admissão: ${admissao.paciente.nomePaciente} -> Leito ${admissao.leitoId}`);
+        
         // Criar paciente
         const pacienteRef = doc(collection(db, 'pacientesRegulaFacil'), admissao.paciente.id);
         batch.set(pacienteRef, admissao.paciente);
 
-        // Atualizar leito
-        const setorRef = doc(db, 'setoresRegulaFacil', admissao.setorId);
-        const novoHistorico: HistoricoStatus = {
-          status: 'Ocupado',
-          timestamp,
-          pacienteId: admissao.paciente.id
-        };
+        // Encontrar e atualizar o setor com o leito ocupado
+        const setorParaAtualizar = setoresAtuais.find(s => s.id === admissao.setorId);
+        if (setorParaAtualizar) {
+          const novosLeitos = setorParaAtualizar.leitos.map(leito => {
+            if (leito.id === admissao.leitoId) {
+              return {
+                ...leito,
+                pacienteId: admissao.paciente.id,
+                historicoStatus: [
+                  ...leito.historicoStatus,
+                  {
+                    status: 'Ocupado' as const,
+                    timestamp,
+                    pacienteId: admissao.paciente.id,
+                  }
+                ]
+              };
+            }
+            return leito;
+          });
 
-        // Aqui precisaríamos de uma query mais complexa para atualizar o leito específico
-        // Por ora, vamos implementar uma abordagem simplificada
-        console.log(`Nova admissão: ${admissao.paciente.nomePaciente} -> Leito ${admissao.leitoId}`);
+          const setorRef = doc(db, 'setoresRegulaFacil', setorParaAtualizar.id!);
+          batch.update(setorRef, { leitos: novosLeitos });
+        }
       }
 
       // Executar movimentações
@@ -284,18 +306,56 @@ export const useReconciliation = () => {
         console.log(`Movimentação: ${movimentacao.nomePaciente} de ${movimentacao.leitoOrigemId} para ${movimentacao.leitoDestinoId}`);
         
         // Liberar leito de origem
-        const historicoLiberacao: HistoricoStatus = {
-          status: 'Vago',
-          timestamp,
-          pacienteId: null
-        };
+        if (movimentacao.leitoOrigemId) {
+          const setorOrigem = setoresAtuais.find(s => s.id === movimentacao.setorOrigemId);
+          if (setorOrigem) {
+            const leitosOrigemAtualizados = setorOrigem.leitos.map(leito => {
+              if (leito.id === movimentacao.leitoOrigemId) {
+                return {
+                  ...leito,
+                  pacienteId: null,
+                  historicoStatus: [
+                    ...leito.historicoStatus,
+                    {
+                      status: 'Vago' as const,
+                      timestamp,
+                      pacienteId: null,
+                    }
+                  ]
+                };
+              }
+              return leito;
+            });
+
+            const setorOrigemRef = doc(db, 'setoresRegulaFacil', setorOrigem.id!);
+            batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizados });
+          }
+        }
 
         // Ocupar leito de destino
-        const historicoOcupacao: HistoricoStatus = {
-          status: 'Ocupado',
-          timestamp,
-          pacienteId: movimentacao.pacienteId
-        };
+        const setorDestino = setoresAtuais.find(s => s.id === movimentacao.setorDestinoId);
+        if (setorDestino) {
+          const leitosDestinoAtualizados = setorDestino.leitos.map(leito => {
+            if (leito.id === movimentacao.leitoDestinoId) {
+              return {
+                ...leito,
+                pacienteId: movimentacao.pacienteId,
+                historicoStatus: [
+                  ...leito.historicoStatus,
+                  {
+                    status: 'Ocupado' as const,
+                    timestamp,
+                    pacienteId: movimentacao.pacienteId,
+                  }
+                ]
+              };
+            }
+            return leito;
+          });
+
+          const setorDestinoRef = doc(db, 'setoresRegulaFacil', setorDestino.id!);
+          batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizados });
+        }
       }
 
       await batch.commit();

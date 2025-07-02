@@ -130,9 +130,13 @@ const RegulacaoLeitos = () => {
                           <div className="pt-4">
                             {setor.leitos.length > 0 ? (
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                {setor.leitos.map((leito) => (
-                                  <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
-                                ))}
+                                {[...setor.leitos]
+                                  .sort((a, b) => 
+                                    b.codigoLeito.localeCompare(a.codigoLeito, undefined, { numeric: true })
+                                  )
+                                  .map((leito) => (
+                                    <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
+                                  ))}
                               </div>
                             ) : (
                               <div className="text-center py-8 text-muted-foreground">
