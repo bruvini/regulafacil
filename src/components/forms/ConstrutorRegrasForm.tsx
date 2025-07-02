@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2, Plus } from 'lucide-react';
-import { RegrasPrecaucao, GrupoRegras, RegraIsolamento } from '@/types/isolamento';
+import { RegrasPrecaucao, GrupoRegras, RegraIsolamento, ParametroRegra } from '@/types/isolamento';
 
 interface ConstrutorRegrasFormProps {
   regras: RegrasPrecaucao;
@@ -20,7 +20,7 @@ const tiposRegra = [
   { value: 'APOS_X_DIAS_SINTOMA', label: 'Após X dias do início de sintoma' },
   { value: 'APOS_X_DIAS_SEM_SINTOMA', label: 'Após X dias sem sintoma' },
   { value: 'LIBERACAO_MEDICA', label: 'Mediante liberação médica' }
-];
+] as const;
 
 const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) => {
   const adicionarGrupo = () => {
@@ -70,7 +70,7 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
 
   const atualizarTipoRegra = (indiceGrupo: number, indiceRegra: number, novoTipo: string) => {
     const novosGrupos = [...regras.grupos];
-    novosGrupos[indiceGrupo].regras[indiceRegra].tipo = novoTipo as any;
+    novosGrupos[indiceGrupo].regras[indiceRegra].tipo = novoTipo as RegraIsolamento['tipo'];
     
     // Reset parametro quando muda o tipo
     novosGrupos[indiceGrupo].regras[indiceRegra].parametro = null;
@@ -81,7 +81,7 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
     });
   };
 
-  const atualizarParametro = (indiceGrupo: number, indiceRegra: number, campo: string, valor: any) => {
+  const atualizarParametro = (indiceGrupo: number, indiceRegra: number, campo: keyof ParametroRegra, valor: string | number) => {
     const novosGrupos = [...regras.grupos];
     const regra = novosGrupos[indiceGrupo].regras[indiceRegra];
     
@@ -89,7 +89,14 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
       regra.parametro = {};
     }
     
-    regra.parametro[campo as keyof typeof regra.parametro] = valor;
+    // Type-safe parameter update
+    if (campo === 'dias' && typeof valor === 'number') {
+      regra.parametro.dias = valor;
+    } else if (campo === 'sintoma' && typeof valor === 'string') {
+      regra.parametro.sintoma = valor;
+    } else if (campo === 'exame' && typeof valor === 'string') {
+      regra.parametro.exame = valor;
+    }
     
     onChange({
       ...regras,
@@ -159,7 +166,7 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
                           placeholder="Dias"
                           className="w-20"
                           value={regra.parametro?.dias || ''}
-                          onChange={(e) => atualizarParametro(indiceGrupo, indiceRegra, 'dias', parseInt(e.target.value))}
+                          onChange={(e) => atualizarParametro(indiceGrupo, indiceRegra, 'dias', parseInt(e.target.value) || 0)}
                         />
                         <Input
                           placeholder="Sintoma"
