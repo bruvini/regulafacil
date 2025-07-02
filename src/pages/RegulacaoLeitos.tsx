@@ -4,7 +4,8 @@ import { Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import ImportacaoResumoModal from '@/components/modals/ImportacaoResumoModal';
+import ValidacaoCensoModal from '@/components/modals/ValidacaoCensoModal';
+import { useSetores } from '@/hooks/useSetores';
 import * as XLSX from 'xlsx';
 
 interface PacienteImportado {
@@ -17,12 +18,18 @@ interface PacienteImportado {
   especialidade: string;
 }
 
+interface ResultadoValidacao {
+  pacientesValidados: number;
+  discrepancias: Record<string, string[]>;
+}
+
 const RegulacaoLeitos = () => {
-  const [resumo, setResumo] = useState<Record<string, PacienteImportado[]> | null>(null);
-  const [isModalResumoOpen, setIsModalResumoOpen] = useState(false);
+  const [resultadoValidacao, setResultadoValidacao] = useState<ResultadoValidacao | null>(null);
+  const [isModalValidacaoOpen, setIsModalValidacaoOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { setores } = useSetores();
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -55,23 +62,53 @@ const RegulacaoLeitos = () => {
     
     console.log('Pacientes processados:', pacientes);
     
-    // Agrupar por setor
-    const pacientesAgrupados: Record<string, PacienteImportado[]> = {};
+    // Validar contra os dados do Firestore
+    let pacientesValidados = 0;
+    const discrepancias: Record<string, string[]> = {};
+    
     pacientes.forEach(paciente => {
-      if (!pacientesAgrupados[paciente.setor]) {
-        pacientesAgrupados[paciente.setor] = [];
+      // Encontrar o setor correspondente
+      const setorEncontrado = setores.find(s => s.nomeSetor === paciente.setor);
+      
+      if (setorEncontrado) {
+        // Verificar se o leito existe no setor
+        const leitoEncontrado = setorEncontrado.leitos.find(l => l.codigoLeito === paciente.leito);
+        
+        if (leitoEncontrado) {
+          pacientesValidados++;
+        } else {
+          // Leito não encontrado - adicionar às discrepâncias
+          if (!discrepancias[paciente.setor]) {
+            discrepancias[paciente.setor] = [];
+          }
+          if (!discrepancias[paciente.setor].includes(paciente.leito)) {
+            discrepancias[paciente.setor].push(paciente.leito);
+          }
+        }
+      } else {
+        // Setor não encontrado - adicionar às discrepâncias
+        if (!discrepancias[paciente.setor]) {
+          discrepancias[paciente.setor] = [];
+        }
+        if (!discrepancias[paciente.setor].includes(paciente.leito)) {
+          discrepancias[paciente.setor].push(paciente.leito);
+        }
       }
-      pacientesAgrupados[paciente.setor].push(paciente);
     });
     
-    console.log('Resumo agrupado por setor:', pacientesAgrupados);
+    const resultado: ResultadoValidacao = {
+      pacientesValidados,
+      discrepancias
+    };
     
-    setResumo(pacientesAgrupados);
-    setIsModalResumoOpen(true);
+    console.log('Resultado da validação:', resultado);
+    
+    setResultadoValidacao(resultado);
+    setIsModalValidacaoOpen(true);
     
     toast({
-      title: 'Sucesso',
-      description: `Arquivo importado com sucesso! ${pacientes.length} pacientes processados.`,
+      title: 'Validação Concluída',
+      description: `${pacientesValidados} pacientes validados com sucesso!`,
     });
   };
 
@@ -146,20 +183,20 @@ const RegulacaoLeitos = () => {
         <div className="flex flex-col space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-medical-primary">Central de Regulação</h1>
-            <p className="text-muted-foreground">Importe e gerencie o censo de pacientes do hospital.</p>
+            <p className="text-muted-foreground">Importe e valide o censo de pacientes do hospital.</p>
           </div>
           
           {/* Card de Importação */}
           <Card className="w-full max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="text-center text-medical-primary">
-                Importar Censo de Pacientes
+                Validar Censo de Pacientes
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Faça upload da planilha Excel de censo para importar os dados dos pacientes automaticamente.
+                  Faça upload da planilha Excel de censo para validar os dados dos pacientes contra os setores e leitos cadastrados.
                 </p>
                 
                 <Button
@@ -170,7 +207,7 @@ const RegulacaoLeitos = () => {
                   className="mx-auto"
                 >
                   <Upload className="mr-2 h-5 w-5" />
-                  {isProcessing ? 'Processando...' : 'Importar Planilha'}
+                  {isProcessing ? 'Processando...' : 'Validar Planilha'}
                 </Button>
                 
                 <input
@@ -190,10 +227,10 @@ const RegulacaoLeitos = () => {
         </div>
       </div>
       
-      <ImportacaoResumoModal
-        open={isModalResumoOpen}
-        onOpenChange={setIsModalResumoOpen}
-        resumo={resumo}
+      <ValidacaoCensoModal
+        open={isModalValidacaoOpen}
+        onOpenChange={setIsModalValidacaoOpen}
+        resultado={resultadoValidacao}
       />
     </div>
   );

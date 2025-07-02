@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -118,27 +117,35 @@ export const useSetores = () => {
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
 
-      const novoLeito: Leito = {
-        id: crypto.randomUUID(),
-        ...leitoData,
-        statusLeito: 'Vago',
-        dataAtualizacaoStatus: new Date().toISOString()
-      };
+      // Processar múltiplos códigos de leito
+      const codigosLeito = leitoData.codigoLeito
+        .split(',')
+        .map(codigo => codigo.trim())
+        .filter(codigo => codigo);
 
-      const leitosAtualizados = [...setor.leitos, novoLeito];
+      const novosLeitos = codigosLeito.map(codigoLeito => ({
+        id: crypto.randomUUID(),
+        codigoLeito,
+        leitoPCP: leitoData.leitoPCP,
+        leitoIsolamento: leitoData.leitoIsolamento,
+        statusLeito: 'Vago' as const,
+        dataAtualizacaoStatus: new Date().toISOString()
+      }));
+
+      const leitosAtualizados = [...setor.leitos, ...novosLeitos];
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       
       await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
       
       toast({
         title: 'Sucesso',
-        description: 'Leito adicionado com sucesso!',
+        description: `${novosLeitos.length} leito${novosLeitos.length > 1 ? 's' : ''} adicionado${novosLeitos.length > 1 ? 's' : ''} com sucesso!`,
       });
     } catch (error) {
-      console.error('Erro ao adicionar leito:', error);
+      console.error('Erro ao adicionar leito(s):', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível adicionar o leito.',
+        description: 'Não foi possível adicionar o(s) leito(s).',
         variant: 'destructive',
       });
     } finally {
