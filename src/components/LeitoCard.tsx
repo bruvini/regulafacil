@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Unlock, Check, Info } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -21,21 +20,31 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
 
   const handleBloquear = (motivo: string) => {
+    console.log('Tentando bloquear leito:', { setorId, leitoId: leito.id, motivo });
     atualizarStatusLeito(setorId, leito.id, 'Bloqueado', motivo);
   };
 
   const handleHigienizar = () => {
+    console.log('Tentando higienizar leito:', { setorId, leitoId: leito.id });
     atualizarStatusLeito(setorId, leito.id, 'Higienizacao');
   };
 
   const handleDesbloquear = () => {
     console.log('Tentando desbloquear leito:', { setorId, leitoId: leito.id });
-    desbloquearLeito(setorId, leito.id);
+    if (desbloquearLeito) {
+      desbloquearLeito(setorId, leito.id);
+    } else {
+      console.error('Função desbloquearLeito não está disponível');
+    }
   };
 
   const handleFinalizarHigienizacao = () => {
     console.log('Finalizando higienização do leito:', { setorId, leitoId: leito.id });
-    finalizarHigienizacao(setorId, leito.id);
+    if (finalizarHigienizacao) {
+      finalizarHigienizacao(setorId, leito.id);
+    } else {
+      console.error('Função finalizarHigienizacao não está disponível');
+    }
   };
 
   return (
