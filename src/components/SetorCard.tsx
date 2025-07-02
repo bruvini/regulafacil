@@ -8,7 +8,14 @@ interface SetorCardProps {
 }
 
 const SetorCard = ({ setor }: SetorCardProps) => {
-  const leitosVagos = setor.leitos.filter(leito => leito.statusLeito === 'Vago').length;
+  const getStatusAtual = (leito: any) => {
+    if (!leito.historicoStatus || leito.historicoStatus.length === 0) {
+      return 'Vago';
+    }
+    return leito.historicoStatus[leito.historicoStatus.length - 1].status;
+  };
+
+  const leitosVagos = setor.leitos.filter(leito => getStatusAtual(leito) === 'Vago').length;
   const totalLeitos = setor.leitos.length;
 
   return (

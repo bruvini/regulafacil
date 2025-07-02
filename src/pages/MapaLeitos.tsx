@@ -7,27 +7,28 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import LeitoCard from '@/components/LeitoCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { useSetores } from '@/hooks/useSetores';
+import { Leito } from '@/types/hospital';
 
 const RegulacaoLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { setores, loading } = useSetores();
 
-  const calcularTaxaOcupacao = (leitos: any[]) => {
+  // Função para obter o status atual de um leito
+  const getStatusAtual = (leito: Leito) => {
+    if (!leito.historicoStatus || leito.historicoStatus.length === 0) {
+      return 'Vago';
+    }
+    return leito.historicoStatus[leito.historicoStatus.length - 1].status;
+  };
+
+  const calcularTaxaOcupacao = (leitos: Leito[]) => {
     if (leitos.length === 0) return 0;
-    const leitosOcupados = leitos.filter(
-      leito => {
-        const statusAtual = leito.historicoStatus[leito.historicoStatus.length - 1]?.status || 'Vago';
-        return statusAtual === 'Ocupado';
-      }
-    ).length;
+    const leitosOcupados = leitos.filter(leito => getStatusAtual(leito) === 'Ocupado').length;
     return Math.round((leitosOcupados / leitos.length) * 100);
   };
 
-  const contarLeitosVagos = (leitos: any[]) => {
-    return leitos.filter(leito => {
-      const statusAtual = leito.historicoStatus[leito.historicoStatus.length - 1]?.status || 'Vago';
-      return statusAtual === 'Vago';
-    }).length;
+  const contarLeitosVagos = (leitos: Leito[]) => {
+    return leitos.filter(leito => getStatusAtual(leito) === 'Vago').length;
   };
 
   return (
