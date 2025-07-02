@@ -4,7 +4,8 @@ import { Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import Papa from 'papaparse';
+import ImportacaoResumoModal from '@/components/modals/ImportacaoResumoModal';
+import * as XLSX from 'xlsx';
 
 interface PacienteImportado {
   nomePaciente: string;
@@ -16,12 +17,9 @@ interface PacienteImportado {
   especialidade: string;
 }
 
-interface ResumoImportacao {
-  [setor: string]: PacienteImportado[];
-}
-
 const RegulacaoLeitos = () => {
-  const [resumoImportacao, setResumoImportacao] = useState<ResumoImportacao | null>(null);
+  const [resumo, setResumo] = useState<Record<string, PacienteImportado[]> | null>(null);
+  const [isModalResumoOpen, setIsModalResumoOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -38,8 +36,8 @@ const RegulacaoLeitos = () => {
     
     const pacientes: PacienteImportado[] = [];
     
-    dadosProcessados.forEach((row, index) => {
-      // Verificar se a linha tem dados suficientes
+    dadosProcessados.forEach((row) => {
+      // Verificar se a linha tem dados suficientes e nome válido
       if (row && row.length >= 8 && row[0] && row[4] && row[6]) {
         const paciente: PacienteImportado = {
           nomePaciente: row[0]?.toString().trim() || '',
@@ -58,17 +56,18 @@ const RegulacaoLeitos = () => {
     console.log('Pacientes processados:', pacientes);
     
     // Agrupar por setor
-    const resumo: ResumoImportacao = {};
+    const pacientesAgrupados: Record<string, PacienteImportado[]> = {};
     pacientes.forEach(paciente => {
-      if (!resumo[paciente.setor]) {
-        resumo[paciente.setor] = [];
+      if (!pacientesAgrupados[paciente.setor]) {
+        pacientesAgrupados[paciente.setor] = [];
       }
-      resumo[paciente.setor].push(paciente);
+      pacientesAgrupados[paciente.setor].push(paciente);
     });
     
-    console.log('Resumo agrupado por setor:', resumo);
+    console.log('Resumo agrupado por setor:', pacientesAgrupados);
     
-    setResumoImportacao(resumo);
+    setResumo(pacientesAgrupados);
+    setIsModalResumoOpen(true);
     
     toast({
       title: 'Sucesso',
@@ -81,17 +80,16 @@ const RegulacaoLeitos = () => {
     
     if (!file) return;
     
-    // Verificar se é um arquivo CSV ou Excel
+    // Verificar se é um arquivo Excel
     const allowedTypes = [
-      'text/csv',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ];
     
-    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(csv|xls|xlsx)$/i)) {
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(xls|xlsx)$/i)) {
       toast({
         title: 'Erro',
-        description: 'Por favor, selecione um arquivo CSV ou Excel (.csv, .xls, .xlsx).',
+        description: 'Por favor, selecione um arquivo Excel (.xls ou .xlsx).',
         variant: 'destructive',
       });
       return;
@@ -99,24 +97,44 @@ const RegulacaoLeitos = () => {
     
     setIsProcessing(true);
     
-    Papa.parse(file, {
-      header: false,
-      skipEmptyLines: true,
-      complete: (results) => {
-        console.log('Resultado do Papa.parse:', results);
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+
+        // Converte a planilha para um array de arrays
+        const json_data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        console.log('Dados extraídos da planilha:', json_data);
         setIsProcessing(false);
-        processarDadosImportados(results.data as any[][]);
-      },
-      error: (error) => {
-        console.error('Erro ao ler o arquivo:', error);
+        processarDadosImportados(json_data);
+
+      } catch (error) {
+        console.error("Erro ao processar o arquivo Excel:", error);
         setIsProcessing(false);
         toast({
           title: 'Erro',
-          description: 'Erro ao processar o arquivo. Verifique se o formato está correto.',
+          description: 'Erro ao processar o arquivo Excel. Verifique se o formato está correto.',
           variant: 'destructive',
         });
       }
-    });
+    };
+
+    reader.onerror = (error) => {
+      console.error("Erro ao ler o arquivo:", error);
+      setIsProcessing(false);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao ler o arquivo. Tente novamente.',
+        variant: 'destructive',
+      });
+    };
+
+    reader.readAsArrayBuffer(file);
     
     // Limpar o input para permitir seleção do mesmo arquivo novamente
     event.target.value = '';
@@ -141,7 +159,7 @@ const RegulacaoLeitos = () => {
             <CardContent className="text-center">
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Faça upload da planilha de censo para importar os dados dos pacientes automaticamente.
+                  Faça upload da planilha Excel de censo para importar os dados dos pacientes automaticamente.
                 </p>
                 
                 <Button
@@ -158,65 +176,25 @@ const RegulacaoLeitos = () => {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.xls,.xlsx"
+                  accept=".xls,.xlsx"
                   onChange={handleFileChange}
                   className="hidden"
                 />
                 
                 <p className="text-sm text-muted-foreground">
-                  Formatos suportados: CSV, XLS, XLSX
+                  Formatos suportados: XLS, XLSX
                 </p>
               </div>
             </CardContent>
           </Card>
-          
-          {/* Card de Resumo */}
-          <Card className="w-full max-w-4xl mx-auto">
-            <CardHeader>
-              <CardTitle className="text-medical-primary">
-                Resumo da Importação
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!resumoImportacao ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    Aguardando importação de arquivo...
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-green-800 font-medium">
-                      Arquivo importado com sucesso!
-                    </p>
-                  </div>
-                  
-                  <div className="grid gap-4">
-                    <h3 className="font-semibold text-lg">Pacientes por Setor:</h3>
-                    <ul className="space-y-2">
-                      {Object.entries(resumoImportacao).map(([setor, pacientes]) => (
-                        <li key={setor} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                          <span className="font-medium">{setor}</span>
-                          <span className="bg-medical-primary text-white px-3 py-1 rounded-full text-sm">
-                            {pacientes.length} pacientes
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    
-                    <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-blue-800 text-sm">
-                        <strong>Total geral:</strong> {Object.values(resumoImportacao).reduce((total, pacientes) => total + pacientes.length, 0)} pacientes importados
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
+      
+      <ImportacaoResumoModal
+        open={isModalResumoOpen}
+        onOpenChange={setIsModalResumoOpen}
+        resumo={resumo}
+      />
     </div>
   );
 };
