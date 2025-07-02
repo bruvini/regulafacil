@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,10 +21,10 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     setores,
     loading,
     criarSetor,
-    atualizarSetor,
+    editarSetor,
     excluirSetor,
     adicionarLeito,
-    atualizarLeito,
+    editarLeito,
     excluirLeito,
   } = useSetores();
 
@@ -34,14 +35,14 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
   const [editingSetor, setEditingSetor] = useState<{ id: string; data: SetorFormData } | null>(null);
   const [editingLeito, setEditingLeito] = useState<{ 
     setorId: string; 
-    leitoIndex: number; 
+    leitoId: string; 
     data: LeitoFormData 
   } | null>(null);
   const [selectedSetorForLeitos, setSelectedSetorForLeitos] = useState('');
 
   const handleSetorSubmit = async (data: SetorFormData) => {
     if (editingSetor) {
-      await atualizarSetor(editingSetor.id, data);
+      await editarSetor(editingSetor.id, data);
       setEditingSetor(null);
     } else {
       await criarSetor(data);
@@ -52,7 +53,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
 
   const handleLeitoSubmit = async (setorId: string, data: LeitoFormData) => {
     if (editingLeito) {
-      await atualizarLeito(editingLeito.setorId, editingLeito.leitoIndex, data);
+      await editarLeito(editingLeito.setorId, editingLeito.leitoId, data);
       setEditingLeito(null);
     } else {
       await adicionarLeito(setorId, data);
@@ -70,7 +71,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     setorFormMethods.reset(editData);
   };
 
-  const handleEditLeito = (setorId: string, leitoIndex: number, leito: any) => {
+  const handleEditLeito = (setorId: string, leito: any) => {
     const editData = {
       codigoLeito: leito.codigoLeito,
       leitoPCP: leito.leitoPCP,
@@ -78,7 +79,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     };
     setEditingLeito({
       setorId,
-      leitoIndex,
+      leitoId: leito.id,
       data: editData
     });
     leitoFormMethods.reset(editData);
@@ -204,8 +205,8 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                   
                   {selectedSetor && (
                     <div className="space-y-3 max-h-80 overflow-y-auto">
-                      {selectedSetor.leitos.map((leito, index) => (
-                        <Card key={index}>
+                      {selectedSetor.leitos.map((leito) => (
+                        <Card key={leito.id}>
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                               <div>
@@ -219,14 +220,14 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleEditLeito(selectedSetor.id!, index, leito)}
+                                  onClick={() => handleEditLeito(selectedSetor.id!, leito)}
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  onClick={() => excluirLeito(selectedSetor.id!, index)}
+                                  onClick={() => excluirLeito(selectedSetor.id!, leito.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

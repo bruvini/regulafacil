@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { 
   collection, 
@@ -285,18 +284,22 @@ export const useReconciliation = () => {
           const leitoIndex = leitosAtualizados.findIndex(l => l.id === admissao.leitoId);
           
           if (leitoIndex > -1) {
-            // Atualizar o pacienteId
+            // 1. Atualizar o pacienteId na raiz do objeto leito
             leitosAtualizados[leitoIndex].pacienteId = admissao.paciente.id;
             
-            // Garantir que o histórico de status é um array e adicionar o novo status
-            leitosAtualizados[leitoIndex].historicoStatus = [
-              ...(leitosAtualizados[leitoIndex].historicoStatus || []),
-              {
-                status: 'Ocupado' as const,
-                timestamp,
-                pacienteId: admissao.paciente.id,
-              }
-            ];
+            // 2. Garantir que o histórico existe e adicionar o novo status
+            if (!leitosAtualizados[leitoIndex].historicoStatus) {
+              leitosAtualizados[leitoIndex].historicoStatus = [];
+            }
+            
+            leitosAtualizados[leitoIndex].historicoStatus.push({
+              status: 'Ocupado' as const,
+              timestamp,
+              pacienteId: admissao.paciente.id,
+            });
+
+            // 3. Atualizar dataAtualizacaoStatus
+            leitosAtualizados[leitoIndex].dataAtualizacaoStatus = timestamp;
             
             console.log(`Atualizando leito ${admissao.leitoId} com paciente ${admissao.paciente.id}`);
           }
@@ -318,15 +321,22 @@ export const useReconciliation = () => {
             const leitoOrigemIndex = leitosOrigemAtualizados.findIndex(l => l.id === movimentacao.leitoOrigemId);
             
             if (leitoOrigemIndex > -1) {
+              // 1. Liberar o paciente
               leitosOrigemAtualizados[leitoOrigemIndex].pacienteId = null;
-              leitosOrigemAtualizados[leitoOrigemIndex].historicoStatus = [
-                ...(leitosOrigemAtualizados[leitoOrigemIndex].historicoStatus || []),
-                {
-                  status: 'Vago' as const,
-                  timestamp,
-                  pacienteId: null,
-                }
-              ];
+              
+              // 2. Garantir que o histórico existe e adicionar status Vago
+              if (!leitosOrigemAtualizados[leitoOrigemIndex].historicoStatus) {
+                leitosOrigemAtualizados[leitoOrigemIndex].historicoStatus = [];
+              }
+              
+              leitosOrigemAtualizados[leitoOrigemIndex].historicoStatus.push({
+                status: 'Vago' as const,
+                timestamp,
+                pacienteId: null,
+              });
+
+              // 3. Atualizar dataAtualizacaoStatus
+              leitosOrigemAtualizados[leitoOrigemIndex].dataAtualizacaoStatus = timestamp;
             }
 
             const setorOrigemRef = doc(db, 'setoresRegulaFacil', setorOrigem.id!);
@@ -341,15 +351,22 @@ export const useReconciliation = () => {
           const leitoDestinoIndex = leitosDestinoAtualizados.findIndex(l => l.id === movimentacao.leitoDestinoId);
           
           if (leitoDestinoIndex > -1) {
+            // 1. Ocupar com o paciente
             leitosDestinoAtualizados[leitoDestinoIndex].pacienteId = movimentacao.pacienteId;
-            leitosDestinoAtualizados[leitoDestinoIndex].historicoStatus = [
-              ...(leitosDestinoAtualizados[leitoDestinoIndex].historicoStatus || []),
-              {
-                status: 'Ocupado' as const,
-                timestamp,
-                pacienteId: movimentacao.pacienteId,
-              }
-            ];
+            
+            // 2. Garantir que o histórico existe e adicionar status Ocupado
+            if (!leitosDestinoAtualizados[leitoDestinoIndex].historicoStatus) {
+              leitosDestinoAtualizados[leitoDestinoIndex].historicoStatus = [];
+            }
+            
+            leitosDestinoAtualizados[leitoDestinoIndex].historicoStatus.push({
+              status: 'Ocupado' as const,
+              timestamp,
+              pacienteId: movimentacao.pacienteId,
+            });
+
+            // 3. Atualizar dataAtualizacaoStatus
+            leitosDestinoAtualizados[leitoDestinoIndex].dataAtualizacaoStatus = timestamp;
           }
 
           const setorDestinoRef = doc(db, 'setoresRegulaFacil', setorDestino.id!);

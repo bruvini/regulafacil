@@ -16,12 +16,22 @@ interface LeitoCardProps {
   setorId: string;
 }
 
+// Função auxiliar para obter o status de forma segura - Programação Defensiva
+const getStatusAtual = (leito: Leito): 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' => {
+  // Se historicoStatus não existir ou estiver vazio, retorne 'Vago' como padrão seguro.
+  if (!leito.historicoStatus || leito.historicoStatus.length === 0) {
+    return 'Vago';
+  }
+  // Se existir, retorne o status do último registro.
+  return leito.historicoStatus[leito.historicoStatus.length - 1].status;
+};
+
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao } = useSetores();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
 
-  // Derivar o status atual do histórico
-  const statusAtual = leito.historicoStatus[leito.historicoStatus.length - 1]?.status || 'Vago';
+  // Derivar o status atual usando a função auxiliar segura
+  const statusAtual = getStatusAtual(leito);
 
   const handleBloquear = (motivo: string) => {
     console.log('Tentando bloquear leito:', { setorId, leitoId: leito.id, motivo });
@@ -71,7 +81,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                 )}
               </div>
             </div>
-            <StatusBadge historicoStatus={leito.historicoStatus} />
+            <StatusBadge historicoStatus={leito.historicoStatus || []} />
           </div>
           
           {(leito.leitoPCP || leito.leitoIsolamento) && (
