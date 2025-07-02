@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,22 +13,52 @@ interface LeitoFormProps {
   selectedSetorId?: string;
   initialData?: LeitoFormData;
   isLoading?: boolean;
+  onReset?: () => void;
 }
 
-const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading }: LeitoFormProps) => {
-  const [formData, setFormData] = useState<LeitoFormData>(
-    initialData || { codigoLeito: '', leitoPCP: false, leitoIsolamento: false }
-  );
+const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading, onReset }: LeitoFormProps) => {
+  const [formData, setFormData] = useState<LeitoFormData>({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
   const [setorId, setSetorId] = useState(selectedSetorId || '');
+  const codigoLeitoRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    } else {
+      setFormData({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    setSetorId(selectedSetorId || '');
+  }, [selectedSetorId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!setorId) return;
-    onSubmit(setorId, formData);
+    
+    await onSubmit(setorId, formData);
+    
+    if (!initialData) {
+      // Limpar formulário após cadastro
+      setFormData({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+      // Focar no primeiro campo
+      setTimeout(() => {
+        codigoLeitoRef.current?.focus();
+      }, 100);
+    }
   };
 
   const handleInputChange = (field: keyof LeitoFormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleReset = () => {
+    setFormData({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+    onReset?.();
+    setTimeout(() => {
+      codigoLeitoRef.current?.focus();
+    }, 100);
   };
 
   return (
@@ -52,6 +82,7 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading 
       <div className="space-y-2">
         <Label htmlFor="codigoLeito">Código do Leito</Label>
         <Input
+          ref={codigoLeitoRef}
           id="codigoLeito"
           type="text"
           value={formData.codigoLeito}
@@ -85,13 +116,26 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading 
         </div>
       </div>
       
-      <Button 
-        type="submit" 
-        className="w-full bg-medical-primary hover:bg-medical-secondary"
-        disabled={isLoading || !setorId}
-      >
-        {isLoading ? 'Salvando...' : (initialData ? 'Atualizar Leito' : 'Adicionar Leito')}
-      </Button>
+      <div className="space-y-2">
+        <Button 
+          type="submit" 
+          className="w-full bg-medical-primary hover:bg-medical-secondary"
+          disabled={isLoading || !setorId}
+        >
+          {isLoading ? 'Salvando...' : (initialData ? 'Atualizar Leito' : 'Adicionar Leito')}
+        </Button>
+        
+        {initialData && (
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={handleReset}
+            className="w-full"
+          >
+            Cancelar Edição
+          </Button>
+        )}
+      </div>
     </form>
   );
 };

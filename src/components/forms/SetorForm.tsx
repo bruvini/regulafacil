@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,20 +9,45 @@ interface SetorFormProps {
   onSubmit: (data: SetorFormData) => void;
   initialData?: SetorFormData;
   isLoading?: boolean;
+  onReset?: () => void;
 }
 
-const SetorForm = ({ onSubmit, initialData, isLoading }: SetorFormProps) => {
-  const [formData, setFormData] = useState<SetorFormData>(
-    initialData || { nomeSetor: '', siglaSetor: '' }
-  );
+const SetorForm = ({ onSubmit, initialData, isLoading, onReset }: SetorFormProps) => {
+  const [formData, setFormData] = useState<SetorFormData>({ nomeSetor: '', siglaSetor: '' });
+  const nomeSetorRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    } else {
+      setFormData({ nomeSetor: '', siglaSetor: '' });
+    }
+  }, [initialData]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    await onSubmit(formData);
+    
+    if (!initialData) {
+      // Limpar formulário após cadastro
+      setFormData({ nomeSetor: '', siglaSetor: '' });
+      // Focar no primeiro campo
+      setTimeout(() => {
+        nomeSetorRef.current?.focus();
+      }, 100);
+    }
   };
 
   const handleInputChange = (field: keyof SetorFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleReset = () => {
+    setFormData({ nomeSetor: '', siglaSetor: '' });
+    onReset?.();
+    setTimeout(() => {
+      nomeSetorRef.current?.focus();
+    }, 100);
   };
 
   return (
@@ -29,6 +55,7 @@ const SetorForm = ({ onSubmit, initialData, isLoading }: SetorFormProps) => {
       <div className="space-y-2">
         <Label htmlFor="nomeSetor">Nome do Setor</Label>
         <Input
+          ref={nomeSetorRef}
           id="nomeSetor"
           type="text"
           value={formData.nomeSetor}
@@ -51,13 +78,26 @@ const SetorForm = ({ onSubmit, initialData, isLoading }: SetorFormProps) => {
         />
       </div>
       
-      <Button 
-        type="submit" 
-        className="w-full bg-medical-primary hover:bg-medical-secondary"
-        disabled={isLoading}
-      >
-        {isLoading ? 'Salvando...' : (initialData ? 'Atualizar Setor' : 'Criar Setor')}
-      </Button>
+      <div className="space-y-2">
+        <Button 
+          type="submit" 
+          className="w-full bg-medical-primary hover:bg-medical-secondary"
+          disabled={isLoading}
+        >
+          {isLoading ? 'Salvando...' : (initialData ? 'Atualizar Setor' : 'Criar Setor')}
+        </Button>
+        
+        {initialData && (
+          <Button 
+            type="button"
+            variant="outline"
+            onClick={handleReset}
+            className="w-full"
+          >
+            Cancelar Edição
+          </Button>
+        )}
+      </div>
     </form>
   );
 };

@@ -240,6 +240,79 @@ export const useSetores = () => {
     }
   };
 
+  const desbloquearLeito = async (setorId: string, leitoId: string) => {
+    try {
+      setLoading(true);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitoIndex = setor.leitos.findIndex(l => l.id === leitoId);
+      if (leitoIndex === -1) throw new Error('Leito não encontrado');
+
+      const leitosAtualizados = [...setor.leitos];
+      const leitoAtualizado = { ...leitosAtualizados[leitoIndex] };
+      
+      // Remove o motivo do bloqueio e altera status para Vago
+      delete leitoAtualizado.motivoBloqueio;
+      leitoAtualizado.statusLeito = 'Vago';
+      leitoAtualizado.dataAtualizacaoStatus = new Date().toISOString();
+      
+      leitosAtualizados[leitoIndex] = leitoAtualizado;
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Leito desbloqueado com sucesso!',
+      });
+    } catch (error) {
+      console.error('Erro ao desbloquear leito:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível desbloquear o leito.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const finalizarHigienizacao = async (setorId: string, leitoId: string) => {
+    try {
+      setLoading(true);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitoIndex = setor.leitos.findIndex(l => l.id === leitoId);
+      if (leitoIndex === -1) throw new Error('Leito não encontrado');
+
+      const leitosAtualizados = [...setor.leitos];
+      leitosAtualizados[leitoIndex] = {
+        ...leitosAtualizados[leitoIndex],
+        statusLeito: 'Vago',
+        dataAtualizacaoStatus: new Date().toISOString()
+      };
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Higienização finalizada com sucesso!',
+      });
+    } catch (error) {
+      console.error('Erro ao finalizar higienização:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível finalizar a higienização.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     setores,
     loading,
@@ -250,5 +323,7 @@ export const useSetores = () => {
     atualizarLeito,
     excluirLeito,
     atualizarStatusLeito,
+    desbloquearLeito,
+    finalizarHigienizacao,
   };
 };

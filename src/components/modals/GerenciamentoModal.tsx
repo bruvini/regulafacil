@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -71,6 +72,14 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     });
   };
 
+  const handleResetSetorForm = () => {
+    setEditingSetor(null);
+  };
+
+  const handleResetLeitoForm = () => {
+    setEditingLeito(null);
+  };
+
   const selectedSetor = setores.find(s => s.id === selectedSetorForLeitos);
 
   return (
@@ -98,16 +107,8 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                   onSubmit={handleSetorSubmit}
                   initialData={editingSetor?.data}
                   isLoading={loading}
+                  onReset={handleResetSetorForm}
                 />
-                {editingSetor && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setEditingSetor(null)}
-                    className="w-full mt-2"
-                  >
-                    Cancelar Edição
-                  </Button>
-                )}
               </div>
               
               <div>
@@ -161,16 +162,8 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                   selectedSetorId={editingLeito?.setorId || selectedSetorForLeitos}
                   initialData={editingLeito?.data}
                   isLoading={loading}
+                  onReset={handleResetLeitoForm}
                 />
-                {editingLeito && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setEditingLeito(null)}
-                    className="w-full mt-2"
-                  >
-                    Cancelar Edição
-                  </Button>
-                )}
               </div>
               
               <div>
