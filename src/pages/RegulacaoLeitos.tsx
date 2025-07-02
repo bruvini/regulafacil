@@ -5,68 +5,38 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import ValidacaoCensoModal from '@/components/modals/ValidacaoCensoModal';
+import ReconciliationPreviewModal from '@/components/modals/ReconciliationPreviewModal';
 import { useSetores } from '@/hooks/useSetores';
+import { useReconciliation } from '@/hooks/useReconciliation';
 import * as XLSX from 'xlsx';
-
-interface PacienteImportado {
-  nomePaciente: string;
-  dataNascimento: string;
-  sexo: string;
-  dataInternacao: string;
-  setor: string;
-  leito: string;
-  especialidade: string;
-}
-
-interface ResultadoValidacao {
-  pacientesValidados: number;
-  discrepancias: Record<string, string[]>;
-}
+import { PacienteImportado, ResultadoValidacao } from '@/types/hospital';
 
 const RegulacaoLeitos = () => {
   const [resultadoValidacao, setResultadoValidacao] = useState<ResultadoValidacao | null>(null);
   const [isModalValidacaoOpen, setIsModalValidacaoOpen] = useState(false);
+  const [isModalReconciliationOpen, setIsModalReconciliationOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { setores } = useSetores();
+  const { 
+    loading: reconciliationLoading, 
+    planoDeMudancas, 
+    reconciliarCenso, 
+    executarPlanoDeMudancas 
+  } = useReconciliation();
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
   };
 
-  const processarDadosImportados = (dados: any[][]) => {
-    console.log('Dados brutos recebidos:', dados);
+  const validarDadosImportados = (dados: PacienteImportado[]): ResultadoValidacao => {
+    console.log('Validando dados importados:', dados);
     
-    // Ignorar as 3 primeiras linhas (cabeçalho)
-    const dadosProcessados = dados.slice(3);
-    
-    const pacientes: PacienteImportado[] = [];
-    
-    dadosProcessados.forEach((row) => {
-      // Verificar se a linha tem dados suficientes e nome válido
-      if (row && row.length >= 8 && row[0] && row[4] && row[6]) {
-        const paciente: PacienteImportado = {
-          nomePaciente: row[0]?.toString().trim() || '',
-          dataNascimento: row[1]?.toString().trim() || '',
-          sexo: row[2]?.toString().trim() || '',
-          dataInternacao: row[3]?.toString().trim() || '',
-          setor: row[4]?.toString().trim() || '',
-          leito: row[6]?.toString().trim() || '',
-          especialidade: row[7]?.toString().trim() || ''
-        };
-        
-        pacientes.push(paciente);
-      }
-    });
-    
-    console.log('Pacientes processados:', pacientes);
-    
-    // Validar contra os dados do Firestore
     let pacientesValidados = 0;
     const discrepancias: Record<string, string[]> = {};
     
-    pacientes.forEach(paciente => {
+    dados.forEach(paciente => {
       // Encontrar o setor correspondente
       const setorEncontrado = setores.find(s => s.nomeSetor === paciente.setor);
       
@@ -96,20 +66,78 @@ const RegulacaoLeitos = () => {
       }
     });
     
-    const resultado: ResultadoValidacao = {
+    const validacaoCompleta = Object.keys(discrepancias).length === 0;
+    
+    return {
       pacientesValidados,
-      discrepancias
+      discrepancias,
+      validacaoCompleta
     };
+  };
+
+  const processarDadosImportados = async (dados: any[][]) => {
+    console.log('Dados brutos recebidos:', dados);
     
-    console.log('Resultado da validação:', resultado);
+    // Ignorar as 3 primeiras linhas (cabeçalho)
+    const dadosProcessados = dados.slice(3);
     
-    setResultadoValidacao(resultado);
-    setIsModalValidacaoOpen(true);
+    const pacientes: PacienteImportado[] = [];
     
-    toast({
-      title: 'Validação Concluída',
-      description: `${pacientesValidados} pacientes validados com sucesso!`,
+    dadosProcessados.forEach((row) => {
+      // Verificar se a linha tem dados suficientes e nome válido
+      if (row && row.length >= 8 && row[0] && row[4] && row[6]) {
+        const paciente: PacienteImportado = {
+          nomePaciente: row[0]?.toString().trim() || '',
+          dataNascimento: row[1]?.toString().trim() || '',
+          sexo: row[2]?.toString().trim() || '',
+          dataInternacao: row[3]?.toString().trim() || '',
+          setor: row[4]?.toString().trim() || '',
+          leito: row[6]?.toString().trim() || '',
+          especialidade: row[7]?.toString().trim() || ''
+        };
+        
+        pacientes.push(paciente);
+      }
     });
+    
+    console.log('Pacientes processados:', pacientes);
+    
+    // Validar dados
+    const resultadoValidacao = validarDadosImportados(pacientes);
+    
+    if (!resultadoValidacao.validacaoCompleta) {
+      // Mostrar modal de validação com pendências
+      setResultadoValidacao(resultadoValidacao);
+      setIsModalValidacaoOpen(true);
+      
+      toast({
+        title: 'Validação Incompleta',
+        description: 'Existem setores ou leitos não cadastrados. Cadastre-os primeiro antes de prosseguir.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validação 100% bem-sucedida - prosseguir com reconciliação
+    try {
+      console.log('Iniciando processo de reconciliação...');
+      const plano = await reconciliarCenso(pacientes, setores);
+      
+      if (plano.totalAcoes > 0) {
+        setIsModalReconciliationOpen(true);
+        toast({
+          title: 'Reconciliação Preparada',
+          description: `${plano.totalAcoes} ações identificadas. Revise o plano antes de aplicar.`,
+        });
+      } else {
+        toast({
+          title: 'Censo Sincronizado',
+          description: 'Nenhuma mudança necessária. O censo já está atualizado.',
+        });
+      }
+    } catch (error) {
+      console.error('Erro na reconciliação:', error);
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,37 +205,51 @@ const RegulacaoLeitos = () => {
     event.target.value = '';
   };
 
+  const handleConfirmReconciliation = async () => {
+    if (planoDeMudancas) {
+      try {
+        await executarPlanoDeMudancas(planoDeMudancas);
+        setIsModalReconciliationOpen(false);
+      } catch (error) {
+        console.error('Erro ao executar reconciliação:', error);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col space-y-8">
           <div>
             <h1 className="text-3xl font-bold text-medical-primary">Central de Regulação</h1>
-            <p className="text-muted-foreground">Importe e valide o censo de pacientes do hospital.</p>
+            <p className="text-muted-foreground">Motor inteligente de reconciliação de censo hospitalar.</p>
           </div>
           
           {/* Card de Importação */}
           <Card className="w-full max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="text-center text-medical-primary">
-                Validar Censo de Pacientes
+                Motor de Reconciliação de Censo
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
               <div className="space-y-4">
                 <p className="text-muted-foreground">
-                  Faça upload da planilha Excel de censo para validar os dados dos pacientes contra os setores e leitos cadastrados.
+                  Importe a planilha de censo e o sistema irá comparar com o estado atual, 
+                  identificando automaticamente admissões, movimentações e pendências.
                 </p>
                 
                 <Button
                   onClick={handleImportClick}
                   variant="medical"
                   size="lg"
-                  disabled={isProcessing}
+                  disabled={isProcessing || reconciliationLoading}
                   className="mx-auto"
                 >
                   <Upload className="mr-2 h-5 w-5" />
-                  {isProcessing ? 'Processando...' : 'Validar Planilha'}
+                  {isProcessing ? 'Processando...' : 
+                   reconciliationLoading ? 'Reconciliando...' : 
+                   'Iniciar Reconciliação'}
                 </Button>
                 
                 <input
@@ -231,6 +273,14 @@ const RegulacaoLeitos = () => {
         open={isModalValidacaoOpen}
         onOpenChange={setIsModalValidacaoOpen}
         resultado={resultadoValidacao}
+      />
+
+      <ReconciliationPreviewModal
+        open={isModalReconciliationOpen}
+        onOpenChange={setIsModalReconciliationOpen}
+        planoDeMudancas={planoDeMudancas}
+        onConfirm={handleConfirmReconciliation}
+        isExecuting={reconciliationLoading}
       />
     </div>
   );
