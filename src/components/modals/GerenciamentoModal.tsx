@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -51,10 +50,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     setTimeout(() => setorFormMethods.setFocus('nomeSetor'), 100);
   };
 
-  const handleLeitoSubmit = async (data: LeitoFormData) => {
-    const setorId = editingLeito?.setorId || selectedSetorForLeitos;
-    if (!setorId) return;
-    
+  const handleLeitoSubmit = async (setorId: string, data: LeitoFormData) => {
     if (editingLeito) {
       await atualizarLeito(editingLeito.setorId, editingLeito.leitoIndex, data);
       setEditingLeito(null);
@@ -125,7 +121,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                 </h3>
                 <FormProvider {...setorFormMethods}>
                   <SetorForm
-                    onSubmit={setorFormMethods.handleSubmit(handleSetorSubmit)}
+                    onSubmit={handleSetorSubmit}
                     initialData={editingSetor?.data}
                     isLoading={loading}
                     onReset={handleResetSetorForm}
@@ -180,7 +176,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                 </h3>
                 <FormProvider {...leitoFormMethods}>
                   <LeitoForm
-                    onSubmit={setorFormMethods.handleSubmit(handleLeitoSubmit)}
+                    onSubmit={handleLeitoSubmit}
                     setores={setores}
                     selectedSetorId={editingLeito?.setorId || selectedSetorForLeitos}
                     initialData={editingLeito?.data}
