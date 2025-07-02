@@ -1,4 +1,3 @@
-
 export interface Paciente {
   id: string;
   nomePaciente: string;
@@ -23,7 +22,6 @@ export interface Leito {
   codigoLeito: string;
   leitoPCP: boolean;
   leitoIsolamento: boolean;
-  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
   dataAtualizacaoStatus: string;
   motivoBloqueio?: string;
   pacienteId: string | null; // ID do paciente atualmente no leito, ou null se vago

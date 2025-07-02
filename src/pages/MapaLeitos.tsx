@@ -15,9 +15,19 @@ const RegulacaoLeitos = () => {
   const calcularTaxaOcupacao = (leitos: any[]) => {
     if (leitos.length === 0) return 0;
     const leitosOcupados = leitos.filter(
-      leito => !['Vago', 'Higienizacao', 'Bloqueado'].includes(leito.statusLeito)
+      leito => {
+        const statusAtual = leito.historicoStatus[leito.historicoStatus.length - 1]?.status || 'Vago';
+        return statusAtual === 'Ocupado';
+      }
     ).length;
     return Math.round((leitosOcupados / leitos.length) * 100);
+  };
+
+  const contarLeitosVagos = (leitos: any[]) => {
+    return leitos.filter(leito => {
+      const statusAtual = leito.historicoStatus[leito.historicoStatus.length - 1]?.status || 'Vago';
+      return statusAtual === 'Vago';
+    }).length;
   };
 
   return (
@@ -59,9 +69,7 @@ const RegulacaoLeitos = () => {
                   </div>
                   <div className="text-center p-4 bg-yellow-50 rounded-lg">
                     <div className="text-2xl font-bold text-medical-success">
-                      {setores.reduce((acc, setor) => 
-                        acc + setor.leitos.filter(leito => leito.statusLeito === 'Vago').length, 0
-                      )}
+                      {setores.reduce((acc, setor) => acc + contarLeitosVagos(setor.leitos), 0)}
                     </div>
                     <div className="text-sm text-muted-foreground">Leitos Vagos</div>
                   </div>

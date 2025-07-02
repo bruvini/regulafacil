@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Unlock, Check, Info } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -18,6 +19,9 @@ interface LeitoCardProps {
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao } = useSetores();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
+
+  // Derivar o status atual do histórico
+  const statusAtual = leito.historicoStatus[leito.historicoStatus.length - 1]?.status || 'Vago';
 
   const handleBloquear = (motivo: string) => {
     console.log('Tentando bloquear leito:', { setorId, leitoId: leito.id, motivo });
@@ -67,7 +71,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                 )}
               </div>
             </div>
-            <StatusBadge status={leito.statusLeito} />
+            <StatusBadge historicoStatus={leito.historicoStatus} />
           </div>
           
           {(leito.leitoPCP || leito.leitoIsolamento) && (
@@ -86,7 +90,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
           )}
 
           <div className="flex-grow">
-            {leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio && (
+            {statusAtual === 'Bloqueado' && leito.motivoBloqueio && (
               <div className="flex items-start space-x-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                 <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-yellow-800">
@@ -102,7 +106,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
               <DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} />
             </div>
 
-            {leito.statusLeito === 'Vago' && (
+            {statusAtual === 'Vago' && (
               <div className="flex justify-center space-x-2">
                 <TooltipProvider>
                   <Tooltip>
@@ -142,7 +146,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
               </div>
             )}
 
-            {leito.statusLeito === 'Bloqueado' && (
+            {statusAtual === 'Bloqueado' && (
               <div className="flex justify-center">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -178,7 +182,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
               </div>
             )}
 
-            {leito.statusLeito === 'Higienizacao' && (
+            {statusAtual === 'Higienizacao' && (
               <div className="flex justify-center">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
