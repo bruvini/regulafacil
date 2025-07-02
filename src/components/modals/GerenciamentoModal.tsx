@@ -51,7 +51,10 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     setTimeout(() => setorFormMethods.setFocus('nomeSetor'), 100);
   };
 
-  const handleLeitoSubmit = async (setorId: string, data: LeitoFormData) => {
+  const handleLeitoSubmit = async (data: LeitoFormData) => {
+    const setorId = editingLeito?.setorId || selectedSetorForLeitos;
+    if (!setorId) return;
+    
     if (editingLeito) {
       await atualizarLeito(editingLeito.setorId, editingLeito.leitoIndex, data);
       setEditingLeito(null);
@@ -177,7 +180,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                 </h3>
                 <FormProvider {...leitoFormMethods}>
                   <LeitoForm
-                    onSubmit={leitoFormMethods.handleSubmit(handleLeitoSubmit)}
+                    onSubmit={setorFormMethods.handleSubmit(handleLeitoSubmit)}
                     setores={setores}
                     selectedSetorId={editingLeito?.setorId || selectedSetorForLeitos}
                     initialData={editingLeito?.data}
