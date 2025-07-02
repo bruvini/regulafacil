@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useIsolamentos } from '@/hooks/useIsolamentos';
-import { TipoIsolamento, TipoIsolamentoFormData } from '@/types/isolamento';
+import { TipoIsolamento, TipoIsolamentoFormData, RegrasPrecaucao } from '@/types/isolamento';
 import ConstrutorRegrasForm from '@/components/forms/ConstrutorRegrasForm';
 
 interface GerenciamentoIsolamentoModalProps {
