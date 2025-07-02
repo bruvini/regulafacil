@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -129,7 +130,8 @@ export const useSetores = () => {
         leitoPCP: leitoData.leitoPCP,
         leitoIsolamento: leitoData.leitoIsolamento,
         statusLeito: 'Vago' as const,
-        dataAtualizacaoStatus: new Date().toISOString()
+        dataAtualizacaoStatus: new Date().toISOString(),
+        historicoStatus: [] // Garante que sempre comece como array vazio
       }));
 
       const leitosAtualizados = [...setor.leitos, ...novosLeitos];

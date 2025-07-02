@@ -284,7 +284,7 @@ export const useReconciliation = () => {
                 ...leito,
                 pacienteId: admissao.paciente.id,
                 historicoStatus: [
-                  ...leito.historicoStatus,
+                  ...(leito.historicoStatus || []), // Correção defensiva aqui!
                   {
                     status: 'Ocupado' as const,
                     timestamp,
@@ -315,7 +315,7 @@ export const useReconciliation = () => {
                   ...leito,
                   pacienteId: null,
                   historicoStatus: [
-                    ...leito.historicoStatus,
+                    ...(leito.historicoStatus || []), // Correção defensiva aqui!
                     {
                       status: 'Vago' as const,
                       timestamp,
@@ -341,7 +341,7 @@ export const useReconciliation = () => {
                 ...leito,
                 pacienteId: movimentacao.pacienteId,
                 historicoStatus: [
-                  ...leito.historicoStatus,
+                  ...(leito.historicoStatus || []), // Correção defensiva aqui!
                   {
                     status: 'Ocupado' as const,
                     timestamp,

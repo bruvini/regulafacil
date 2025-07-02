@@ -132,7 +132,7 @@ const RegulacaoLeitos = () => {
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                                 {[...setor.leitos]
                                   .sort((a, b) => 
-                                    b.codigoLeito.localeCompare(a.codigoLeito, undefined, { numeric: true })
+                                    a.codigoLeito.localeCompare(b.codigoLeito, undefined, { numeric: true })
                                   )
                                   .map((leito) => (
                                     <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
