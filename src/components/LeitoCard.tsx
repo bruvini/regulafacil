@@ -29,10 +29,12 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   };
 
   const handleDesbloquear = () => {
+    console.log('Tentando desbloquear leito:', { setorId, leitoId: leito.id });
     desbloquearLeito(setorId, leito.id);
   };
 
   const handleFinalizarHigienizacao = () => {
+    console.log('Finalizando higienização do leito:', { setorId, leitoId: leito.id });
     finalizarHigienizacao(setorId, leito.id);
   };
 

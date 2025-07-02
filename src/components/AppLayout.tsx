@@ -41,6 +41,11 @@ const menuItems = [
     icon: BedDouble,
   },
   {
+    title: 'Mapa de Leitos',
+    url: '/mapa-leitos',
+    icon: BedDouble,
+  },
+  {
     title: 'Gestão de Isolamentos',
     url: '/gestao-isolamentos',
     icon: Shield,

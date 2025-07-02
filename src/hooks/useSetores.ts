@@ -206,6 +206,7 @@ export const useSetores = () => {
 
   const atualizarStatusLeito = async (setorId: string, leitoId: string, status: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao', motivo?: string) => {
     try {
+      console.log('Hook useSetores recebeu chamada para atualizar status:', { setorId, leitoId, novoStatus: status });
       setLoading(true);
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
@@ -221,6 +222,7 @@ export const useSetores = () => {
         ...(status === 'Bloqueado' && motivo ? { motivoBloqueio: motivo } : {})
       };
 
+      console.log('Enviando para o Firestore:', leitosAtualizados);
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
       
@@ -229,7 +231,7 @@ export const useSetores = () => {
         description: `Status do leito atualizado para ${status}!`,
       });
     } catch (error) {
-      console.error('Erro ao atualizar status do leito:', error);
+      console.error('FALHA AO ATUALIZAR NO FIRESTORE:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível atualizar o status do leito.',
@@ -242,6 +244,7 @@ export const useSetores = () => {
 
   const desbloquearLeito = async (setorId: string, leitoId: string) => {
     try {
+      console.log('Hook useSetores - desbloquearLeito chamada:', { setorId, leitoId });
       setLoading(true);
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
@@ -259,6 +262,7 @@ export const useSetores = () => {
       
       leitosAtualizados[leitoIndex] = leitoAtualizado;
 
+      console.log('Desbloquear - Enviando para o Firestore:', leitosAtualizados);
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
       
@@ -267,7 +271,7 @@ export const useSetores = () => {
         description: 'Leito desbloqueado com sucesso!',
       });
     } catch (error) {
-      console.error('Erro ao desbloquear leito:', error);
+      console.error('FALHA AO DESBLOQUEAR NO FIRESTORE:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível desbloquear o leito.',
@@ -280,6 +284,7 @@ export const useSetores = () => {
 
   const finalizarHigienizacao = async (setorId: string, leitoId: string) => {
     try {
+      console.log('Hook useSetores - finalizarHigienizacao chamada:', { setorId, leitoId });
       setLoading(true);
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
@@ -294,6 +299,7 @@ export const useSetores = () => {
         dataAtualizacaoStatus: new Date().toISOString()
       };
 
+      console.log('Finalizar Higienização - Enviando para o Firestore:', leitosAtualizados);
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
       
@@ -302,7 +308,7 @@ export const useSetores = () => {
         description: 'Higienização finalizada com sucesso!',
       });
     } catch (error) {
-      console.error('Erro ao finalizar higienização:', error);
+      console.error('FALHA AO FINALIZAR HIGIENIZAÇÃO NO FIRESTORE:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível finalizar a higienização.',
