@@ -5,16 +5,94 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { useSetores } from '@/hooks/useSetores';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
+import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
+import { useToast } from '@/hooks/use-toast';
 
 const RegulacaoLeitos = () => {
+  const { setores } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const { toast } = useToast();
 
-  const handleFileSelected = (file: File) => {
-    // A lógica para processar o arquivo virá aqui no futuro.
-    console.log("Arquivo recebido na página principal:", file.name);
-    // Por enquanto, apenas exibimos um alerta.
-    alert(`O arquivo "${file.name}" foi selecionado e estará pronto para ser processado no próximo passo.`);
+  const handleProcessFileRequest = (file: File) => {
+    setProcessing(true);
+    setValidationResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // A leitura dos dados começa da linha 4 (índice 3 do array)
+        const dadosPlanilha = jsonData.slice(3);
+        
+        const setoresPlanilha = new Set<string>();
+        const leitosPlanilha: Record<string, Set<string>> = {};
+
+        dadosPlanilha.forEach((row: any) => {
+          const nomeSetor = row[4]?.trim();
+          const nomeLeito = row[6]?.trim();
+          
+          if (nomeSetor) {
+            setoresPlanilha.add(nomeSetor);
+            if (nomeLeito) {
+              if (!leitosPlanilha[nomeSetor]) {
+                leitosPlanilha[nomeSetor] = new Set<string>();
+              }
+              leitosPlanilha[nomeSetor].add(nomeLeito);
+            }
+          }
+        });
+        
+        const setoresCadastrados = new Set(setores.map(s => s.nomeSetor));
+        const leitosCadastrados: Record<string, Set<string>> = {};
+        setores.forEach(s => {
+          leitosCadastrados[s.nomeSetor] = new Set(s.leitos.map(l => l.codigoLeito));
+        });
+
+        const setoresFaltantes = [...setoresPlanilha].filter(s => !setoresCadastrados.has(s));
+        
+        const leitosFaltantes: Record<string, string[]> = {};
+        Object.entries(leitosPlanilha).forEach(([setor, leitos]) => {
+          if (setoresCadastrados.has(setor)) {
+            const faltantes = [...leitos].filter(l => !leitosCadastrados[setor]?.has(l));
+            if (faltantes.length > 0) {
+              leitosFaltantes[setor] = faltantes;
+            }
+          }
+        });
+
+        setValidationResult({ setoresFaltantes, leitosFaltantes });
+
+      } catch (error) {
+        console.error("Erro ao processar o arquivo Excel:", error);
+        toast({
+          title: 'Erro de Processamento',
+          description: 'Ocorreu um erro ao ler a planilha. Verifique o formato do arquivo.',
+          variant: 'destructive',
+        });
+      } finally {
+        setProcessing(false);
+      }
+    };
+    reader.onerror = (error) => {
+      console.error("Erro ao ler o arquivo:", error);
+      toast({
+        title: 'Erro de Leitura',
+        description: 'Não foi possível ler o arquivo selecionado.',
+        variant: 'destructive',
+      });
+      setProcessing(false);
+    };
+    reader.readAsBinaryString(file);
   };
 
   return (
@@ -110,8 +188,15 @@ const RegulacaoLeitos = () => {
         {/* Modal de Importação */}
         <ImportacaoMVModal 
           open={importModalOpen}
-          onOpenChange={setImportModalOpen}
-          onFileSelect={handleFileSelected}
+          onOpenChange={(isOpen) => {
+            setImportModalOpen(isOpen);
+            if (!isOpen) {
+              setValidationResult(null);
+            }
+          }}
+          onProcessFileRequest={handleProcessFileRequest}
+          validationResult={validationResult}
+          processing={processing}
         />
 
       </div>
