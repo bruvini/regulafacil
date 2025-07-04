@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -91,7 +90,7 @@ const RegulacaoLeitos = () => {
             .map((row: any) => ({
               nomeCompleto: row[0]?.trim(),
               dataNascimento: row[1]?.trim(),
-              sexo: row[2]?.trim() === 'F' ? 'Feminino' : 'Masculino',
+              sexo: (row[2]?.trim() === 'F' ? 'Feminino' : 'Masculino') as 'Masculino' | 'Feminino',
               dataInternacao: row[3]?.trim(),
               setorNome: row[4]?.trim(),
               leitoCodigo: row[6]?.trim(),
