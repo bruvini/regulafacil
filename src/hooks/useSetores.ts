@@ -21,10 +21,24 @@ export const useSetores = () => {
     const unsubscribe = onSnapshot(
       collection(db, 'setoresRegulaFacil'),
       (snapshot) => {
-        const setoresData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Setor[];
+        const setoresData = snapshot.docs.map(doc => {
+          const setorData = doc.data() as Setor;
+          
+          // *** INÍCIO DA CORREÇÃO ***
+          // Garante que cada leito tenha um array de histórico inicializado
+          const leitosComHistorico = setorData.leitos.map(leito => ({
+            ...leito,
+            historico: leito.historico || [], // Se leito.historico for undefined, cria um array vazio
+          }));
+          // *** FIM DA CORREÇÃO ***
+
+          return {
+            id: doc.id,
+            ...setorData,
+            leitos: leitosComHistorico, // Usa a lista de leitos corrigida
+          }
+        }) as Setor[];
+        
         setSetores(setoresData);
         setLoading(false);
       },
