@@ -1,19 +1,12 @@
 
+import { CheckCircle, AlertTriangle, LogIn, ArrowRightLeft, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardCopy, AlertTriangle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 
 export interface ResultadoValidacao {
   setoresFaltantes: string[];
   leitosFaltantes: Record<string, string[]>;
-}
-
-export interface SyncSummary {
-  novasInternacoes: PacienteDaPlanilha[];
-  transferencias: { paciente: PacienteDaPlanilha; leitoAntigo: string }[];
-  altas: { nomePaciente: string; leitoAntigo: string }[];
 }
 
 export interface PacienteDaPlanilha {
@@ -26,81 +19,70 @@ export interface PacienteDaPlanilha {
   especialidade: string;
 }
 
-interface ValidacaoImportacaoProps {
-  resultado?: ResultadoValidacao;
-  syncSummary?: SyncSummary;
-  onContinue: () => void;
-  onConfirmSync?: () => void;
-  isSyncing?: boolean;
+export interface SyncSummary {
+  novasInternacoes: PacienteDaPlanilha[];
+  transferencias: { paciente: PacienteDaPlanilha; leitoAntigo: string }[];
+  altas: { nomePaciente: string; leitoAntigo: string }[];
 }
 
-export const ValidacaoImportacao = ({ resultado, syncSummary, onContinue, onConfirmSync, isSyncing = false }: ValidacaoImportacaoProps) => {
-  const { toast } = useToast();
+interface ValidacaoImportacaoProps {
+  resultado: ResultadoValidacao | null;
+  syncSummary: SyncSummary | null;
+  onContinue: () => void;
+  onConfirmSync: () => void;
+  isSyncing: boolean;
+}
 
-  const handleCopyToClipboard = (text: string, type: 'setor' | 'leito') => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copiado!',
-      description: `Lista de ${type === 'setor' ? 'setores' : 'leitos'} copiada para a área de transferência.`,
-    });
-  };
-
-  // Scenario 1: Validation Results
+export const ValidacaoImportacao = ({ 
+  resultado, 
+  syncSummary, 
+  onContinue, 
+  onConfirmSync,
+  isSyncing 
+}: ValidacaoImportacaoProps) => {
+  
+  // Cenário 1: Resultado de validação (setores/leitos faltantes)
   if (resultado) {
     const temInconsistencias = resultado.setoresFaltantes.length > 0 || Object.keys(resultado.leitosFaltantes).length > 0;
-
+    
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4 bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-lg">
-          <AlertTriangle className="h-8 w-8 text-yellow-600" />
+        <div className="flex items-center gap-4 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200 p-4 rounded-lg">
+          <AlertTriangle className="h-8 w-8 text-orange-600 dark:text-orange-400 flex-shrink-0" />
           <div>
-            <h3 className="font-bold">Ação Necessária</h3>
-            <p className="text-sm">Foram encontrados setores e/ou leitos na planilha que não estão cadastrados no sistema. Por favor, cadastre-os antes de prosseguir.</p>
+            <h3 className="font-bold">Validação da Planilha</h3>
+            <p className="text-sm">Alguns setores ou leitos da planilha não foram encontrados no sistema.</p>
           </div>
         </div>
 
-        {temInconsistencias ? (
-          <div className="grid md:grid-cols-2 gap-6">
-            {resultado.setoresFaltantes.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-lg">Setores a Cadastrar</CardTitle></CardHeader>
-                <CardContent>
-                  <ul className="list-disc list-inside bg-muted p-3 rounded-md">
-                    {resultado.setoresFaltantes.map(setor => <li key={setor}>{setor}</li>)}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-
-            {Object.keys(resultado.leitosFaltantes).length > 0 && (
-              <div className={resultado.setoresFaltantes.length > 0 ? '' : 'md:col-span-2'}>
-                <Card>
-                  <CardHeader><CardTitle className="text-lg">Leitos a Cadastrar</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    {Object.entries(resultado.leitosFaltantes).map(([setor, leitos]) => {
-                      const leitosString = leitos.join(', ');
-                      return (
-                        <div key={setor}>
-                          <h4 className="font-semibold">{setor}</h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-sm bg-muted p-2 rounded-md flex-grow break-all">{leitosString}</p>
-                            <Button size="sm" variant="ghost" onClick={() => handleCopyToClipboard(leitosString, 'leito')}>
-                              <ClipboardCopy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+        {resultado.setoresFaltantes.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="font-semibold text-red-700 dark:text-red-300">Setores não encontrados ({resultado.setoresFaltantes.length}):</h4>
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3 rounded max-h-32 overflow-y-auto">
+              <ul className="list-disc list-inside text-sm space-y-1">
+                {resultado.setoresFaltantes.map((setor, index) => (
+                  <li key={index} className="text-red-800 dark:text-red-200">{setor}</li>
+                ))}
+              </ul>
+            </div>
           </div>
-        ) : (
-           <p className="text-center text-green-700 font-medium">Nenhuma inconsistência encontrada. Tudo pronto para a Etapa 2.</p>
         )}
 
-        <div className="flex justify-end pt-4">
+        {Object.keys(resultado.leitosFaltantes).length > 0 && (
+          <div className="space-y-2">
+            <h4 className="font-semibold text-red-700 dark:text-red-300">Leitos não encontrados:</h4>
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-3 rounded max-h-32 overflow-y-auto">
+              {Object.entries(resultado.leitosFaltantes).map(([setor, leitos]) => (
+                <div key={setor} className="mb-2">
+                  <p className="font-medium text-red-800 dark:text-red-200">{setor}:</p>
+                  <p className="text-sm text-red-700 dark:text-red-300 ml-4">{leitos.join(', ')}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end pt-4 border-t">
           <Button onClick={onContinue} disabled={temInconsistencias}>
             {temInconsistencias ? 'Corrija para continuar' : 'Sincronizar Pacientes'}
           </Button>
@@ -108,75 +90,64 @@ export const ValidacaoImportacao = ({ resultado, syncSummary, onContinue, onConf
       </div>
     );
   }
-
-  // Scenario 2: Sync Summary Results
+  
+  // Cenário 2: Resumo de sincronização (cards totalizadores)
   if (syncSummary) {
     const totalMudancas = syncSummary.novasInternacoes.length + syncSummary.transferencias.length + syncSummary.altas.length;
-
+    
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4 bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg">
-          <AlertTriangle className="h-8 w-8 text-blue-600" />
+        <div className="flex items-center gap-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 p-4 rounded-lg">
+          <CheckCircle className="h-8 w-8 text-blue-600 dark:text-blue-400 flex-shrink-0" />
           <div>
-            <h3 className="font-bold">Resumo das Mudanças</h3>
-            <p className="text-sm">Analise cuidadosamente as alterações que serão realizadas antes de confirmar.</p>
+            <h3 className="font-bold">Resumo da Sincronização</h3>
+            <p className="text-sm">Revise os totais de mudanças abaixo. Se estiver tudo correto, confirme para aplicar as alterações no sistema.</p>
           </div>
         </div>
 
-        <div className="grid gap-6">
-          {syncSummary.novasInternacoes.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-lg text-green-700">Novas Internações ({syncSummary.novasInternacoes.length})</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {syncSummary.novasInternacoes.map((paciente, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-2 bg-green-50 rounded">
-                      <span className="font-medium">{paciente.nomeCompleto}</span>
-                      <span className="text-sm text-muted-foreground">{paciente.leitoCodigo} - {paciente.setorNome}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {syncSummary.transferencias.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-lg text-blue-700">Transferências ({syncSummary.transferencias.length})</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {syncSummary.transferencias.map((transferencia, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-2 bg-blue-50 rounded">
-                      <span className="font-medium">{transferencia.paciente.nomeCompleto}</span>
-                      <span className="text-sm text-muted-foreground">{transferencia.leitoAntigo} → {transferencia.paciente.leitoCodigo}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {syncSummary.altas.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle className="text-lg text-red-700">Altas ({syncSummary.altas.length})</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {syncSummary.altas.map((alta, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-2 bg-red-50 rounded">
-                      <span className="font-medium">{alta.nomePaciente}</span>
-                      <span className="text-sm text-muted-foreground">Liberando leito {alta.leitoAntigo}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {totalMudancas === 0 && (
-            <p className="text-center text-gray-600 font-medium">Nenhuma mudança detectada. O sistema já está sincronizado.</p>
-          )}
+        {/* Cards de Resumo */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+          <Card className="bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-3xl text-green-700 dark:text-green-300">{syncSummary.novasInternacoes.length}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-sm font-medium text-green-800 dark:text-green-300 flex items-center justify-center gap-2">
+                <LogIn className="h-4 w-4"/>Novas Internações
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-3xl text-orange-700 dark:text-orange-300">{syncSummary.transferencias.length}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-300 flex items-center justify-center gap-2">
+                <ArrowRightLeft className="h-4 w-4"/>Transferências
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-3xl text-red-700 dark:text-red-300">{syncSummary.altas.length}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-sm font-medium text-red-800 dark:text-red-300 flex items-center justify-center gap-2">
+                <LogOut className="h-4 w-4"/>Altas / Saídas
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
+        {totalMudancas === 0 && (
+          <p className="text-center text-muted-foreground pt-4">
+            Nenhuma mudança detectada. O sistema já está sincronizado com a planilha.
+          </p>
+        )}
+
+        {/* Barra de progresso durante sincronização */}
         {isSyncing && (
           <div className="space-y-2 pt-4">
             <p className="text-sm font-medium text-center text-medical-primary">Sincronizando dados, por favor aguarde...</p>
@@ -184,10 +155,10 @@ export const ValidacaoImportacao = ({ resultado, syncSummary, onContinue, onConf
           </div>
         )}
 
-        <div className="flex justify-end pt-4">
+        {/* Botão de confirmação */}
+        <div className="flex justify-end pt-4 border-t">
           <Button onClick={onConfirmSync} disabled={totalMudancas === 0 || isSyncing}>
-            {!isSyncing && `Confirmar e Sincronizar ${totalMudancas > 0 ? `(${totalMudancas} alterações)` : ''}`}
-            {isSyncing && 'Sincronizando...'}
+            {isSyncing ? 'Sincronizando...' : `Confirmar e Sincronizar ${totalMudancas > 0 ? `(${totalMudancas} alterações)` : ''}`}
           </Button>
         </div>
       </div>
