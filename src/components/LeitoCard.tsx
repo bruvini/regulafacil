@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Unlock, Check, Info } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Unlock, Check, Info, BedDouble, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -31,20 +32,12 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
 
   const handleDesbloquear = () => {
     console.log('Tentando desbloquear leito:', { setorId, leitoId: leito.id });
-    if (desbloquearLeito) {
-      desbloquearLeito(setorId, leito.id);
-    } else {
-      console.error('Função desbloquearLeito não está disponível');
-    }
+    desbloquearLeito(setorId, leito.id);
   };
 
   const handleFinalizarHigienizacao = () => {
     console.log('Finalizando higienização do leito:', { setorId, leitoId: leito.id });
-    if (finalizarHigienizacao) {
-      finalizarHigienizacao(setorId, leito.id);
-    } else {
-      console.error('Função finalizarHigienizacao não está disponível');
-    }
+    finalizarHigienizacao(setorId, leito.id);
   };
 
   return (
@@ -136,6 +129,49 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Higienizar Leito</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+
+            {leito.statusLeito === 'Ocupado' && (
+              <div className="flex justify-center space-x-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <BedDouble className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Liberar Leito</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <AlertTriangle className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Solicitar UTI</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <ArrowRightLeft className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Solicitar Remanejamento</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
