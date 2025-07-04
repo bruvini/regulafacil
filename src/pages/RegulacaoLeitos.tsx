@@ -1,11 +1,22 @@
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Download } from 'lucide-react';
+import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 
 const RegulacaoLeitos = () => {
+  const [importModalOpen, setImportModalOpen] = useState(false);
+
+  const handleFileSelected = (file: File) => {
+    // A lógica para processar o arquivo virá aqui no futuro.
+    console.log("Arquivo recebido na página principal:", file.name);
+    // Por enquanto, apenas exibimos um alerta.
+    alert(`O arquivo "${file.name}" foi selecionado e estará pronto para ser processado no próximo passo.`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -45,7 +56,7 @@ const RegulacaoLeitos = () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon">
+                      <Button variant="outline" size="icon" onClick={() => setImportModalOpen(true)}>
                         <Download className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -95,6 +106,13 @@ const RegulacaoLeitos = () => {
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+
+        {/* Modal de Importação */}
+        <ImportacaoMVModal 
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          onFileSelect={handleFileSelected}
+        />
 
       </div>
     </div>
