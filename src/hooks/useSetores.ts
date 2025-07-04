@@ -242,6 +242,44 @@ export const useSetores = () => {
     }
   };
 
+  const desbloquearLeito = async (setorId: string, leitoId: string) => {
+    try {
+      setLoading(true);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => {
+        if (l.id === leitoId) {
+          const { motivoBloqueio, ...leitoRestante } = l; // Remove o motivo do bloqueio
+          return {
+            ...leitoRestante,
+            statusLeito: 'Vago',
+            dataAtualizacaoStatus: new Date().toISOString()
+          };
+        }
+        return l;
+      });
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+
+      toast({
+        title: 'Sucesso',
+        description: 'Leito desbloqueado com sucesso!',
+      });
+
+    } catch (error) {
+      console.error('Falha ao desbloquear o leito no Firestore:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível desbloquear o leito.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     setores,
     loading,
@@ -252,5 +290,6 @@ export const useSetores = () => {
     atualizarLeito,
     excluirLeito,
     atualizarStatusLeito,
+    desbloquearLeito,
   };
 };

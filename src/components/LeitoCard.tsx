@@ -1,9 +1,10 @@
 
 import { useState } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Leito } from '@/types/hospital';
 import StatusBadge from './StatusBadge';
 import DurationDisplay from './DurationDisplay';
@@ -16,7 +17,7 @@ interface LeitoCardProps {
 }
 
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
-  const { atualizarStatusLeito } = useSetores();
+  const { atualizarStatusLeito, desbloquearLeito } = useSetores();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
 
   const handleBloquear = (motivo: string) => {
@@ -27,6 +28,16 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const handleHigienizar = () => {
     console.log('Tentando higienizar leito:', { setorId, leitoId: leito.id });
     atualizarStatusLeito(setorId, leito.id, 'Higienizacao');
+  };
+
+  const handleDesbloquear = () => {
+    // Log para depuração
+    console.log('Tentando desbloquear leito:', { setorId, leitoId: leito.id });
+    if (desbloquearLeito) {
+      desbloquearLeito(setorId, leito.id);
+    } else {
+      console.error('Função desbloquearLeito não está disponível no hook useSetores.');
+    }
   };
 
   return (
@@ -121,6 +132,42 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+              </div>
+            )}
+
+            {leito.statusLeito === 'Bloqueado' && (
+              <div className="flex justify-center">
+                <AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Unlock className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Desbloquear Leito</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Desbloquear Leito</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Deseja realmente desbloquear o leito {leito.codigoLeito}?
+                        Ele ficará disponível para ocupação.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDesbloquear}>
+                        Desbloquear
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             )}
 
