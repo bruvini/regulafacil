@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -280,6 +279,43 @@ export const useSetores = () => {
     }
   };
 
+  const finalizarHigienizacao = async (setorId: string, leitoId: string) => {
+    try {
+      setLoading(true);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => {
+        if (l.id === leitoId) {
+          return {
+            ...l,
+            statusLeito: 'Vago',
+            dataAtualizacaoStatus: new Date().toISOString()
+          };
+        }
+        return l;
+      });
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+
+      toast({
+        title: 'Sucesso',
+        description: 'Higienização finalizada com sucesso!',
+      });
+
+    } catch (error) {
+      console.error('Falha ao finalizar a higienização no Firestore:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível finalizar a higienização.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     setores,
     loading,
@@ -291,5 +327,6 @@ export const useSetores = () => {
     excluirLeito,
     atualizarStatusLeito,
     desbloquearLeito,
+    finalizarHigienizacao,
   };
 };
