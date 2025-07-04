@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -9,15 +9,37 @@ import StatusBadge from './StatusBadge';
 import DurationDisplay from './DurationDisplay';
 import MotivoBloqueioModal from './modals/MotivoBloqueioModal';
 import { useSetores } from '@/hooks/useSetores';
+import { usePacientes } from '@/hooks/usePacientes';
+import { cn } from '@/lib/utils';
 
 interface LeitoCardProps {
   leito: Leito;
   setorId: string;
 }
 
+const calcularIdade = (dataNascimento: string): string => {
+  if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
+  
+  const [dia, mes, ano] = dataNascimento.split('/').map(Number);
+  const hoje = new Date();
+  const nascimento = new Date(ano, mes - 1, dia);
+  
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const m = hoje.getMonth() - nascimento.getMonth();
+  
+  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade--;
+  }
+  
+  return idade.toString();
+};
+
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao } = useSetores();
+  const { pacientes } = usePacientes();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
+
+  const paciente = leito.pacienteId ? pacientes.find(p => p.id === leito.pacienteId) : null;
 
   const handleBloquear = (motivo: string) => {
     console.log('Tentando bloquear leito:', { setorId, leitoId: leito.id, motivo });
@@ -30,7 +52,6 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   };
 
   const handleDesbloquear = () => {
-    // Log para depuração
     console.log('Tentando desbloquear leito:', { setorId, leitoId: leito.id });
     if (desbloquearLeito) {
       desbloquearLeito(setorId, leito.id);
@@ -40,7 +61,6 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   };
 
   const handleFinalizarHigienizacao = () => {
-    // Log para depuração
     console.log('Finalizando higienização do leito:', { setorId, leitoId: leito.id });
     if (finalizarHigienizacao) {
       finalizarHigienizacao(setorId, leito.id);
@@ -51,7 +71,13 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
 
   return (
     <>
-      <Card className="p-3 shadow-card hover:shadow-medical transition-all duration-200 border border-border/50 flex flex-col h-full">
+      <Card 
+        className={cn(
+          "p-3 shadow-card hover:shadow-medical transition-all duration-200 border flex flex-col h-full",
+          paciente?.sexo === 'Feminino' && 'border-2 border-pink-500',
+          paciente?.sexo === 'Masculino' && 'border-2 border-blue-500'
+        )}
+      >
         <div className="flex flex-col h-full space-y-2">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-2">
@@ -87,8 +113,22 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
             </div>
           )}
 
-          <div className="flex-grow">
-            {leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio && (
+          <div className="flex-grow space-y-2 py-2">
+            {leito.statusLeito === 'Ocupado' && paciente ? (
+              <div className="text-left space-y-2">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <p className="font-medium text-sm leading-tight">{paciente.nomeCompleto}</p>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {calcularIdade(paciente.dataNascimento)} anos
+                </p>
+                <div className="flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">{paciente.especialidade}</p>
+                </div>
+              </div>
+            ) : leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio ? (
               <div className="flex items-start space-x-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                 <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-yellow-800">
@@ -96,6 +136,8 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                   <p>{leito.motivoBloqueio}</p>
                 </div>
               </div>
+            ) : (
+              <div className="h-full w-full"></div>
             )}
           </div>
 
