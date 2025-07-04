@@ -4,17 +4,29 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileUp, Info } from 'lucide-react';
-import { ValidacaoImportacao, ResultadoValidacao } from './ValidacaoImportacao';
+import { ValidacaoImportacao, ResultadoValidacao, SyncSummary } from './ValidacaoImportacao';
 
 interface ImportacaoMVModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onProcessFileRequest: (file: File) => void;
   validationResult: ResultadoValidacao | null;
+  syncSummary: SyncSummary | null;
   processing: boolean;
+  isSyncing: boolean;
+  onConfirmSync: () => void;
 }
 
-export const ImportacaoMVModal = ({ open, onOpenChange, onProcessFileRequest, validationResult, processing }: ImportacaoMVModalProps) => {
+export const ImportacaoMVModal = ({ 
+  open, 
+  onOpenChange, 
+  onProcessFileRequest, 
+  validationResult, 
+  syncSummary,
+  processing, 
+  isSyncing,
+  onConfirmSync 
+}: ImportacaoMVModalProps) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,8 +47,13 @@ export const ImportacaoMVModal = ({ open, onOpenChange, onProcessFileRequest, va
   };
   
   const handleContinue = () => {
-    alert("Etapa 2 ainda em desenvolvimento.");
+    // This triggers the sync summary generation
+    if (selectedFile) {
+      onProcessFileRequest(selectedFile);
+    }
   };
+
+  const isShowingResults = validationResult || syncSummary;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
@@ -48,17 +65,28 @@ export const ImportacaoMVModal = ({ open, onOpenChange, onProcessFileRequest, va
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-medical-primary">
-            {validationResult ? "Validação de Dados da Planilha" : "Importar Pacientes do Soul MV"}
+            {syncSummary 
+              ? "Confirmação de Sincronização" 
+              : validationResult 
+                ? "Validação de Dados da Planilha" 
+                : "Importar Pacientes do Soul MV"
+            }
           </DialogTitle>
-          {!validationResult && (
+          {!isShowingResults && (
             <DialogDescription>
               Siga os passos para exportar os dados e importe o arquivo gerado.
             </DialogDescription>
           )}
         </DialogHeader>
 
-        {validationResult ? (
-            <ValidacaoImportacao resultado={validationResult} onContinue={handleContinue} />
+        {isShowingResults ? (
+            <ValidacaoImportacao 
+              resultado={validationResult} 
+              syncSummary={syncSummary}
+              onContinue={handleContinue} 
+              onConfirmSync={onConfirmSync}
+              isSyncing={isSyncing}
+            />
         ) : (
             <>
                 <div className="grid md:grid-cols-2 gap-6 py-4">

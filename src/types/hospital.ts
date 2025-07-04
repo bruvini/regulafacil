@@ -1,3 +1,4 @@
+
 export interface HistoricoLeito {
   statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
   data: string;
@@ -27,6 +28,22 @@ export interface Paciente {
   especialidade: string;
   leitoAtualId?: string; // ID do leito que ele ocupa
   setorAtualId?: string;
+}
+
+export interface PacienteDaPlanilha {
+  nomeCompleto: string;
+  dataNascimento: string;
+  sexo: 'Masculino' | 'Feminino';
+  dataInternacao: string;
+  setorNome: string;
+  leitoCodigo: string;
+  especialidade: string;
+}
+
+export interface SyncSummary {
+  novasInternacoes: PacienteDaPlanilha[];
+  transferencias: { paciente: PacienteDaPlanilha; leitoAntigo: string }[];
+  altas: { nomePaciente: string; leitoAntigo: string }[];
 }
 
 export interface Setor {

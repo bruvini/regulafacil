@@ -10,13 +10,18 @@ import { useSetores } from '@/hooks/useSetores';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { useToast } from '@/hooks/use-toast';
-import { Paciente, HistoricoLeito } from '@/types/hospital';
+import { Paciente, HistoricoLeito, SyncSummary, PacienteDaPlanilha } from '@/types/hospital';
+import { collection, doc, writeBatch } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 const RegulacaoLeitos = () => {
   const { setores } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
+  const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const { toast } = useToast();
   
   // const { pacientes } = usePacientes(); // Vamos precisar disso depois
@@ -25,6 +30,7 @@ const RegulacaoLeitos = () => {
   const handleProcessFileRequest = (file: File) => {
     setProcessing(true);
     setValidationResult(null);
+    setSyncSummary(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -74,7 +80,68 @@ const RegulacaoLeitos = () => {
           }
         });
 
-        setValidationResult({ setoresFaltantes, leitosFaltantes });
+        const temInconsistencias = setoresFaltantes.length > 0 || Object.keys(leitosFaltantes).length > 0;
+
+        if (temInconsistencias) {
+          // Show validation errors
+          setValidationResult({ setoresFaltantes, leitosFaltantes });
+        } else {
+          // If validation passes, proceed to sync summary generation
+          const pacientesPlanilha: PacienteDaPlanilha[] = dadosPlanilha
+            .map((row: any) => ({
+              nomeCompleto: row[0]?.trim(),
+              dataNascimento: row[1]?.trim(),
+              sexo: row[2]?.trim() === 'F' ? 'Feminino' : 'Masculino',
+              dataInternacao: row[3]?.trim(),
+              setorNome: row[4]?.trim(),
+              leitoCodigo: row[6]?.trim(),
+              especialidade: row[7]?.trim()
+            }))
+            .filter(p => p.nomeCompleto && p.leitoCodigo);
+
+          const todosLeitos = setores.flatMap(s => s.leitos.map(l => ({ ...l, setorNome: s.nomeSetor })));
+          const leitosOcupados = todosLeitos.filter(l => l.statusLeito === 'Ocupado');
+
+          const summary: SyncSummary = { novasInternacoes: [], transferencias: [], altas: [] };
+
+          // 1. Identificar Altas: Pacientes no sistema que não estão na planilha
+          leitosOcupados.forEach(leitoOcupado => {
+            const pacienteNoLeito = pacientes.find(p => p.id === leitoOcupado.pacienteId);
+            if (pacienteNoLeito && !pacientesPlanilha.some(p => p.nomeCompleto === pacienteNoLeito.nomeCompleto)) {
+              summary.altas.push({ 
+                nomePaciente: pacienteNoLeito.nomeCompleto, 
+                leitoAntigo: leitoOcupado.codigoLeito 
+              });
+            }
+          });
+
+          // 2. Identificar Novas Internações e Transferências
+          pacientesPlanilha.forEach(pacientePlanilha => {
+            const pacienteExistente = pacientes.find(p => p.nomeCompleto === pacientePlanilha.nomeCompleto);
+            const leitoDaPlanilha = todosLeitos.find(l => l.codigoLeito === pacientePlanilha.leitoCodigo);
+
+            if (!leitoDaPlanilha) return; // Leito inválido, já foi pego na validação
+
+            if (pacienteExistente) {
+              // Paciente já existe - verifica transferência
+              if (pacienteExistente.leitoAtualId !== leitoDaPlanilha.id) {
+                const leitoAntigo = todosLeitos.find(l => l.id === pacienteExistente.leitoAtualId);
+                summary.transferencias.push({ 
+                  paciente: pacientePlanilha, 
+                  leitoAntigo: leitoAntigo?.codigoLeito || 'N/A' 
+                });
+              }
+            } else {
+              // Paciente novo - nova internação
+              if (leitoDaPlanilha.statusLeito === 'Vago') {
+                summary.novasInternacoes.push(pacientePlanilha);
+              }
+            }
+          });
+
+          setSyncSummary(summary);
+          setDadosPlanilhaProcessados(pacientesPlanilha);
+        }
 
       } catch (error) {
         console.error("Erro ao processar o arquivo Excel:", error);
@@ -101,22 +168,173 @@ const RegulacaoLeitos = () => {
 
   // Nova função de sincronização
   const handleSync = async () => {
-    // AQUI ENTRARÁ TODA A LÓGICA COMPLEXA DE COMPARAÇÃO E ATUALIZAÇÃO
-    // 1. Mapear pacientes e leitos da planilha.
-    // 2. Mapear pacientes e leitos do Firestore.
-    // 3. Comparar e identificar:
-    //    - Novas internações (paciente novo em leito vago)
-    //    - Transferências (paciente existente em novo leito)
-    //    - Altas (paciente do sistema que não está mais na planilha)
-    // 4. Preparar um batch de escritas no Firestore para atualizar tudo atomicamente.
-    //    - Atualizar status, pacienteId e histórico dos leitos afetados.
-    //    - Criar/atualizar/remover documentos na coleção de pacientes.
+    if (!syncSummary) return;
     
-    toast({
-      title: 'Sincronização iniciada!',
-      description: 'Este é o próximo passo a ser desenvolvido.',
-    });
-    setImportModalOpen(false); // Fecha o modal
+    setIsSyncing(true);
+
+    try {
+      const batch = writeBatch(db);
+      const allSetoresMap = new Map(setores.map(s => [s.id!, s]));
+      const todosLeitos = setores.flatMap(s => s.leitos.map(l => ({ ...l, setorId: s.id!, setorNome: s.nomeSetor })));
+
+      // Lógica de Altas - liberar leitos ocupados
+      syncSummary.altas.forEach(alta => {
+        const leitoParaLiberar = todosLeitos.find(l => l.codigoLeito === alta.leitoAntigo);
+        if (leitoParaLiberar) {
+          const setor = allSetoresMap.get(leitoParaLiberar.setorId);
+          if (setor) {
+            const leitosAtualizados = setor.leitos.map(l => {
+              if (l.id === leitoParaLiberar.id) {
+                const novoHistorico: HistoricoLeito = {
+                  statusLeito: 'Vago',
+                  data: new Date().toISOString(),
+                };
+                return {
+                  ...l,
+                  statusLeito: 'Vago' as const,
+                  dataAtualizacaoStatus: new Date().toISOString(),
+                  pacienteId: undefined,
+                  historico: [...(l.historico || []), novoHistorico]
+                };
+              }
+              return l;
+            });
+            
+            const setorRef = doc(db, 'setoresRegulaFacil', leitoParaLiberar.setorId);
+            batch.update(setorRef, { leitos: leitosAtualizados });
+          }
+        }
+      });
+
+      // Lógica de Transferências
+      syncSummary.transferencias.forEach(transferencia => {
+        const leitoAntigo = todosLeitos.find(l => l.codigoLeito === transferencia.leitoAntigo);
+        const leitoNovo = todosLeitos.find(l => l.codigoLeito === transferencia.paciente.leitoCodigo);
+        
+        if (leitoAntigo && leitoNovo) {
+          // Liberar leito antigo
+          const setorAntigo = allSetoresMap.get(leitoAntigo.setorId);
+          if (setorAntigo) {
+            const leitosAtualizados = setorAntigo.leitos.map(l => {
+              if (l.id === leitoAntigo.id) {
+                const novoHistorico: HistoricoLeito = {
+                  statusLeito: 'Vago',
+                  data: new Date().toISOString(),
+                };
+                return {
+                  ...l,
+                  statusLeito: 'Vago' as const,
+                  dataAtualizacaoStatus: new Date().toISOString(),
+                  pacienteId: undefined,
+                  historico: [...(l.historico || []), novoHistorico]
+                };
+              }
+              return l;
+            });
+            
+            const setorRef = doc(db, 'setoresRegulaFacil', leitoAntigo.setorId);
+            batch.update(setorRef, { leitos: leitosAtualizados });
+          }
+
+          // Ocupar leito novo
+          const setorNovo = allSetoresMap.get(leitoNovo.setorId);
+          if (setorNovo) {
+            const pacienteId = transferencia.paciente.nomeCompleto.toLowerCase().replace(/\s+/g, '_');
+            const leitosAtualizados = setorNovo.leitos.map(l => {
+              if (l.id === leitoNovo.id) {
+                const novoHistorico: HistoricoLeito = {
+                  statusLeito: 'Ocupado',
+                  data: new Date().toISOString(),
+                  pacienteId: pacienteId,
+                };
+                return {
+                  ...l,
+                  statusLeito: 'Ocupado' as const,
+                  dataAtualizacaoStatus: new Date().toISOString(),
+                  pacienteId: pacienteId,
+                  historico: [...(l.historico || []), novoHistorico]
+                };
+              }
+              return l;
+            });
+            
+            const setorRef = doc(db, 'setoresRegulaFacil', leitoNovo.setorId);
+            batch.update(setorRef, { leitos: leitosAtualizados });
+          }
+        }
+      });
+
+      // Lógica de Novas Internações
+      syncSummary.novasInternacoes.forEach(internacao => {
+        const leitoParaOcupar = todosLeitos.find(l => l.codigoLeito === internacao.leitoCodigo);
+        if (leitoParaOcupar) {
+          const setor = allSetoresMap.get(leitoParaOcupar.setorId);
+          if (setor) {
+            const pacienteId = internacao.nomeCompleto.toLowerCase().replace(/\s+/g, '_');
+            const leitosAtualizados = setor.leitos.map(l => {
+              if (l.id === leitoParaOcupar.id) {
+                const novoHistorico: HistoricoLeito = {
+                  statusLeito: 'Ocupado',
+                  data: new Date().toISOString(),
+                  pacienteId: pacienteId,
+                };
+                return {
+                  ...l,
+                  statusLeito: 'Ocupado' as const,
+                  dataAtualizacaoStatus: new Date().toISOString(),
+                  pacienteId: pacienteId,
+                  historico: [...(l.historico || []), novoHistorico]
+                };
+              }
+              return l;
+            });
+            
+            const setorRef = doc(db, 'setoresRegulaFacil', leitoParaOcupar.setorId);
+            batch.update(setorRef, { leitos: leitosAtualizados });
+
+            // Criar documento do paciente
+            const pacienteData: Paciente = {
+              id: pacienteId,
+              nomeCompleto: internacao.nomeCompleto,
+              dataNascimento: internacao.dataNascimento,
+              sexo: internacao.sexo,
+              dataInternacao: internacao.dataInternacao,
+              especialidade: internacao.especialidade,
+              leitoAtualId: leitoParaOcupar.id,
+              setorAtualId: leitoParaOcupar.setorId,
+            };
+
+            const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+            batch.set(pacienteRef, pacienteData);
+          }
+        }
+      });
+
+      // Simulação de tempo para a barra de progresso ser visível
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Executar todas as operações atomicamente
+      await batch.commit();
+      
+      toast({ 
+        title: 'Sucesso!', 
+        description: `Sincronização concluída! ${syncSummary.novasInternacoes.length + syncSummary.transferencias.length + syncSummary.altas.length} operações realizadas.`,
+      });
+      
+      setImportModalOpen(false);
+      
+    } catch (error) {
+      console.error("Erro ao sincronizar:", error);
+      toast({ 
+        title: 'Erro!', 
+        description: 'Não foi possível sincronizar os dados.', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsSyncing(false);
+      setSyncSummary(null);
+      setValidationResult(null);
+    }
   };
 
   return (
@@ -216,11 +434,15 @@ const RegulacaoLeitos = () => {
             setImportModalOpen(isOpen);
             if (!isOpen) {
               setValidationResult(null);
+              setSyncSummary(null);
             }
           }}
           onProcessFileRequest={handleProcessFileRequest}
           validationResult={validationResult}
+          syncSummary={syncSummary}
           processing={processing}
+          isSyncing={isSyncing}
+          onConfirmSync={handleSync}
         />
 
       </div>
