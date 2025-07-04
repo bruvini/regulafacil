@@ -143,6 +143,10 @@ export const useSetores = () => {
             leitoIsolamento: leitoData.leitoIsolamento,
             statusLeito: 'Vago',
             dataAtualizacaoStatus: new Date().toISOString(),
+            historico: [{
+              statusLeito: 'Vago',
+              data: new Date().toISOString(),
+            }],
           };
           novosLeitos.push(novoLeito);
           leitosAdicionados.push(codigo);

@@ -79,8 +79,8 @@ export const ValidacaoImportacao = ({ resultado, onContinue }: ValidacaoImportac
       )}
 
       <div className="flex justify-end pt-4">
-        <Button onClick={onContinue} disabled={true} title="Funcionalidade em desenvolvimento">
-          Continuar para Importação (Etapa 2)
+        <Button onClick={onContinue} disabled={temInconsistencias}>
+          {temInconsistencias ? 'Corrija para continuar' : 'Sincronizar Pacientes'}
         </Button>
       </div>
     </div>

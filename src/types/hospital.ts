@@ -1,3 +1,9 @@
+export interface HistoricoLeito {
+  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
+  data: string;
+  pacienteId?: string; // ID do paciente se o status for 'Ocupado'
+  motivoBloqueio?: string;
+}
 
 export interface Leito {
   id: string;
@@ -7,6 +13,20 @@ export interface Leito {
   statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
   dataAtualizacaoStatus: string;
   motivoBloqueio?: string;
+  // Novos campos:
+  pacienteId?: string; // ID do paciente atualmente no leito
+  historico: HistoricoLeito[]; // Log de todas as movimentações
+}
+
+export interface Paciente {
+  id?: string; // ID será o nome do paciente normalizado
+  nomeCompleto: string;
+  dataNascimento: string;
+  sexo: 'Masculino' | 'Feminino';
+  dataInternacao: string;
+  especialidade: string;
+  leitoAtualId?: string; // ID do leito que ele ocupa
+  setorAtualId?: string;
 }
 
 export interface Setor {

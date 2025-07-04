@@ -10,6 +10,7 @@ import { useSetores } from '@/hooks/useSetores';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { useToast } from '@/hooks/use-toast';
+import { Paciente, HistoricoLeito } from '@/types/hospital';
 
 const RegulacaoLeitos = () => {
   const { setores } = useSetores();
@@ -17,6 +18,9 @@ const RegulacaoLeitos = () => {
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [processing, setProcessing] = useState(false);
   const { toast } = useToast();
+  
+  // const { pacientes } = usePacientes(); // Vamos precisar disso depois
+  const [pacientes, setPacientes] = useState<Paciente[]>([]); // Simulação temporária
 
   const handleProcessFileRequest = (file: File) => {
     setProcessing(true);
@@ -93,6 +97,26 @@ const RegulacaoLeitos = () => {
       setProcessing(false);
     };
     reader.readAsBinaryString(file);
+  };
+
+  // Nova função de sincronização
+  const handleSync = async () => {
+    // AQUI ENTRARÁ TODA A LÓGICA COMPLEXA DE COMPARAÇÃO E ATUALIZAÇÃO
+    // 1. Mapear pacientes e leitos da planilha.
+    // 2. Mapear pacientes e leitos do Firestore.
+    // 3. Comparar e identificar:
+    //    - Novas internações (paciente novo em leito vago)
+    //    - Transferências (paciente existente em novo leito)
+    //    - Altas (paciente do sistema que não está mais na planilha)
+    // 4. Preparar um batch de escritas no Firestore para atualizar tudo atomicamente.
+    //    - Atualizar status, pacienteId e histórico dos leitos afetados.
+    //    - Criar/atualizar/remover documentos na coleção de pacientes.
+    
+    toast({
+      title: 'Sincronização iniciada!',
+      description: 'Este é o próximo passo a ser desenvolvido.',
+    });
+    setImportModalOpen(false); // Fecha o modal
   };
 
   return (
