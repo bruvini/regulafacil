@@ -1,11 +1,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { FormDescription } from '@/components/ui/form';
 import { LeitoFormData, Setor } from '@/types/hospital';
 
 interface LeitoFormProps {
@@ -20,7 +19,7 @@ interface LeitoFormProps {
 const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading, onReset }: LeitoFormProps) => {
   const [formData, setFormData] = useState<LeitoFormData>({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
   const [setorId, setSetorId] = useState(selectedSetorId || '');
-  const codigoLeitoRef = useRef<HTMLTextAreaElement>(null);
+  const codigoLeitoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -81,19 +80,16 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="codigoLeito">Código dos Leitos</Label>
-        <Textarea
+        <Label htmlFor="codigoLeito">Código do Leito</Label>
+        <Input
           ref={codigoLeitoRef}
           id="codigoLeito"
+          type="text"
           value={formData.codigoLeito}
           onChange={(e) => handleInputChange('codigoLeito', e.target.value)}
-          placeholder="Ex: Leito 101-A, Leito 101-B, Leito 102-A"
+          placeholder="Ex: Leito 101-A"
           required
-          className="min-h-[80px]"
         />
-        <FormDescription>
-          Para múltiplos leitos, separe os códigos por vírgula. Ex: 201-A, 201-B, 202-A
-        </FormDescription>
       </div>
       
       <div className="space-y-4">
@@ -126,7 +122,7 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
           className="w-full bg-medical-primary hover:bg-medical-secondary"
           disabled={isLoading || !setorId}
         >
-          {isLoading ? 'Salvando...' : (initialData ? 'Atualizar Leito' : 'Adicionar Leitos')}
+          {isLoading ? 'Salvando...' : (initialData ? 'Atualizar Leito' : 'Adicionar Leito')}
         </Button>
         
         {initialData && (

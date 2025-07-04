@@ -7,28 +7,17 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import LeitoCard from '@/components/LeitoCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { useSetores } from '@/hooks/useSetores';
-import { Leito } from '@/types/hospital';
 
 const RegulacaoLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { setores, loading } = useSetores();
 
-  // Função para obter o status atual de um leito
-  const getStatusAtual = (leito: Leito) => {
-    if (!leito.historicoStatus || leito.historicoStatus.length === 0) {
-      return 'Vago';
-    }
-    return leito.historicoStatus[leito.historicoStatus.length - 1].status;
-  };
-
-  const calcularTaxaOcupacao = (leitos: Leito[]) => {
+  const calcularTaxaOcupacao = (leitos: any[]) => {
     if (leitos.length === 0) return 0;
-    const leitosOcupados = leitos.filter(leito => getStatusAtual(leito) === 'Ocupado').length;
+    const leitosOcupados = leitos.filter(
+      leito => !['Vago', 'Higienizacao', 'Bloqueado'].includes(leito.statusLeito)
+    ).length;
     return Math.round((leitosOcupados / leitos.length) * 100);
-  };
-
-  const contarLeitosVagos = (leitos: Leito[]) => {
-    return leitos.filter(leito => getStatusAtual(leito) === 'Vago').length;
   };
 
   return (
@@ -70,7 +59,9 @@ const RegulacaoLeitos = () => {
                   </div>
                   <div className="text-center p-4 bg-yellow-50 rounded-lg">
                     <div className="text-2xl font-bold text-medical-success">
-                      {setores.reduce((acc, setor) => acc + contarLeitosVagos(setor.leitos), 0)}
+                      {setores.reduce((acc, setor) => 
+                        acc + setor.leitos.filter(leito => leito.statusLeito === 'Vago').length, 0
+                      )}
                     </div>
                     <div className="text-sm text-muted-foreground">Leitos Vagos</div>
                   </div>
@@ -139,13 +130,9 @@ const RegulacaoLeitos = () => {
                           <div className="pt-4">
                             {setor.leitos.length > 0 ? (
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                {[...setor.leitos]
-                                  .sort((a, b) => 
-                                    a.codigoLeito.localeCompare(b.codigoLeito, undefined, { numeric: true })
-                                  )
-                                  .map((leito) => (
-                                    <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
-                                  ))}
+                                {setor.leitos.map((leito) => (
+                                  <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
+                                ))}
                               </div>
                             ) : (
                               <div className="text-center py-8 text-muted-foreground">

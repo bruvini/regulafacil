@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Unlock, Check, Info } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -16,22 +15,9 @@ interface LeitoCardProps {
   setorId: string;
 }
 
-// Função auxiliar para obter o status de forma segura - Programação Defensiva
-const getStatusAtual = (leito: Leito): 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' => {
-  // Se historicoStatus não existir ou estiver vazio, retorne 'Vago' como padrão seguro.
-  if (!leito.historicoStatus || leito.historicoStatus.length === 0) {
-    return 'Vago';
-  }
-  // Se existir, retorne o status do último registro.
-  return leito.historicoStatus[leito.historicoStatus.length - 1].status;
-};
-
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao } = useSetores();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
-
-  // Derivar o status atual usando a função auxiliar segura
-  const statusAtual = getStatusAtual(leito);
 
   const handleBloquear = (motivo: string) => {
     console.log('Tentando bloquear leito:', { setorId, leitoId: leito.id, motivo });
@@ -81,7 +67,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                 )}
               </div>
             </div>
-            <StatusBadge historicoStatus={leito.historicoStatus || []} />
+            <StatusBadge status={leito.statusLeito} />
           </div>
           
           {(leito.leitoPCP || leito.leitoIsolamento) && (
@@ -100,7 +86,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
           )}
 
           <div className="flex-grow">
-            {statusAtual === 'Bloqueado' && leito.motivoBloqueio && (
+            {leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio && (
               <div className="flex items-start space-x-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                 <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-yellow-800">
@@ -116,7 +102,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
               <DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} />
             </div>
 
-            {statusAtual === 'Vago' && (
+            {leito.statusLeito === 'Vago' && (
               <div className="flex justify-center space-x-2">
                 <TooltipProvider>
                   <Tooltip>
@@ -156,7 +142,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
               </div>
             )}
 
-            {statusAtual === 'Bloqueado' && (
+            {leito.statusLeito === 'Bloqueado' && (
               <div className="flex justify-center">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -192,7 +178,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
               </div>
             )}
 
-            {statusAtual === 'Higienizacao' && (
+            {leito.statusLeito === 'Higienizacao' && (
               <div className="flex justify-center">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

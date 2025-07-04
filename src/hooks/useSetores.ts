@@ -3,16 +3,14 @@ import { useState, useEffect } from 'react';
 import { 
   collection, 
   getDocs, 
-  doc, 
-  setDoc, 
-  deleteDoc, 
+  addDoc, 
   updateDoc, 
-  writeBatch,
-  query,
-  orderBy
+  deleteDoc, 
+  doc,
+  onSnapshot 
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Setor, SetorFormData, LeitoFormData, Leito, HistoricoStatus } from '@/types/hospital';
+import { Setor, SetorFormData, LeitoFormData, Leito } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 
 export const useSetores = () => {
@@ -20,30 +18,50 @@ export const useSetores = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const carregarSetores = async () => {
-    try {
-      console.log('Carregando setores...');
-      const q = query(collection(db, 'setoresRegulaFacil'), orderBy('nomeSetor'));
-      const querySnapshot = await getDocs(q);
-      
-      const setoresData: Setor[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        setoresData.push({
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, 'setoresRegulaFacil'),
+      (snapshot) => {
+        const setoresData = snapshot.docs.map(doc => ({
           id: doc.id,
-          nomeSetor: data.nomeSetor,
-          siglaSetor: data.siglaSetor,
-          leitos: data.leitos || []
+          ...doc.data()
+        })) as Setor[];
+        setSetores(setoresData);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Erro ao buscar setores:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar os setores.',
+          variant: 'destructive',
         });
-      });
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [toast]);
+
+  const criarSetor = async (setorData: SetorFormData) => {
+    try {
+      setLoading(true);
+      const novoSetor: Omit<Setor, 'id'> = {
+        ...setorData,
+        leitos: []
+      };
       
-      console.log('Setores carregados:', setoresData);
-      setSetores(setoresData);
+      await addDoc(collection(db, 'setoresRegulaFacil'), novoSetor);
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Setor criado com sucesso!',
+      });
     } catch (error) {
-      console.error('Erro ao carregar setores:', error);
+      console.error('Erro ao criar setor:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao carregar setores',
+        description: 'Não foi possível criar o setor.',
         variant: 'destructive',
       });
     } finally {
@@ -51,317 +69,267 @@ export const useSetores = () => {
     }
   };
 
-  const criarSetor = async (data: SetorFormData) => {
+  const atualizarSetor = async (id: string, setorData: SetorFormData) => {
     try {
-      const novoSetor: Setor = {
-        nomeSetor: data.nomeSetor,
-        siglaSetor: data.siglaSetor,
-        leitos: []
-      };
-
-      const docRef = doc(collection(db, 'setoresRegulaFacil'));
-      await setDoc(docRef, novoSetor);
+      setLoading(true);
+      const setorRef = doc(db, 'setoresRegulaFacil', id);
+      await updateDoc(setorRef, setorData as any);
       
       toast({
         title: 'Sucesso',
-        description: `Setor ${data.nomeSetor} criado com sucesso!`,
+        description: 'Setor atualizado com sucesso!',
       });
-      
-      await carregarSetores();
     } catch (error) {
-      console.error('Erro ao criar setor:', error);
+      console.error('Erro ao atualizar setor:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao criar setor',
+        description: 'Não foi possível atualizar o setor.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const editarSetor = async (setorId: string, data: SetorFormData) => {
+  const excluirSetor = async (id: string) => {
     try {
-      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      await updateDoc(setorRef, {
-        nomeSetor: data.nomeSetor,
-        siglaSetor: data.siglaSetor
-      });
-      
-      toast({
-        title: 'Sucesso',
-        description: `Setor ${data.nomeSetor} atualizado com sucesso!`,
-      });
-      
-      await carregarSetores();
-    } catch (error) {
-      console.error('Erro ao editar setor:', error);
-      toast({
-        title: 'Erro',
-        description: 'Falha ao editar setor',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const excluirSetor = async (setorId: string) => {
-    try {
-      await deleteDoc(doc(db, 'setoresRegulaFacil', setorId));
+      setLoading(true);
+      await deleteDoc(doc(db, 'setoresRegulaFacil', id));
       
       toast({
         title: 'Sucesso',
         description: 'Setor excluído com sucesso!',
       });
-      
-      await carregarSetores();
     } catch (error) {
       console.error('Erro ao excluir setor:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao excluir setor',
+        description: 'Não foi possível excluir o setor.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const adicionarLeito = async (setorId: string, data: LeitoFormData) => {
+  const adicionarLeito = async (setorId: string, leitoData: LeitoFormData) => {
     try {
+      setLoading(true);
       const setor = setores.find(s => s.id === setorId);
-      if (!setor) {
-        throw new Error('Setor não encontrado');
-      }
+      if (!setor) throw new Error('Setor não encontrado');
 
       const novoLeito: Leito = {
         id: crypto.randomUUID(),
-        codigoLeito: data.codigoLeito,
-        leitoPCP: data.leitoPCP,
-        leitoIsolamento: data.leitoIsolamento,
-        dataAtualizacaoStatus: new Date().toISOString(),
-        pacienteId: null,
-        historicoStatus: [{
-          status: 'Vago',
-          timestamp: new Date().toISOString(),
-          pacienteId: null,
-        }]
+        ...leitoData,
+        statusLeito: 'Vago',
+        dataAtualizacaoStatus: new Date().toISOString()
       };
 
       const leitosAtualizados = [...setor.leitos, novoLeito];
-      
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      await updateDoc(setorRef, { leitos: leitosAtualizados });
+      
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
       
       toast({
         title: 'Sucesso',
-        description: `Leito ${data.codigoLeito} adicionado com sucesso!`,
+        description: 'Leito adicionado com sucesso!',
       });
-      
-      await carregarSetores();
     } catch (error) {
       console.error('Erro ao adicionar leito:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao adicionar leito',
+        description: 'Não foi possível adicionar o leito.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const editarLeito = async (setorId: string, leitoId: string, data: LeitoFormData) => {
+  const atualizarLeito = async (setorId: string, leitoIndex: number, leitoData: LeitoFormData) => {
     try {
+      setLoading(true);
       const setor = setores.find(s => s.id === setorId);
-      if (!setor) {
-        throw new Error('Setor não encontrado');
-      }
+      if (!setor) throw new Error('Setor não encontrado');
 
-      const leitosAtualizados = setor.leitos.map(leito => 
-        leito.id === leitoId 
-          ? { 
-              ...leito, 
-              codigoLeito: data.codigoLeito,
-              leitoPCP: data.leitoPCP,
-              leitoIsolamento: data.leitoIsolamento,
-              dataAtualizacaoStatus: new Date().toISOString()
-            }
-          : leito
-      );
-      
+      const leitosAtualizados = [...setor.leitos];
+      leitosAtualizados[leitoIndex] = {
+        ...leitosAtualizados[leitoIndex],
+        ...leitoData
+      };
+
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      await updateDoc(setorRef, { leitos: leitosAtualizados });
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
       
       toast({
         title: 'Sucesso',
-        description: `Leito ${data.codigoLeito} atualizado com sucesso!`,
+        description: 'Leito atualizado com sucesso!',
       });
-      
-      await carregarSetores();
     } catch (error) {
-      console.error('Erro ao editar leito:', error);
+      console.error('Erro ao atualizar leito:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao editar leito',
+        description: 'Não foi possível atualizar o leito.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const excluirLeito = async (setorId: string, leitoId: string) => {
+  const excluirLeito = async (setorId: string, leitoIndex: number) => {
     try {
+      setLoading(true);
       const setor = setores.find(s => s.id === setorId);
-      if (!setor) {
-        throw new Error('Setor não encontrado');
-      }
+      if (!setor) throw new Error('Setor não encontrado');
 
-      const leitosAtualizados = setor.leitos.filter(leito => leito.id !== leitoId);
-      
+      const leitosAtualizados = setor.leitos.filter((_, index) => index !== leitoIndex);
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      await updateDoc(setorRef, { leitos: leitosAtualizados });
+      
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
       
       toast({
         title: 'Sucesso',
         description: 'Leito excluído com sucesso!',
       });
-      
-      await carregarSetores();
     } catch (error) {
       console.error('Erro ao excluir leito:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao excluir leito',
+        description: 'Não foi possível excluir o leito.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const adicionarLeitosEmMassa = async (setorId: string, leitosParaAdicionar: LeitoFormData[]) => {
+  const atualizarStatusLeito = async (setorId: string, leitoId: string, status: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao', motivo?: string) => {
     try {
+      console.log('Hook useSetores recebeu chamada para atualizar status:', { setorId, leitoId, novoStatus: status });
+      setLoading(true);
       const setor = setores.find(s => s.id === setorId);
-      if (!setor) {
-        throw new Error('Setor não encontrado');
-      }
-
-      const novosLeitos: Leito[] = leitosParaAdicionar.map(data => ({
-        id: crypto.randomUUID(),
-        codigoLeito: data.codigoLeito,
-        leitoPCP: data.leitoPCP,
-        leitoIsolamento: data.leitoIsolamento,
-        dataAtualizacaoStatus: new Date().toISOString(),
-        pacienteId: null,
-        historicoStatus: [{
-          status: 'Vago',
-          timestamp: new Date().toISOString(),
-          pacienteId: null,
-        }]
-      }));
-
-      const leitosAtualizados = [...setor.leitos, ...novosLeitos];
-      
-      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      await updateDoc(setorRef, { leitos: leitosAtualizados });
-      
-      toast({
-        title: 'Sucesso',
-        description: `${leitosParaAdicionar.length} leitos adicionados com sucesso!`,
-      });
-      
-      await carregarSetores();
-    } catch (error) {
-      console.error('Erro ao adicionar leitos em massa:', error);
-      toast({
-        title: 'Erro',
-        description: 'Falha ao adicionar leitos em massa',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const atualizarStatusLeito = async (setorId: string, leitoId: string, novoStatus: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao', motivo?: string) => {
-    try {
-      console.log('Atualizando status do leito:', { setorId, leitoId, novoStatus, motivo });
-      
-      const setor = setores.find(s => s.id === setorId);
-      if (!setor) {
-        console.error('Setor não encontrado:', setorId);
-        throw new Error('Setor não encontrado');
-      }
+      if (!setor) throw new Error('Setor não encontrado');
 
       const leitoIndex = setor.leitos.findIndex(l => l.id === leitoId);
-      if (leitoIndex === -1) {
-        console.error('Leito não encontrado:', leitoId);
-        throw new Error('Leito não encontrado');
-      }
+      if (leitoIndex === -1) throw new Error('Leito não encontrado');
 
       const leitosAtualizados = [...setor.leitos];
-      const leitoAtualizado = { ...leitosAtualizados[leitoIndex] };
-
-      // Criar novo item para o histórico
-      const novoHistorico: HistoricoStatus = {
-        status: novoStatus,
-        timestamp: new Date().toISOString(),
-        pacienteId: leitoAtualizado.pacienteId,
-        motivo: motivo
+      leitosAtualizados[leitoIndex] = {
+        ...leitosAtualizados[leitoIndex],
+        statusLeito: status,
+        dataAtualizacaoStatus: new Date().toISOString(),
+        ...(status === 'Bloqueado' && motivo ? { motivoBloqueio: motivo } : {})
       };
 
-      // Atualizar o histórico
-      leitoAtualizado.historicoStatus = [
-        ...(leitoAtualizado.historicoStatus || []),
-        novoHistorico
-      ];
-
-      // Atualizar campos específicos baseados no status
-      if (novoStatus === 'Bloqueado') {
-        leitoAtualizado.motivoBloqueio = motivo;
-      } else if (novoStatus === 'Vago') {
-        leitoAtualizado.pacienteId = null;
-        leitoAtualizado.motivoBloqueio = undefined;
-      }
-
-      leitoAtualizado.dataAtualizacaoStatus = new Date().toISOString();
-      leitosAtualizados[leitoIndex] = leitoAtualizado;
-
-      console.log('Leito atualizado:', leitoAtualizado);
-
+      console.log('Enviando para o Firestore:', leitosAtualizados);
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      await updateDoc(setorRef, { leitos: leitosAtualizados });
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
       
       toast({
         title: 'Sucesso',
-        description: `Status do leito atualizado para ${novoStatus}!`,
+        description: `Status do leito atualizado para ${status}!`,
       });
-      
-      await carregarSetores();
     } catch (error) {
-      console.error('Erro ao atualizar status do leito:', error);
+      console.error('FALHA AO ATUALIZAR NO FIRESTORE:', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao atualizar status do leito',
+        description: 'Não foi possível atualizar o status do leito.',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const desbloquearLeito = async (setorId: string, leitoId: string) => {
-    await atualizarStatusLeito(setorId, leitoId, 'Vago');
+    try {
+      console.log('Hook useSetores - desbloquearLeito chamada:', { setorId, leitoId });
+      setLoading(true);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitoIndex = setor.leitos.findIndex(l => l.id === leitoId);
+      if (leitoIndex === -1) throw new Error('Leito não encontrado');
+
+      const leitosAtualizados = [...setor.leitos];
+      const leitoAtualizado = { ...leitosAtualizados[leitoIndex] };
+      
+      // Remove o motivo do bloqueio e altera status para Vago
+      delete leitoAtualizado.motivoBloqueio;
+      leitoAtualizado.statusLeito = 'Vago';
+      leitoAtualizado.dataAtualizacaoStatus = new Date().toISOString();
+      
+      leitosAtualizados[leitoIndex] = leitoAtualizado;
+
+      console.log('Desbloquear - Enviando para o Firestore:', leitosAtualizados);
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Leito desbloqueado com sucesso!',
+      });
+    } catch (error) {
+      console.error('FALHA AO DESBLOQUEAR NO FIRESTORE:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível desbloquear o leito.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const finalizarHigienizacao = async (setorId: string, leitoId: string) => {
-    await atualizarStatusLeito(setorId, leitoId, 'Vago');
-  };
+    try {
+      console.log('Hook useSetores - finalizarHigienizacao chamada:', { setorId, leitoId });
+      setLoading(true);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
 
-  useEffect(() => {
-    carregarSetores();
-  }, []);
+      const leitoIndex = setor.leitos.findIndex(l => l.id === leitoId);
+      if (leitoIndex === -1) throw new Error('Leito não encontrado');
+
+      const leitosAtualizados = [...setor.leitos];
+      leitosAtualizados[leitoIndex] = {
+        ...leitosAtualizados[leitoIndex],
+        statusLeito: 'Vago',
+        dataAtualizacaoStatus: new Date().toISOString()
+      };
+
+      console.log('Finalizar Higienização - Enviando para o Firestore:', leitosAtualizados);
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+      
+      toast({
+        title: 'Sucesso',
+        description: 'Higienização finalizada com sucesso!',
+      });
+    } catch (error) {
+      console.error('FALHA AO FINALIZAR HIGIENIZAÇÃO NO FIRESTORE:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível finalizar a higienização.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return {
     setores,
     loading,
     criarSetor,
-    editarSetor,
+    atualizarSetor,
     excluirSetor,
     adicionarLeito,
-    editarLeito,
+    atualizarLeito,
     excluirLeito,
-    adicionarLeitosEmMassa,
     atualizarStatusLeito,
     desbloquearLeito,
     finalizarHigienizacao,
-    carregarSetores
   };
 };

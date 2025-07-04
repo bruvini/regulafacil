@@ -1,14 +1,11 @@
 
 import { Badge } from '@/components/ui/badge';
-import { HistoricoStatus } from '@/types/hospital';
 
 interface StatusBadgeProps {
-  historicoStatus: HistoricoStatus[];
+  status: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
 }
 
-const StatusBadge = ({ historicoStatus }: StatusBadgeProps) => {
-  const statusAtual = historicoStatus[historicoStatus.length - 1]?.status || 'Vago';
-
+const StatusBadge = ({ status }: StatusBadgeProps) => {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'Vago':
@@ -39,11 +36,11 @@ const StatusBadge = ({ historicoStatus }: StatusBadgeProps) => {
     }
   };
 
-  const config = getStatusConfig(statusAtual);
+  const config = getStatusConfig(status);
 
   return (
     <Badge variant={config.variant} className={config.className}>
-      {statusAtual}
+      {status}
     </Badge>
   );
 };
