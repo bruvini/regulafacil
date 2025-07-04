@@ -1,10 +1,9 @@
 
 import { useState } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Unlock, Check, Info, BedDouble, AlertTriangle, ArrowRightLeft } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Leito } from '@/types/hospital';
 import StatusBadge from './StatusBadge';
 import DurationDisplay from './DurationDisplay';
@@ -17,7 +16,7 @@ interface LeitoCardProps {
 }
 
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
-  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao } = useSetores();
+  const { atualizarStatusLeito } = useSetores();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
 
   const handleBloquear = (motivo: string) => {
@@ -28,16 +27,6 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const handleHigienizar = () => {
     console.log('Tentando higienizar leito:', { setorId, leitoId: leito.id });
     atualizarStatusLeito(setorId, leito.id, 'Higienizacao');
-  };
-
-  const handleDesbloquear = () => {
-    console.log('Tentando desbloquear leito:', { setorId, leitoId: leito.id });
-    desbloquearLeito(setorId, leito.id);
-  };
-
-  const handleFinalizarHigienizacao = () => {
-    console.log('Finalizando higienização do leito:', { setorId, leitoId: leito.id });
-    finalizarHigienizacao(setorId, leito.id);
   };
 
   return (
@@ -175,78 +164,6 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              </div>
-            )}
-
-            {leito.statusLeito === 'Bloqueado' && (
-              <div className="flex justify-center">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Unlock className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Desbloquear Leito</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Desbloquear Leito</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Deseja realmente desbloquear o leito {leito.codigoLeito}? 
-                        Ele ficará disponível para ocupação.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDesbloquear}>
-                        Desbloquear
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-
-            {leito.statusLeito === 'Higienizacao' && (
-              <div className="flex justify-center">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Finalizar Higienização</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Finalizar Higienização</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Confirmar a finalização da higienização do leito {leito.codigoLeito}? 
-                        Ele ficará disponível para ocupação.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleFinalizarHigienizacao}>
-                        Finalizar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
               </div>
             )}
           </div>
