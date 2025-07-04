@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import LeitoCard from '@/components/LeitoCard';
+import QuartoCard from '@/components/QuartoCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { useSetores } from '@/hooks/useSetores';
+import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
 
 const RegulacaoLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -129,11 +131,24 @@ const RegulacaoLeitos = () => {
                         <AccordionContent>
                           <div className="pt-4">
                             {setor.leitos.length > 0 ? (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                {setor.leitos.map((leito) => (
-                                  <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
-                                ))}
-                              </div>
+                              (() => {
+                                const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
+                                return (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                    {Object.entries(quartos).map(([nomeQuarto, leitosDoQuarto]) => (
+                                      <QuartoCard
+                                        key={nomeQuarto}
+                                        nomeQuarto={nomeQuarto}
+                                        leitos={leitosDoQuarto}
+                                        setorId={setor.id!}
+                                      />
+                                    ))}
+                                    {leitosSoltos.map((leito) => (
+                                      <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
+                                    ))}
+                                  </div>
+                                );
+                              })()
                             ) : (
                               <div className="text-center py-8 text-muted-foreground">
                                 <p>Nenhum leito cadastrado neste setor</p>
