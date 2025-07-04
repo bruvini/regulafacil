@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -6,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
+import { usePacientes } from '@/hooks/usePacientes';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +16,8 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const RegulacaoLeitos = () => {
-  const { setores } = useSetores();
+  const { setores, loading: setoresLoading } = useSetores();
+  const { pacientes } = usePacientes();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
@@ -22,9 +25,6 @@ const RegulacaoLeitos = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const { toast } = useToast();
-  
-  // const { pacientes } = usePacientes(); // Vamos precisar disso depois
-  const [pacientes, setPacientes] = useState<Paciente[]>([]); // Simulação temporária
 
   const handleProcessFileRequest = (file: File) => {
     setProcessing(true);
@@ -165,148 +165,80 @@ const RegulacaoLeitos = () => {
     reader.readAsBinaryString(file);
   };
 
-  // Nova função de sincronização
+  // Nova função de sincronização corrigida
   const handleSync = async () => {
-    if (!syncSummary) return;
+    if (!syncSummary || setoresLoading) {
+      toast({ title: 'Aguarde', description: 'Dados ainda estão sendo carregados.' });
+      return;
+    }
     
     setIsSyncing(true);
 
     try {
       const batch = writeBatch(db);
-      const allSetoresMap = new Map(setores.map(s => [s.id!, s]));
-      const todosLeitos = setores.flatMap(s => s.leitos.map(l => ({ ...l, setorId: s.id!, setorNome: s.nomeSetor })));
+      const agora = new Date().toISOString();
 
-      // Lógica de Altas - liberar leitos ocupados
+      // Criamos uma cópia profunda dos setores para manipular em memória
+      const setoresAtualizados = new Map(setores.map(s => [s.id!, JSON.parse(JSON.stringify(s))]));
+      
+      // 1. Lógica de Altas
       syncSummary.altas.forEach(alta => {
-        const leitoParaLiberar = todosLeitos.find(l => l.codigoLeito === alta.leitoAntigo);
-        if (leitoParaLiberar) {
-          const setor = allSetoresMap.get(leitoParaLiberar.setorId);
-          if (setor) {
-            const leitosAtualizados = setor.leitos.map(l => {
-              if (l.id === leitoParaLiberar.id) {
-                const novoHistorico: HistoricoLeito = {
-                  statusLeito: 'Vago',
-                  data: new Date().toISOString(),
-                };
-                return {
-                  ...l,
-                  statusLeito: 'Vago' as const,
-                  dataAtualizacaoStatus: new Date().toISOString(),
-                  pacienteId: undefined,
-                  historico: [...(l.historico || []), novoHistorico]
-                };
-              }
-              return l;
-            });
-            
-            const setorRef = doc(db, 'setoresRegulaFacil', leitoParaLiberar.setorId);
-            batch.update(setorRef, { leitos: leitosAtualizados });
+        setoresAtualizados.forEach(setor => {
+          const leito = setor.leitos.find(l => l.codigoLeito === alta.leitoAntigo);
+          if (leito) {
+            leito.statusLeito = 'Vago';
+            leito.pacienteId = undefined;
+            leito.dataAtualizacaoStatus = agora;
+            leito.historico.push({ statusLeito: 'Vago', data: agora });
           }
-        }
+        });
       });
 
-      // Lógica de Transferências
-      syncSummary.transferencias.forEach(transferencia => {
-        const leitoAntigo = todosLeitos.find(l => l.codigoLeito === transferencia.leitoAntigo);
-        const leitoNovo = todosLeitos.find(l => l.codigoLeito === transferencia.paciente.leitoCodigo);
-        
-        if (leitoAntigo && leitoNovo) {
-          // Liberar leito antigo
-          const setorAntigo = allSetoresMap.get(leitoAntigo.setorId);
-          if (setorAntigo) {
-            const leitosAtualizados = setorAntigo.leitos.map(l => {
-              if (l.id === leitoAntigo.id) {
-                const novoHistorico: HistoricoLeito = {
-                  statusLeito: 'Vago',
-                  data: new Date().toISOString(),
-                };
-                return {
-                  ...l,
-                  statusLeito: 'Vago' as const,
-                  dataAtualizacaoStatus: new Date().toISOString(),
-                  pacienteId: undefined,
-                  historico: [...(l.historico || []), novoHistorico]
-                };
-              }
-              return l;
-            });
-            
-            const setorRef = doc(db, 'setoresRegulaFacil', leitoAntigo.setorId);
-            batch.update(setorRef, { leitos: leitosAtualizados });
+      // 2. Lógica de Transferências
+      syncSummary.transferencias.forEach(transf => {
+        // Libera leito antigo
+        setoresAtualizados.forEach(setor => {
+          const leitoAntigo = setor.leitos.find(l => l.codigoLeito === transf.leitoAntigo);
+          if (leitoAntigo) {
+            leitoAntigo.statusLeito = 'Vago';
+            leitoAntigo.pacienteId = undefined;
+            leitoAntigo.dataAtualizacaoStatus = agora;
+            leitoAntigo.historico.push({ statusLeito: 'Vago', data: agora });
           }
-
-          // Ocupar leito novo
-          const setorNovo = allSetoresMap.get(leitoNovo.setorId);
-          if (setorNovo) {
-            const pacienteId = transferencia.paciente.nomeCompleto.toLowerCase().replace(/\s+/g, '_');
-            const leitosAtualizados = setorNovo.leitos.map(l => {
-              if (l.id === leitoNovo.id) {
-                const novoHistorico: HistoricoLeito = {
-                  statusLeito: 'Ocupado',
-                  data: new Date().toISOString(),
-                  pacienteId: pacienteId,
-                };
-                return {
-                  ...l,
-                  statusLeito: 'Ocupado' as const,
-                  dataAtualizacaoStatus: new Date().toISOString(),
-                  pacienteId: pacienteId,
-                  historico: [...(l.historico || []), novoHistorico]
-                };
+        });
+        // Ocupa leito novo
+        setoresAtualizados.forEach(setor => {
+           if(setor.nomeSetor === transf.paciente.setorNome) {
+              const leitoNovo = setor.leitos.find(l => l.codigoLeito === transf.paciente.leitoCodigo);
+              if (leitoNovo) {
+                  leitoNovo.statusLeito = 'Ocupado';
+                  leitoNovo.pacienteId = transf.paciente.nomeCompleto;
+                  leitoNovo.dataAtualizacaoStatus = agora;
+                  leitoNovo.historico.push({ statusLeito: 'Ocupado', data: agora, pacienteId: leitoNovo.pacienteId });
               }
-              return l;
-            });
-            
-            const setorRef = doc(db, 'setoresRegulaFacil', leitoNovo.setorId);
-            batch.update(setorRef, { leitos: leitosAtualizados });
           }
-        }
+        });
       });
-
-      // Lógica de Novas Internações
+      
+      // 3. Lógica de Novas Internações
       syncSummary.novasInternacoes.forEach(internacao => {
-        const leitoParaOcupar = todosLeitos.find(l => l.codigoLeito === internacao.leitoCodigo);
-        if (leitoParaOcupar) {
-          const setor = allSetoresMap.get(leitoParaOcupar.setorId);
-          if (setor) {
-            const pacienteId = internacao.nomeCompleto.toLowerCase().replace(/\s+/g, '_');
-            const leitosAtualizados = setor.leitos.map(l => {
-              if (l.id === leitoParaOcupar.id) {
-                const novoHistorico: HistoricoLeito = {
-                  statusLeito: 'Ocupado',
-                  data: new Date().toISOString(),
-                  pacienteId: pacienteId,
-                };
-                return {
-                  ...l,
-                  statusLeito: 'Ocupado' as const,
-                  dataAtualizacaoStatus: new Date().toISOString(),
-                  pacienteId: pacienteId,
-                  historico: [...(l.historico || []), novoHistorico]
-                };
-              }
-              return l;
-            });
-            
-            const setorRef = doc(db, 'setoresRegulaFacil', leitoParaOcupar.setorId);
-            batch.update(setorRef, { leitos: leitosAtualizados });
-
-            // Criar documento do paciente
-            const pacienteData: Paciente = {
-              id: pacienteId,
-              nomeCompleto: internacao.nomeCompleto,
-              dataNascimento: internacao.dataNascimento,
-              sexo: internacao.sexo,
-              dataInternacao: internacao.dataInternacao,
-              especialidade: internacao.especialidade,
-              leitoAtualId: leitoParaOcupar.id,
-              setorAtualId: leitoParaOcupar.setorId,
-            };
-
-            const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-            batch.set(pacienteRef, pacienteData);
+        setoresAtualizados.forEach(setor => {
+          if(setor.nomeSetor === internacao.setorNome) {
+            const leito = setor.leitos.find(l => l.codigoLeito === internacao.leitoCodigo);
+            if (leito) {
+              leito.statusLeito = 'Ocupado';
+              leito.pacienteId = internacao.nomeCompleto;
+              leito.dataAtualizacaoStatus = agora;
+              leito.historico.push({ statusLeito: 'Ocupado', data: agora, pacienteId: leito.pacienteId });
+            }
           }
-        }
+        });
+      });
+      
+      // 4. Adicionar todas as atualizações ao batch
+      setoresAtualizados.forEach(setorAtualizado => {
+        const setorRef = doc(db, 'setoresRegulaFacil', setorAtualizado.id);
+        batch.update(setorRef, { leitos: setorAtualizado.leitos });
       });
 
       // Simulação de tempo para a barra de progresso ser visível
