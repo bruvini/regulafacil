@@ -1,6 +1,10 @@
 
 import { Leito } from '@/types/hospital';
 
+const comparadorNatural = (a: string, b: string) => {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+};
+
 type GrupoLeitos = {
   quartos: Record<string, Leito[]>;
   leitosSoltos: Leito[];

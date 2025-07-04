@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { LeitoFormData, Setor } from '@/types/hospital';
 
 interface LeitoFormProps {
@@ -19,7 +20,8 @@ interface LeitoFormProps {
 const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading, onReset }: LeitoFormProps) => {
   const [formData, setFormData] = useState<LeitoFormData>({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
   const [setorId, setSetorId] = useState(selectedSetorId || '');
-  const codigoLeitoRef = useRef<HTMLInputElement>(null);
+  const [isBulkAdd, setIsBulkAdd] = useState(false);
+  const codigoLeitoRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -42,6 +44,7 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
     if (!initialData) {
       // Limpar formulário após cadastro
       setFormData({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+      setIsBulkAdd(false);
       // Focar no primeiro campo
       setTimeout(() => {
         codigoLeitoRef.current?.focus();
@@ -53,8 +56,14 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleCodigoLeitoChange = (value: string) => {
+    handleInputChange('codigoLeito', value);
+    setIsBulkAdd(value.includes(','));
+  };
+
   const handleReset = () => {
     setFormData({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+    setIsBulkAdd(false);
     onReset?.();
     setTimeout(() => {
       codigoLeitoRef.current?.focus();
@@ -81,14 +90,14 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
 
       <div className="space-y-2">
         <Label htmlFor="codigoLeito">Código do Leito</Label>
-        <Input
+        <Textarea
           ref={codigoLeitoRef}
           id="codigoLeito"
-          type="text"
           value={formData.codigoLeito}
-          onChange={(e) => handleInputChange('codigoLeito', e.target.value)}
-          placeholder="Ex: Leito 101-A"
+          onChange={(e) => handleCodigoLeitoChange(e.target.value)}
+          placeholder="Ex: Leito 101-A, 102-B, 103-C"
           required
+          className="min-h-[80px]"
         />
       </div>
       
@@ -98,6 +107,7 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
             id="leitoPCP"
             checked={formData.leitoPCP}
             onCheckedChange={(checked) => handleInputChange('leitoPCP', checked as boolean)}
+            disabled={isBulkAdd}
           />
           <Label htmlFor="leitoPCP" className="text-sm">
             Leito PCP (Plano de Capacidade Plena)
@@ -109,11 +119,18 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
             id="leitoIsolamento"
             checked={formData.leitoIsolamento}
             onCheckedChange={(checked) => handleInputChange('leitoIsolamento', checked as boolean)}
+            disabled={isBulkAdd}
           />
           <Label htmlFor="leitoIsolamento" className="text-sm">
             Leito de Isolamento
           </Label>
         </div>
+
+        {isBulkAdd && (
+          <p className="text-xs text-muted-foreground">
+            Opções de PCP e Isolamento são desabilitadas ao adicionar leitos em massa.
+          </p>
+        )}
       </div>
       
       <div className="space-y-2">

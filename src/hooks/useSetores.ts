@@ -112,32 +112,77 @@ export const useSetores = () => {
   };
 
   const adicionarLeito = async (setorId: string, leitoData: LeitoFormData) => {
+    setLoading(true);
     try {
-      setLoading(true);
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
 
-      const novoLeito: Leito = {
-        id: crypto.randomUUID(),
-        ...leitoData,
-        statusLeito: 'Vago',
-        dataAtualizacaoStatus: new Date().toISOString()
-      };
+      // 1. Criar um Set com todos os códigos de leitos existentes para checagem rápida
+      const todosCodigosLeitos = new Set(
+        setores.flatMap(s => s.leitos.map(l => l.codigoLeito.trim().toLowerCase()))
+      );
 
-      const leitosAtualizados = [...setor.leitos, novoLeito];
-      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      
-      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Leito adicionado com sucesso!',
+      // 2. Processar códigos de leitos do formulário
+      const codigosParaAdicionar = leitoData.codigoLeito
+        .split(',')
+        .map(code => code.trim())
+        .filter(Boolean); // Remove strings vazias
+
+      const novosLeitos: Leito[] = [];
+      const leitosDuplicados: string[] = [];
+      const leitosAdicionados: string[] = [];
+
+      codigosParaAdicionar.forEach(codigo => {
+        if (todosCodigosLeitos.has(codigo.toLowerCase())) {
+          leitosDuplicados.push(codigo);
+        } else {
+          const novoLeito: Leito = {
+            id: crypto.randomUUID(),
+            codigoLeito: codigo,
+            leitoPCP: leitoData.leitoPCP,
+            leitoIsolamento: leitoData.leitoIsolamento,
+            statusLeito: 'Vago',
+            dataAtualizacaoStatus: new Date().toISOString(),
+          };
+          novosLeitos.push(novoLeito);
+          leitosAdicionados.push(codigo);
+          todosCodigosLeitos.add(codigo.toLowerCase()); // Adiciona ao set para evitar duplicatas na mesma chamada
+        }
       });
+
+      // 3. Atualizar o Firestore se houver novos leitos válidos
+      if (novosLeitos.length > 0) {
+        const leitosAtualizados = [...setor.leitos, ...novosLeitos];
+        const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+        await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+        toast({
+          title: 'Sucesso!',
+          description: `${leitosAdicionados.length} leito(s) adicionado(s): ${leitosAdicionados.join(', ')}.`,
+        });
+      }
+
+      // 4. Informar o usuário sobre leitos duplicados
+      if (leitosDuplicados.length > 0) {
+        toast({
+          title: 'Aviso de Leitos Duplicados',
+          description: `Os seguintes leitos já existem e não foram adicionados: ${leitosDuplicados.join(', ')}.`,
+          variant: 'destructive',
+        });
+      }
+
+      if (novosLeitos.length === 0 && leitosDuplicados.length === 0) {
+          toast({
+              title: 'Nenhum leito adicionado',
+              description: 'Verifique se o campo de código do leito foi preenchido.',
+              variant: 'destructive',
+            });
+      }
+
     } catch (error) {
-      console.error('Erro ao adicionar leito:', error);
+      console.error('Erro ao adicionar leito(s):', error);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível adicionar o leito.',
+        title: 'Erro Inesperado',
+        description: 'Não foi possível adicionar o(s) leito(s).',
         variant: 'destructive',
       });
     } finally {

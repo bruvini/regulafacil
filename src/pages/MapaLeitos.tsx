@@ -133,19 +133,24 @@ const RegulacaoLeitos = () => {
                             {setor.leitos.length > 0 ? (
                               (() => {
                                 const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
+                                const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
                                 return (
                                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                                    {Object.entries(quartos).map(([nomeQuarto, leitosDoQuarto]) => (
-                                      <QuartoCard
-                                        key={nomeQuarto}
-                                        nomeQuarto={nomeQuarto}
-                                        leitos={leitosDoQuarto}
-                                        setorId={setor.id!}
-                                      />
-                                    ))}
-                                    {leitosSoltos.map((leito) => (
-                                      <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
-                                    ))}
+                                    {Object.entries(quartos)
+                                      .sort(([nomeQuartoA], [nomeQuartoB]) => comparadorNatural(nomeQuartoA, nomeQuartoB))
+                                      .map(([nomeQuarto, leitosDoQuarto]) => (
+                                        <QuartoCard
+                                          key={nomeQuarto}
+                                          nomeQuarto={nomeQuarto}
+                                          leitos={leitosDoQuarto}
+                                          setorId={setor.id!}
+                                        />
+                                      ))}
+                                    {leitosSoltos
+                                      .sort((a, b) => comparadorNatural(a.codigoLeito, b.codigoLeito))
+                                      .map((leito) => (
+                                        <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
+                                      ))}
                                   </div>
                                 );
                               })()

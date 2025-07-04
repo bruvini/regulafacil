@@ -19,9 +19,11 @@ const QuartoCard = ({ nomeQuarto, leitos, setorId }: QuartoCardProps) => {
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {leitos.map((leito) => (
-            <LeitoCard key={leito.id} leito={leito} setorId={setorId} />
-          ))}
+          {leitos
+            .sort((a, b) => a.codigoLeito.localeCompare(b.codigoLeito, undefined, { numeric: true, sensitivity: 'base' }))
+            .map((leito) => (
+              <LeitoCard key={leito.id} leito={leito} setorId={setorId} />
+            ))}
         </div>
       </CardContent>
     </Card>
