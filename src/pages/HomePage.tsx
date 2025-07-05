@@ -7,7 +7,8 @@ import {
   TrendingUp, 
   FileText, 
   Settings,
-  ArrowRight
+  ArrowRight,
+  BrainCircuit
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +18,7 @@ const features = [
   {
     title: 'Regulação de Leitos',
     description: 'Gerencie solicitações de leitos e pendências em tempo real',
-    icon: BedDouble,
+    icon: BrainCircuit,
     path: '/regulacao-leitos',
     color: 'bg-medical-primary'
   },

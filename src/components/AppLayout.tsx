@@ -8,7 +8,8 @@ import {
   FileText, 
   Settings,
   Home,
-  Menu
+  Menu,
+  BrainCircuit
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -38,7 +39,7 @@ const menuItems = [
   {
     title: 'Regulação de Leitos',
     url: '/regulacao-leitos',
-    icon: BedDouble,
+    icon: BrainCircuit,
   },
   {
     title: 'Mapa de Leitos',

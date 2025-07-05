@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -546,6 +547,10 @@ export const useSetores = () => {
       const setorOrigemRef = doc(db, 'setoresRegulaFacil', leitoOrigem.setorId);
       const setorDestinoRef = doc(db, 'setoresRegulaFacil', leitoDestino.setorId);
 
+      // Garante que a cópia dos dados do paciente seja segura
+      const dadosPacienteParaDestino = { ...(paciente || {}) };
+      delete dadosPacienteParaDestino.regulacao; // Remove o campo de regulação antigo se existir
+
       // Atualiza o leito de ORIGEM
       const setorOrigemData = setores.find(s => s.id === leitoOrigem.setorId)!;
       const leitosOrigemAtualizado = setorOrigemData.leitos.map(l => {
@@ -555,10 +560,10 @@ export const useSetores = () => {
                   statusLeito: 'Regulado' as const,
                   dataAtualizacaoStatus: agora,
                   regulacao: {
-                      paraSetor: leitoDestino.setorNome,
-                      paraLeito: leitoDestino.codigoLeito,
+                      paraSetor: leitoDestino.setorNome || '',
+                      paraLeito: leitoDestino.codigoLeito || '',
                       data: agora,
-                      observacoes: observacoes
+                      observacoes: observacoes || '' // Garante que não seja undefined
                   }
               };
           }
@@ -575,10 +580,10 @@ export const useSetores = () => {
                   statusLeito: 'Reservado' as const,
                   dataAtualizacaoStatus: agora,
                   dadosPaciente: {
-                      ...paciente,
+                      ...dadosPacienteParaDestino,
                       origem: {
-                          deSetor: leitoOrigem.setorOrigem,
-                          deLeito: leitoOrigem.leitoCodigo
+                          deSetor: leitoOrigem.setorOrigem || '',
+                          deLeito: leitoOrigem.leitoCodigo || ''
                       }
                   }
               };
@@ -586,12 +591,11 @@ export const useSetores = () => {
           return l;
       });
       
-      // Se origem e destino estão no mesmo setor
+      // Trata o caso de origem e destino serem no mesmo setor
       if (setorOrigemRef.path === setorDestinoRef.path) {
-          const leitosCombinados = leitosOrigemAtualizado.map(l => {
-              const leitoDestinoModificado = leitosDestinoAtualizado.find(ld => ld.id === l.id);
-              return leitoDestinoModificado || l;
-          });
+          const leitosCombinados = leitosOrigemAtualizado.map(l => 
+              l.id === leitoDestino.id ? leitosDestinoAtualizado.find(ld => ld.id === l.id) || l : l
+          );
           batch.update(setorOrigemRef, { leitos: leitosCombinados });
       } else {
           batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizado });
