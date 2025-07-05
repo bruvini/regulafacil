@@ -36,10 +36,11 @@ const calcularDuracao = (dataInternacao: string): string => {
 
 interface PacientePendenteItemProps {
   paciente: DadosPaciente;
+  onRegularClick: () => void;
   onAlta?: () => void;
 }
 
-export const PacientePendenteItem = ({ paciente, onAlta }: PacientePendenteItemProps) => {
+export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
   const tempoInternado = calcularDuracao(paciente.dataInternacao);
 
@@ -62,7 +63,7 @@ export const PacientePendenteItem = ({ paciente, onAlta }: PacientePendenteItemP
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={onRegularClick}>
                 <LogIn className="h-4 w-4" />
               </Button>
             </TooltipTrigger>

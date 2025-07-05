@@ -8,6 +8,7 @@ import { Download, BedDouble, Ambulance, X, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
+import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
 import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
@@ -38,6 +39,8 @@ interface SyncSummary {
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
+  const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -273,6 +276,21 @@ const RegulacaoLeitos = () => {
     }
   };
 
+  const handleOpenRegulacaoModal = (paciente: any) => {
+    setPacienteParaRegular(paciente);
+    setRegulacaoModalOpen(true);
+  };
+
+  const handleConfirmarRegulacao = (leitoDestino: any, observacoes: string) => {
+    console.log("Regulação confirmada para:", leitoDestino, "Obs:", observacoes);
+    // Lógica final de atualização no Firestore virá aqui
+    setRegulacaoModalOpen(false);
+    toast({
+      title: "Regulação Confirmada",
+      description: `Leito ${leitoDestino.codigoLeito} regulado com sucesso.`
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -383,11 +401,20 @@ const RegulacaoLeitos = () => {
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <ListaPacientesPendentes titulo="Decisão Cirúrgica" pacientes={decisaoCirurgica} />
-                <ListaPacientesPendentes titulo="Decisão Clínica" pacientes={decisaoClinica} />
+                <ListaPacientesPendentes 
+                  titulo="Decisão Cirúrgica" 
+                  pacientes={decisaoCirurgica}
+                  onRegularClick={handleOpenRegulacaoModal}
+                />
+                <ListaPacientesPendentes 
+                  titulo="Decisão Clínica" 
+                  pacientes={decisaoClinica}
+                  onRegularClick={handleOpenRegulacaoModal}
+                />
                 <ListaPacientesPendentes 
                   titulo="Recuperação Cirúrgica" 
-                  pacientes={recuperacaoCirurgica} 
+                  pacientes={recuperacaoCirurgica}
+                  onRegularClick={handleOpenRegulacaoModal}
                   onAlta={altaAposRecuperacao}
                 />
               </div>
@@ -431,6 +458,16 @@ const RegulacaoLeitos = () => {
           isSyncing={isSyncing}
           onConfirmSync={handleSync}
         />
+
+        {pacienteParaRegular && (
+          <RegulacaoModal
+            open={regulacaoModalOpen}
+            onOpenChange={setRegulacaoModalOpen}
+            paciente={pacienteParaRegular}
+            origem={{ setor: pacienteParaRegular.setorOrigem, leito: pacienteParaRegular.leitoCodigo }}
+            onConfirmRegulacao={handleConfirmarRegulacao}
+          />
+        )}
 
       </div>
     </div>

@@ -9,10 +9,11 @@ import { parse } from 'date-fns';
 interface ListaPacientesPendentesProps {
   titulo: string;
   pacientes: (DadosPaciente & { setorOrigem: string; setorId?: string; leitoId?: string })[];
+  onRegularClick: (paciente: any) => void;
   onAlta?: (setorId: string, leitoId: string) => void;
 }
 
-export const ListaPacientesPendentes = ({ titulo, pacientes, onAlta }: ListaPacientesPendentesProps) => {
+export const ListaPacientesPendentes = ({ titulo, pacientes, onRegularClick, onAlta }: ListaPacientesPendentesProps) => {
   // Ordena os pacientes pelo maior tempo de internação
   const pacientesOrdenados = [...pacientes].sort((a, b) => {
     const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
@@ -34,6 +35,7 @@ export const ListaPacientesPendentes = ({ titulo, pacientes, onAlta }: ListaPaci
                 <PacientePendenteItem 
                   key={paciente.nomePaciente} 
                   paciente={paciente} 
+                  onRegularClick={() => onRegularClick(paciente)}
                   onAlta={titulo === 'Recuperação Cirúrgica' ? () => onAlta?.(paciente.setorId!, paciente.leitoId!) : undefined}
                 />
               ))}
