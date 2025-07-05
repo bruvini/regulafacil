@@ -6,6 +6,20 @@ export interface DadosPaciente {
   sexoPaciente: 'Masculino' | 'Feminino';
   dataInternacao: string;
   especialidadePaciente: string;
+
+  // --- NOVOS CAMPOS OPCIONAIS ---
+  aguardaUTI?: boolean;
+  dataPedidoUTI?: string;
+
+  remanejarPaciente?: boolean;
+  motivoRemanejamento?: string;
+  dataPedidoRemanejamento?: string;
+
+  transferirPaciente?: boolean;
+  destinoTransferencia?: string;
+  motivoTransferencia?: string;
+  dataTransferencia?: string;
+  statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
 }
 
 export interface Leito {

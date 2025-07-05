@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -9,6 +9,8 @@ import { Leito } from '@/types/hospital';
 import StatusBadge from './StatusBadge';
 import DurationDisplay from './DurationDisplay';
 import MotivoBloqueioModal from './modals/MotivoBloqueioModal';
+import { RemanejamentoModal } from './modals/RemanejamentoModal';
+import { TransferenciaModal } from './modals/TransferenciaModal';
 import { useSetores } from '@/hooks/useSetores';
 import { cn } from '@/lib/utils';
 
@@ -35,8 +37,10 @@ const calcularIdade = (dataNascimento: string): string => {
 };
 
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
-  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao } = useSetores();
+  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente } = useSetores();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
+  const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
+  const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
 
   // A variável 'paciente' agora vem diretamente do leito
   const paciente = leito.dadosPaciente;
@@ -52,7 +56,6 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   };
 
   const handleDesbloquear = () => {
-    // Log para depuração
     console.log('Tentando desbloquear leito:', { setorId, leitoId: leito.id });
     if (desbloquearLeito) {
       desbloquearLeito(setorId, leito.id);
@@ -62,7 +65,6 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   };
 
   const handleFinalizarHigienizacao = () => {
-    // Log para depuração
     console.log('Finalizando higienização do leito:', { setorId, leitoId: leito.id });
     if (finalizarHigienizacao) {
       finalizarHigienizacao(setorId, leito.id);
@@ -70,6 +72,11 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
       console.error('Função finalizarHigienizacao não está disponível no hook useSetores.');
     }
   };
+
+  const handleLiberarLeito = () => liberarLeito(setorId, leito.id);
+  const handleSolicitarUTI = () => solicitarUTI(setorId, leito.id);
+  const handleConfirmarRemanejamento = (motivo: string) => solicitarRemanejamento(setorId, leito.id, motivo);
+  const handleConfirmarTransferencia = (destino: string, motivo: string) => transferirPaciente(setorId, leito.id, destino, motivo);
 
   return (
     <>
@@ -262,41 +269,101 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
 
             {leito.statusLeito === 'Ocupado' && (
               <div className="flex justify-center space-x-2">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <BedDouble className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Liberar Leito</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <BedDouble className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Liberar Leito</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Liberar Leito</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Confirmar a liberação do leito {leito.codigoLeito}?
+                        O leito será enviado para higienização.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLiberarLeito}>
+                        Liberar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
+                <AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <AlertTriangle className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Solicitar UTI</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Solicitar UTI</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Confirmar a solicitação de vaga de UTI para o paciente {paciente?.nomePaciente}?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSolicitarUTI}>
+                        Solicitar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
 
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <AlertTriangle className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Solicitar UTI</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => setRemanejamentoModalOpen(true)}
+                      >
                         <ArrowRightLeft className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Solicitar Remanejamento</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => setTransferenciaModalOpen(true)}
+                      >
+                        <Ambulance className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Transferir Paciente</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -311,6 +378,18 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
         onOpenChange={setMotivoBloqueioModalOpen}
         onConfirm={handleBloquear}
         leitoCodigoLeito={leito.codigoLeito}
+      />
+
+      <RemanejamentoModal
+        open={remanejamentoModalOpen}
+        onOpenChange={setRemanejamentoModalOpen}
+        onConfirm={handleConfirmarRemanejamento}
+      />
+
+      <TransferenciaModal
+        open={transferenciaModalOpen}
+        onOpenChange={setTransferenciaModalOpen}
+        onConfirm={handleConfirmarTransferencia}
       />
     </>
   );

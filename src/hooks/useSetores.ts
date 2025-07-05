@@ -366,6 +366,91 @@ export const useSetores = () => {
     }
   };
 
+  // Função helper para encontrar e atualizar um leito específico
+  const updateLeitoInSetor = async (setorId: string, leitoId: string, updates: Partial<Leito>) => {
+    const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+    const setor = setores.find(s => s.id === setorId);
+    if (!setor) throw new Error("Setor não encontrado");
+    
+    const leitosAtualizados = setor.leitos.map(l => l.id === leitoId ? { ...l, ...updates } : l);
+    await updateDoc(setorRef, { leitos: leitosAtualizados });
+  };
+
+  const liberarLeito = async (setorId: string, leitoId: string) => {
+    try {
+      await updateLeitoInSetor(setorId, leitoId, {
+        statusLeito: 'Higienizacao',
+        dataAtualizacaoStatus: new Date().toISOString(),
+        dadosPaciente: null
+      });
+      toast({ title: "Leito Liberado", description: "O leito foi enviado para higienização." });
+    } catch (error) {
+      console.error('Erro ao liberar leito:', error);
+      toast({ title: "Erro", description: "Não foi possível liberar o leito.", variant: "destructive" });
+    }
+  };
+
+  const solicitarUTI = async (setorId: string, leitoId: string) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente) return;
+      
+      await updateLeitoInSetor(setorId, leitoId, {
+        dadosPaciente: { 
+          ...leito.dadosPaciente, 
+          aguardaUTI: true, 
+          dataPedidoUTI: new Date().toISOString() 
+        }
+      });
+      toast({ title: "Solicitação de UTI Registrada", description: "A solicitação foi enviada para a equipe de UTI." });
+    } catch (error) {
+      console.error('Erro ao solicitar UTI:', error);
+      toast({ title: "Erro", description: "Não foi possível registrar a solicitação de UTI.", variant: "destructive" });
+    }
+  };
+
+  const solicitarRemanejamento = async (setorId: string, leitoId: string, motivo: string) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente) return;
+      
+      await updateLeitoInSetor(setorId, leitoId, {
+        dadosPaciente: { 
+          ...leito.dadosPaciente, 
+          remanejarPaciente: true, 
+          motivoRemanejamento: motivo, 
+          dataPedidoRemanejamento: new Date().toISOString() 
+        }
+      });
+      toast({ title: "Solicitação de Remanejamento Registrada", description: "A solicitação foi enviada para análise." });
+    } catch (error) {
+      console.error('Erro ao solicitar remanejamento:', error);
+      toast({ title: "Erro", description: "Não foi possível registrar a solicitação de remanejamento.", variant: "destructive" });
+    }
+  };
+
+  const transferirPaciente = async (setorId: string, leitoId: string, destino: string, motivo: string) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente) return;
+      
+      await updateLeitoInSetor(setorId, leitoId, {
+        dadosPaciente: { 
+          ...leito.dadosPaciente, 
+          transferirPaciente: true, 
+          destinoTransferencia: destino, 
+          motivoTransferencia: motivo, 
+          dataTransferencia: new Date().toISOString(), 
+          statusTransferencia: 'Organizar' 
+        }
+      });
+      toast({ title: "Solicitação de Transferência Registrada", description: "A solicitação foi enviada para organização." });
+    } catch (error) {
+      console.error('Erro ao solicitar transferência:', error);
+      toast({ title: "Erro", description: "Não foi possível registrar a solicitação de transferência.", variant: "destructive" });
+    }
+  };
+
   return {
     setores,
     loading,
@@ -378,5 +463,9 @@ export const useSetores = () => {
     atualizarStatusLeito,
     desbloquearLeito,
     finalizarHigienizacao,
+    liberarLeito,
+    solicitarUTI,
+    solicitarRemanejamento,
+    transferirPaciente,
   };
 };
