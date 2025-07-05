@@ -1,15 +1,17 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AlertCircle, Copy, CheckCircle, BedDouble } from 'lucide-react';
-import { DadosPaciente, Leito } from '@/types/hospital';
+import { AlertTriangle, Copy, CheckCircle, BedDouble, ClipboardCheck } from 'lucide-react';
+import { DadosPaciente } from '@/types/hospital';
 import { useLeitoFinder } from '@/hooks/useLeitoFinder';
+import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 
 interface RegulacaoModalProps {
@@ -23,251 +25,185 @@ interface RegulacaoModalProps {
 const pcpChecklist = [
   "Estar entre 18 e 60 anos de idade",
   "Não ser obeso",
-  "Não estar em uso de ventilação mecânica",
-  "Não necessitar de monitorização cardíaca contínua",
-  "Não estar em uso de drogas vasoativas",
-  "Não apresentar instabilidade hemodinâmica",
-  "Não ter sido submetido a cirurgia de grande porte nas últimas 24h",
-  "Não necessitar de cuidados intensivos",
-  "Não apresentar alterações neurológicas agudas",
-  "Não estar em pós-operatório imediato",
-  "Não necessitar de isolamento por infecção",
-  "Ter estabilidade clínica para permanência em enfermaria",
-  "Não apresentar complicações pós-cirúrgicas graves"
+  "Não possuir acompanhante",
+  "Ser independente nas tarefas diárias",
+  "Não ter risco de queda",
+  "Não possuir limitações de movimento",
+  "Não ter realizado cirurgia de grande porte nos últimos 30 dias",
+  "Não ter tido quedas ou desmaios nas últimas 24h",
+  "Não ter tido 2 ou mais episódios de alterações de SSVV nas últimas 24h",
+  "Não precisar de monitoramento contínuo",
+  "Não possuir condições que afete seu intelecto (AVC, Alzheimer, Parkinson, Convulsão, etc)",
+  "Não usar dispositivos invasivos além de Acesso Venoso Periférico",
+  "Não necessitar de isolamento por infecção"
 ];
+
+const calcularIdade = (dataNascimento?: string): string => {
+    if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
+    const [dia, mes, ano] = dataNascimento.split('/').map(Number);
+    let idade = new Date().getFullYear() - ano;
+    const m = new Date().getMonth() - (mes - 1);
+    if (m < 0 || (m === 0 && new Date().getDate() < dia)) idade--;
+    return idade.toString();
+};
 
 export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao }: RegulacaoModalProps) => {
   const { findAvailableLeitos } = useLeitoFinder();
+  const { toast } = useToast();
   const [leitosDisponiveis, setLeitosDisponiveis] = useState<any[]>([]);
   const [leitoSelecionado, setLeitoSelecionado] = useState<any | null>(null);
-  const [etapa, setEtapa] = useState(1); // 1: Seleção, 2: PCP, 3: Confirmação
+  const [etapa, setEtapa] = useState(1);
   const [pcpChecks, setPcpChecks] = useState<boolean[]>(Array(pcpChecklist.length).fill(false));
   const [observacoes, setObservacoes] = useState('');
-  
+
   useEffect(() => {
-    if (paciente) {
+    if (open && paciente) {
       setLeitosDisponiveis(findAvailableLeitos(paciente));
     }
-    // Resetar o estado ao abrir/fechar ou mudar de paciente
-    setEtapa(1);
-    setLeitoSelecionado(null);
-    setPcpChecks(Array(pcpChecklist.length).fill(false));
-    setObservacoes('');
+    if (!open) {
+      // Resetar tudo quando o modal fechar
+      setEtapa(1);
+      setLeitoSelecionado(null);
+      setPcpChecks(Array(pcpChecklist.length).fill(false));
+      setObservacoes('');
+    }
   }, [open, paciente, findAvailableLeitos]);
+
+  const leitosAgrupadosPorSetor = useMemo(() => {
+    return leitosDisponiveis.reduce((acc, leito) => {
+      (acc[leito.setorNome] = acc[leito.setorNome] || []).push(leito);
+      return acc;
+    }, {} as Record<string, any[]>);
+  }, [leitosDisponiveis]);
 
   const handleSelectLeito = (leito: any) => {
     setLeitoSelecionado(leito);
-    if (leito.leitoPCP) {
-      setEtapa(2); // Vai para a etapa do checklist PCP
-    } else {
-      setEtapa(3); // Vai direto para a confirmação
-    }
+    if (leito.leitoPCP) setEtapa(2);
+    else setEtapa(3);
   };
 
   const handlePcpConfirm = () => {
-    if (pcpChecks.every(check => check)) {
-        setEtapa(3);
-    } else {
-        alert("Todas as condições para o leito PCP devem ser confirmadas.");
-    }
+    if (pcpChecks.every(Boolean)) setEtapa(3);
+    else toast({ title: "Atenção", description: "Todos os critérios para o Leito PCP devem ser confirmados.", variant: "destructive" });
   };
 
-  const calcularIdade = (dataNascimento: string): number => {
-    if (!dataNascimento) return 0;
-    const [dia, mes, ano] = dataNascimento.split('/').map(Number);
-    const hoje = new Date();
-    const nascimento = new Date(ano, mes - 1, dia);
-    let idade = hoje.getFullYear() - nascimento.getFullYear();
-    const m = hoje.getMonth() - nascimento.getMonth();
-    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
-      idade--;
-    }
-    return idade;
-  };
-
-  const renderConfirmacao = () => {
-    if (!paciente || !leitoSelecionado) return null;
-    
+  const getMensagemConfirmacao = () => {
+    if (!paciente || !leitoSelecionado) return "";
     const idade = calcularIdade(paciente.dataNascimento);
     const isolamentos = paciente.isolamentosVigentes?.map(i => i.sigla).join(', ') || 'Nenhum';
-    const mensagem = `REGULAÇÃO DE LEITO - ${new Date().toLocaleString()}
+    const obs = observacoes ? `\nObservações NIR: ${observacoes}` : "";
 
-PACIENTE: ${paciente.nomePaciente}
-IDADE: ${idade} anos | SEXO: ${paciente.sexoPaciente}
-ESPECIALIDADE: ${paciente.especialidadePaciente}
-ISOLAMENTOS: ${isolamentos}
+    return `⚠️ LEITO REGULADO ⚠️
+Paciente: ${paciente.nomePaciente} - ${paciente.sexoPaciente} - ${idade} anos
+Origem: ${origem.setor} - ${origem.leito}
+Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
+Isolamento: ${isolamentos}${obs}
 
-ORIGEM: ${origem.setor} - ${origem.leito}
-DESTINO: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
-TIPO DE LEITO: ${leitoSelecionado.leitoPCP ? 'PCP' : 'Enfermaria'}${leitoSelecionado.leitoIsolamento ? ' (Isolamento)' : ''}
+- Fazer contato com o destino para passar plantão e agilizar transferências. Avisar o NIR caso haja alguma intercorrência, dificuldade na passagem de plantão ou demais eventualidades!
 
-STATUS: Regulação autorizada pelo NIR`;
-    
-    return (
-        <div className="space-y-4">
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="whitespace-pre-wrap font-mono text-xs">{mensagem}</p>
-            </div>
-            <div>
-                <Label htmlFor="observacoes">Observações do NIR (opcional)</Label>
-                <Textarea 
-                    id="observacoes"
-                    placeholder="Adicionar observações da regulação..." 
-                    value={observacoes} 
-                    onChange={e => setObservacoes(e.target.value)} 
-                />
-            </div>
-        </div>
-    );
+Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
   };
 
-  const renderSelecaoLeitos = () => {
-    if (leitosDisponiveis.length === 0) {
-      return (
-        <div className="text-center py-8">
-          <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Nenhum leito disponível</h3>
-          <p className="text-muted-foreground">
-            Não há leitos compatíveis com este paciente no momento.
-          </p>
-        </div>
-      );
-    }
+  const copiarParaClipboard = () => {
+    const mensagem = getMensagemConfirmacao();
+    navigator.clipboard.writeText(mensagem);
+    toast({ title: "Copiado!", description: "Mensagem de regulação copiada para a área de transferência." });
+  };
 
-    // Agrupar leitos por setor
-    const leitosPorSetor = leitosDisponiveis.reduce((acc, leito) => {
-      if (!acc[leito.setorNome]) {
-        acc[leito.setorNome] = [];
-      }
-      acc[leito.setorNome].push(leito);
-      return acc;
-    }, {} as Record<string, any[]>);
-
-    return (
-      <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">
-          {leitosDisponiveis.length} leito(s) disponível(is) para este paciente
-        </div>
-        <Accordion type="multiple" className="w-full">
-          {Object.entries(leitosPorSetor).map(([setorNome, leitos]) => (
-            <AccordionItem key={setorNome} value={setorNome}>
-              <AccordionTrigger className="hover:no-underline">
-                <div className="flex justify-between items-center w-full pr-4">
-                  <span className="font-semibold">{setorNome}</span>
-                  <Badge variant="secondary">{leitos.length}</Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-2">
-                {leitos.map(leito => (
-                  <Card 
-                    key={leito.id} 
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSelectLeito(leito)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <BedDouble className="h-4 w-4" />
-                          <span className="font-medium">{leito.codigoLeito}</span>
-                          {leito.leitoPCP && <Badge variant="outline">PCP</Badge>}
-                          {leito.leitoIsolamento && <Badge variant="destructive">Isolamento</Badge>}
-                        </div>
-                        <Badge variant={leito.statusLeito === 'Vago' ? 'default' : 'secondary'}>
-                          {leito.statusLeito}
-                        </Badge>
+  const renderContent = () => {
+    switch (etapa) {
+      case 1: // Seleção de Leito
+        return (
+          <>
+            <DialogDescription>Selecione um leito disponível compatível com o perfil do paciente.</DialogDescription>
+            <ScrollArea className="h-[50vh] mt-4">
+              <Accordion type="multiple" className="w-full pr-4">
+                {Object.keys(leitosAgrupadosPorSetor).length > 0 ? Object.entries(leitosAgrupadosPorSetor).map(([setorNome, leitos]) => (
+                  <AccordionItem key={setorNome} value={setorNome}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex justify-between items-center w-full pr-4">
+                        <span className="font-semibold">{setorNome}</span>
+                        <Badge variant="secondary">{leitos.length}</Badge>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </div>
-    );
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-2">
+                      {leitos.map(leito => (
+                        <Card 
+                          key={leito.id} 
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => handleSelectLeito(leito)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <BedDouble className="h-4 w-4" />
+                                <span className="font-medium">{leito.codigoLeito}</span>
+                                {leito.leitoPCP && <Badge variant="outline">PCP</Badge>}
+                                {leito.leitoIsolamento && <Badge variant="destructive">Isolamento</Badge>}
+                              </div>
+                              <Badge variant={leito.statusLeito === 'Vago' ? 'default' : 'secondary'}>
+                                {leito.statusLeito}
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                )) : <p className="text-center text-muted-foreground py-8">Nenhum leito compatível encontrado.</p>}
+              </Accordion>
+            </ScrollArea>
+          </>
+        );
+      case 2: // Checklist PCP
+        return (
+          <>
+            <DialogDescription className="flex items-center gap-2 text-amber-700"><AlertTriangle/>O leito selecionado é um Leito PCP. Confirme todos os critérios de elegibilidade.</DialogDescription>
+            <ScrollArea className="h-[50vh] mt-4">
+                <Card><CardContent className="p-4 space-y-3">
+                    {pcpChecklist.map((item, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                            <Checkbox id={`pcp-${index}`} checked={pcpChecks[index]} onCheckedChange={(checked) => setPcpChecks(prev => prev.map((c, i) => i === index ? !!checked : c))} />
+                            <Label htmlFor={`pcp-${index}`} className="text-sm">{item}</Label>
+                        </div>
+                    ))}
+                </CardContent></Card>
+            </ScrollArea>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setEtapa(1)}>Voltar</Button>
+              <Button onClick={handlePcpConfirm}><ClipboardCheck className="mr-2 h-4 w-4"/>Confirmar Critérios</Button>
+            </DialogFooter>
+          </>
+        );
+      case 3: // Confirmação Final
+        return (
+          <>
+            <DialogDescription>Revise os dados da regulação e adicione observações se necessário.</DialogDescription>
+            <div className="space-y-4 mt-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/50 rounded-lg border border-blue-200">
+                  <p className="whitespace-pre-wrap font-mono text-xs">{getMensagemConfirmacao()}</p>
+              </div>
+              <Textarea placeholder="Adicionar observações do NIR (opcional)..." value={observacoes} onChange={e => setObservacoes(e.target.value)} />
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => setEtapa(leitoSelecionado?.leitoPCP ? 2 : 1)}>Voltar</Button>
+              <Button variant="secondary" onClick={copiarParaClipboard}><Copy className="mr-2 h-4 w-4"/>Copiar</Button>
+              <Button onClick={() => onConfirmRegulacao(leitoSelecionado, observacoes)}><CheckCircle className="mr-2 h-4 w-4"/>Confirmar Regulação</Button>
+            </DialogFooter>
+          </>
+        );
+      default:
+        return null;
+    }
   };
-
-  const renderChecklistPCP = () => (
-    <div className="space-y-4">
-      <div className="text-center">
-        <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-        <h3 className="text-lg font-semibold">Checklist para Leito PCP</h3>
-        <p className="text-sm text-muted-foreground">
-          Confirme que o paciente atende a todos os critérios
-        </p>
-      </div>
-      
-      <div className="space-y-3 max-h-64 overflow-y-auto">
-        {pcpChecklist.map((item, index) => (
-          <div key={index} className="flex items-start space-x-2">
-            <Checkbox
-              id={`pcp-${index}`}
-              checked={pcpChecks[index]}
-              onCheckedChange={(checked) => {
-                const newChecks = [...pcpChecks];
-                newChecks[index] = !!checked;
-                setPcpChecks(newChecks);
-              }}
-            />
-            <Label htmlFor={`pcp-${index}`} className="text-sm leading-5">
-              {item}
-            </Label>
-          </div>
-        ))}
-      </div>
-
-      <div className="pt-4 border-t">
-        <Button 
-          onClick={handlePcpConfirm}
-          disabled={!pcpChecks.every(check => check)}
-          className="w-full"
-        >
-          <CheckCircle className="h-4 w-4 mr-2" />
-          Confirmar Critérios PCP
-        </Button>
-      </div>
-    </div>
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>
-            {etapa === 1 && "Selecionar Leito"}
-            {etapa === 2 && "Checklist PCP"}
-            {etapa === 3 && "Confirmar Regulação"}
-          </DialogTitle>
-          <DialogDescription>
-            {paciente && (
-              <span>
-                Regulando leito para: <strong>{paciente.nomePaciente}</strong>
-                {origem && ` • Origem: ${origem.setor} - ${origem.leito}`}
-              </span>
-            )}
-          </DialogDescription>
+          <DialogTitle>Regular Leito para: {paciente?.nomePaciente}</DialogTitle>
         </DialogHeader>
-
-        <div className="py-4">
-          {etapa === 1 && renderSelecaoLeitos()}
-          {etapa === 2 && renderChecklistPCP()}
-          {etapa === 3 && renderConfirmacao()}
-        </div>
-
-        {etapa === 3 && (
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEtapa(1)}>
-              Voltar
-            </Button>
-            <Button variant="outline" onClick={() => navigator.clipboard.writeText(renderConfirmacao()?.props.children[0].props.children.props.children || '')}>
-              <Copy className="h-4 w-4 mr-2" />
-              Copiar
-            </Button>
-            <Button onClick={() => onConfirmRegulacao(leitoSelecionado, observacoes)}>
-              Confirmar Regulação
-            </Button>
-          </DialogFooter>
-        )}
+        {renderContent()}
       </DialogContent>
     </Dialog>
   );
