@@ -2,7 +2,7 @@
 import { Badge } from '@/components/ui/badge';
 
 interface StatusBadgeProps {
-  status: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
+  status: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
 }
 
 const StatusBadge = ({ status }: StatusBadgeProps) => {
@@ -27,6 +27,16 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
         return {
           variant: 'outline' as const,
           className: 'bg-blue-100 text-blue-800 border-blue-200'
+        };
+      case 'Regulado':
+        return {
+          variant: 'secondary' as const,
+          className: 'bg-purple-100 text-purple-800 border-purple-200'
+        };
+      case 'Reservado':
+        return {
+          variant: 'secondary' as const,
+          className: 'bg-teal-100 text-teal-800 border-teal-200'
         };
       default:
         return {
