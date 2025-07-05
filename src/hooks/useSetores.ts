@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -451,6 +452,53 @@ export const useSetores = () => {
     }
   };
 
+  const cancelarPedidoUTI = async (setorId: string, leitoId: string) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente) return;
+      
+      const { aguardaUTI, dataPedidoUTI, ...restoDados } = leito.dadosPaciente;
+
+      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: restoDados });
+      toast({ title: "Solicitação de UTI Cancelada", description: "A solicitação foi removida da fila." });
+    } catch (error) {
+      console.error('Erro ao cancelar pedido UTI:', error);
+      toast({ title: "Erro", description: "Não foi possível cancelar a solicitação de UTI.", variant: "destructive" });
+    }
+  };
+
+  const cancelarTransferencia = async (setorId: string, leitoId: string) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente) return;
+
+      const { 
+        transferirPaciente, destinoTransferencia, motivoTransferencia, 
+        dataTransferencia, statusTransferencia, ...restoDados 
+      } = leito.dadosPaciente;
+
+      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: restoDados });
+      toast({ title: "Transferência Externa Cancelada", description: "A solicitação foi removida da fila." });
+    } catch (error) {
+      console.error('Erro ao cancelar transferência:', error);
+      toast({ title: "Erro", description: "Não foi possível cancelar a transferência.", variant: "destructive" });
+    }
+  };
+
+  const altaAposRecuperacao = async (setorId: string, leitoId: string) => {
+    try {
+      await updateLeitoInSetor(setorId, leitoId, {
+        statusLeito: 'Vago',
+        dataAtualizacaoStatus: new Date().toISOString(),
+        dadosPaciente: null
+      });
+      toast({ title: "Alta Realizada", description: "O leito foi liberado." });
+    } catch (error) {
+      console.error('Erro ao dar alta:', error);
+      toast({ title: "Erro", description: "Não foi possível realizar a alta.", variant: "destructive" });
+    }
+  };
+
   return {
     setores,
     loading,
@@ -467,5 +515,8 @@ export const useSetores = () => {
     solicitarUTI,
     solicitarRemanejamento,
     transferirPaciente,
+    cancelarPedidoUTI,
+    cancelarTransferencia,
+    altaAposRecuperacao,
   };
 };

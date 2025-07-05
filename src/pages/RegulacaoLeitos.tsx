@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Download } from 'lucide-react';
+import { Download, BedDouble, Ambulance, X, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
@@ -13,6 +14,7 @@ import { DadosPaciente } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { intervalToDuration, parse } from 'date-fns';
 
 interface PacienteDaPlanilha {
   nomeCompleto: string;
@@ -31,7 +33,7 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
@@ -41,19 +43,36 @@ const RegulacaoLeitos = () => {
   const { toast } = useToast();
 
   // Lógica para extrair e filtrar os pacientes
-  const todosPacientesOcupados: (DadosPaciente & { setorOrigem: string })[] = setores
+  const todosPacientesOcupados: (DadosPaciente & { setorOrigem: string; setorId: string; leitoId: string })[] = setores
     .flatMap(setor => 
       setor.leitos
         .filter(leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente)
         .map(leito => ({ 
           ...leito.dadosPaciente!,
-          setorOrigem: setor.nomeSetor
+          setorOrigem: setor.nomeSetor,
+          setorId: setor.id!,
+          leitoId: leito.id
         }))
     );
 
   const decisaoCirurgica = todosPacientesOcupados.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
   const decisaoClinica = todosPacientesOcupados.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
   const recuperacaoCirurgica = todosPacientesOcupados.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
+  const pacientesAguardandoUTI = todosPacientesOcupados.filter(p => p.aguardaUTI);
+  const pacientesAguardandoTransferencia = todosPacientesOcupados.filter(p => p.transferirPaciente);
+
+  const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
+
+  // Função para calcular tempo de espera
+  const calcularTempoEspera = (dataInicio: string): string => {
+    const inicio = new Date(dataInicio);
+    const duracao = intervalToDuration({ start: inicio, end: new Date() });
+    const partes = [];
+    if (duracao.days && duracao.days > 0) partes.push(`${duracao.days}d`);
+    if (duracao.hours && duracao.hours > 0) partes.push(`${duracao.hours}h`);
+    if (duracao.minutes) partes.push(`${duracao.minutes}m`);
+    return partes.length > 0 ? partes.join(' ') : 'Recente';
+  };
 
   const handleProcessFileRequest = (file: File) => {
     setProcessing(true);
@@ -320,14 +339,98 @@ const RegulacaoLeitos = () => {
 
         {/* --- Bloco 3: Listas de Espera --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Aguardando UTI */}
           <Card className="shadow-card border border-border/50">
-            <CardHeader><CardTitle>Aguardando UTI</CardTitle></CardHeader>
-            <CardContent><p className="text-sm text-muted-foreground italic">Aqui serão listados os pacientes que aguardam UTI.</p></CardContent>
+            <CardHeader className="flex-row items-center justify-between py-3 px-4">
+              <CardTitle className="text-base font-semibold">Aguardando UTI</CardTitle>
+              <Badge variant="secondary">{pacientesAguardandoUTI.length}</Badge>
+            </CardHeader>
+            <CardContent className="p-2">
+              {pacientesAguardandoUTI.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {pacientesAguardandoUTI.map(p => (
+                    <div key={`${p.setorId}-${p.leitoId}`} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                      <div className="flex-grow">
+                        <p className="font-medium text-sm">{p.nomePaciente}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{p.especialidadePaciente}</span>
+                          <span>•</span>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {p.dataPedidoUTI && calcularTempoEspera(p.dataPedidoUTI)}
+                          </div>
+                        </div>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Cancelar Solicitação</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic text-center py-8">Nenhum paciente aguardando UTI.</p>
+              )}
+            </CardContent>
           </Card>
+
+          {/* Aguardando Transferência */}
           <Card className="shadow-card border border-border/50">
-            <CardHeader><CardTitle>Aguardando Transferência</CardTitle></CardHeader>
-            <CardContent><p className="text-sm text-muted-foreground italic">Aqui serão listados os pacientes que aguardam transferência.</p></CardContent>
+            <CardHeader className="flex-row items-center justify-between py-3 px-4">
+              <CardTitle className="text-base font-semibold">Aguardando Transferência</CardTitle>
+              <Badge variant="secondary">{pacientesAguardandoTransferencia.length}</Badge>
+            </CardHeader>
+            <CardContent className="p-2">
+              {pacientesAguardandoTransferencia.length > 0 ? (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {pacientesAguardandoTransferencia.map(p => (
+                    <div key={`${p.setorId}-${p.leitoId}`} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                      <div className="flex-grow">
+                        <p className="font-medium text-sm">{p.nomePaciente}</p>
+                        <div className="text-xs text-muted-foreground">
+                          <div>Destino: {p.destinoTransferencia}</div>
+                          <div className="flex items-center gap-1 mt-1">
+                            <Clock className="h-3 w-3" />
+                            {p.dataTransferencia && calcularTempoEspera(p.dataTransferencia)}
+                          </div>
+                        </div>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8"
+                              onClick={() => cancelarTransferencia(p.setorId, p.leitoId)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Cancelar Transferência</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic text-center py-8">Nenhuma transferência pendente.</p>
+              )}
+            </CardContent>
           </Card>
+
+          {/* Cirurgias Eletivas */}
           <Card className="shadow-card border border-border/50">
             <CardHeader><CardTitle>Cirurgias Eletivas</CardTitle></CardHeader>
             <CardContent><p className="text-sm text-muted-foreground italic">Aqui serão listados os pacientes que aguardam leito para cirurgia eletiva.</p></CardContent>
@@ -338,13 +441,20 @@ const RegulacaoLeitos = () => {
         <Accordion type="multiple" className="w-full space-y-4">
           <AccordionItem value="item-1" className="border rounded-lg bg-card shadow-card">
             <AccordionTrigger className="px-4 hover:no-underline">
-              <h3 className="font-semibold text-foreground">REGULAÇÕES PENDENTES</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">REGULAÇÕES PENDENTES</h3>
+                <Badge>{totalPendentes}</Badge>
+              </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <ListaPacientesPendentes titulo="Decisão Cirúrgica" pacientes={decisaoCirurgica} />
                 <ListaPacientesPendentes titulo="Decisão Clínica" pacientes={decisaoClinica} />
-                <ListaPacientesPendentes titulo="Recuperação Cirúrgica" pacientes={recuperacaoCirurgica} />
+                <ListaPacientesPendentes 
+                  titulo="Recuperação Cirúrgica" 
+                  pacientes={recuperacaoCirurgica} 
+                  onAlta={altaAposRecuperacao}
+                />
               </div>
             </AccordionContent>
           </AccordionItem>
