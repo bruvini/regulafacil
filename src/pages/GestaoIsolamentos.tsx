@@ -9,11 +9,14 @@ import GerenciamentoIsolamentoModal from '@/components/modals/GerenciamentoIsola
 import { GerenciarPacientesIsolamentoModal } from '@/components/modals/GerenciarPacientesIsolamentoModal';
 import { PacienteEmVigilanciaCard } from '@/components/PacienteEmVigilanciaCard';
 import { useSetores } from '@/hooks/useSetores';
+import { useAlertasIsolamento } from '@/hooks/useAlertasIsolamento';
+import { AlertaIncompatibilidadeItem } from '@/components/AlertaIncompatibilidadeItem';
 
 const GestaoIsolamentos = () => {
   const [gerenciarTiposModalOpen, setGerenciarTiposModalOpen] = useState(false);
   const [gerenciarPacientesModalOpen, setGerenciarPacientesModalOpen] = useState(false);
   const { setores } = useSetores();
+  const { alertas, loading: alertasLoading } = useAlertasIsolamento();
   
   // Lógica para encontrar pacientes em vigilância
   const pacientesEmVigilancia = setores
@@ -68,7 +71,7 @@ const GestaoIsolamentos = () => {
                   <p className="text-sm text-muted-foreground">Em Vigilância</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-medical-warning">0</p>
+                  <p className="text-2xl font-bold text-medical-warning">{alertas.length}</p>
                   <p className="text-sm text-muted-foreground">Alertas Ativos</p>
                 </div>
                 <div className="text-center">
@@ -127,13 +130,23 @@ const GestaoIsolamentos = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
-                Alertas
+                Alertas de Incompatibilidade Biológica
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="italic text-muted-foreground">
-                Sistema de alertas automáticos será implementado em desenvolvimento futuro.
-              </p>
+              {alertasLoading ? (
+                <p className="italic text-muted-foreground">Analisando compatibilidade entre pacientes...</p>
+              ) : (
+                alertas.length > 0 ? (
+                  <div className="space-y-2">
+                    {alertas.map(alerta => (
+                      <AlertaIncompatibilidadeItem key={alerta.pacienteId} alerta={alerta} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="italic text-muted-foreground">Nenhum risco de incompatibilidade detectado.</p>
+                )
+              )}
             </CardContent>
           </Card>
           

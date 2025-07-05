@@ -12,6 +12,7 @@ import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
 import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
 import { AguardandoTransferenciaItem } from '@/components/AguardandoTransferenciaItem';
+import { RemanejamentoPendenteItem } from '@/components/RemanejamentoPendenteItem';
 import { DadosPaciente } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
@@ -44,7 +45,7 @@ const RegulacaoLeitos = () => {
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const { toast } = useToast();
 
-  const todosPacientesOcupados: (DadosPaciente & { setorOrigem: string; setorId: string; leitoId: string })[] = setores
+  const todosPacientesOcupados: (DadosPaciente & { setorOrigem: string; setorId: string; leitoId: string; leitoCodigo: string })[] = setores
     .flatMap(setor => 
       setor.leitos
         .filter(leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente)
@@ -52,7 +53,8 @@ const RegulacaoLeitos = () => {
           ...leito.dadosPaciente!,
           setorOrigem: setor.nomeSetor,
           setorId: setor.id!,
-          leitoId: leito.id
+          leitoId: leito.id,
+          leitoCodigo: leito.codigoLeito
         }))
     );
 
@@ -61,6 +63,7 @@ const RegulacaoLeitos = () => {
   const recuperacaoCirurgica = todosPacientesOcupados.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
   const pacientesAguardandoUTI = todosPacientesOcupados.filter(p => p.aguardaUTI);
   const pacientesAguardandoTransferencia = todosPacientesOcupados.filter(p => p.transferirPaciente);
+  const pacientesAguardandoRemanejamento = todosPacientesOcupados.filter(p => p.remanejarPaciente);
 
   const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 
@@ -393,10 +396,21 @@ const RegulacaoLeitos = () => {
           
           <AccordionItem value="item-2" className="border rounded-lg bg-card shadow-card">
             <AccordionTrigger className="px-4 hover:no-underline">
-              <h3 className="font-semibold text-foreground">REMANEJAMENTOS PENDENTES</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">REMANEJAMENTOS PENDENTES</h3>
+                <Badge variant="destructive">{pacientesAguardandoRemanejamento.length}</Badge>
+              </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
-              <p className="text-sm text-muted-foreground italic">Aqui serão listados os pacientes que aguardam remanejamento dentro dos setores.</p>
+              {pacientesAguardandoRemanejamento.length > 0 ? (
+                <div className="space-y-1">
+                  {pacientesAguardandoRemanejamento.map(p => (
+                    <RemanejamentoPendenteItem key={p.leitoId} paciente={p} />
+                  ))}
+                </div>
+              ) : (
+                <p className="italic text-muted-foreground text-center py-4">Nenhum remanejamento pendente.</p>
+              )}
             </AccordionContent>
           </AccordionItem>
         </Accordion>
