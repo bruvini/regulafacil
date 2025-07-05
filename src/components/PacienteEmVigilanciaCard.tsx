@@ -20,7 +20,7 @@ interface PacienteEmVigilanciaCardProps {
 
 export const PacienteEmVigilanciaCard = ({ paciente, setorId, leitoId }: PacienteEmVigilanciaCardProps) => {
   const { atualizarRegrasIsolamento } = useSetores();
-  const { tiposIsolamento } = useIsolamentos();
+  const { isolamentos } = useIsolamentos();
   const [regrasLocais, setRegrasLocais] = useState<Record<string, string[]>>({});
 
   const handleRegraChange = (isolamentoId: string, regraId: string, checked: boolean) => {
@@ -42,7 +42,7 @@ export const PacienteEmVigilanciaCard = ({ paciente, setorId, leitoId }: Pacient
   };
 
   const obterRegrasDoIsolamento = (isolamentoId: string) => {
-    const tipoIsolamento = tiposIsolamento.find(t => t.id === isolamentoId);
+    const tipoIsolamento = isolamentos.find(t => t.id === isolamentoId);
     if (!tipoIsolamento) return [];
     
     // Extrair regras dos grupos de regras
@@ -90,7 +90,7 @@ export const PacienteEmVigilanciaCard = ({ paciente, setorId, leitoId }: Pacient
               </div>
               <div className="flex items-center gap-2">
                 {paciente.isolamentosVigentes?.map((isolamento: any) => {
-                  const tipo = tiposIsolamento.find(t => t.id === isolamento.isolamentoId);
+                  const tipo = isolamentos.find(t => t.id === isolamento.isolamentoId);
                   return (
                     <Badge 
                       key={isolamento.isolamentoId}
@@ -107,7 +107,7 @@ export const PacienteEmVigilanciaCard = ({ paciente, setorId, leitoId }: Pacient
           <AccordionContent className="px-4 pb-4">
             <div className="space-y-4">
               {paciente.isolamentosVigentes?.map((isolamento: any) => {
-                const tipo = tiposIsolamento.find(t => t.id === isolamento.isolamentoId);
+                const tipo = isolamentos.find(t => t.id === isolamento.isolamentoId);
                 const regras = obterRegrasDoIsolamento(isolamento.isolamentoId);
                 const regrasCumpridas = regrasLocais[isolamento.isolamentoId] || isolamento.regrasCumpridas || [];
                 const todasRegrasCumpridas = regras.length > 0 && regras.every(regra => regrasCumpridas.includes(regra.id));

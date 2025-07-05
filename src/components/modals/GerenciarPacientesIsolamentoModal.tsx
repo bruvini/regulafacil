@@ -27,7 +27,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
   const [dataInicio, setDataInicio] = useState('');
 
   const { setores, adicionarIsolamentoPaciente } = useSetores();
-  const { tiposIsolamento } = useIsolamentos();
+  const { isolamentos } = useIsolamentos();
 
   // Pacientes ocupando leitos sem isolamentos vigentes
   const pacientesDisponiveis = setores
@@ -61,7 +61,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
     if (!pacienteSelecionado || isolamentosSelecionados.length === 0 || !dataInicio) return;
 
     for (const isolamentoId of isolamentosSelecionados) {
-      const tipoIsolamento = tiposIsolamento.find(t => t.id === isolamentoId);
+      const tipoIsolamento = isolamentos.find(t => t.id === isolamentoId);
       if (tipoIsolamento) {
         const novoIsolamento = {
           isolamentoId,
@@ -175,7 +175,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
               <Label>Tipos de Isolamento</Label>
               <ScrollArea className="h-48 border rounded-md p-4 mt-2">
                 <div className="space-y-3">
-                  {tiposIsolamento.map(tipo => (
+                  {isolamentos.map(tipo => (
                     <div key={tipo.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={tipo.id}
