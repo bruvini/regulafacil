@@ -123,11 +123,11 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                     <AccordionTrigger className="hover:no-underline">
                       <div className="flex justify-between items-center w-full pr-4">
                         <span className="font-semibold">{setorNome}</span>
-                        <Badge variant="secondary">{leitos.length}</Badge>
+                        <Badge variant="secondary">{(leitos as any[]).length}</Badge>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="space-y-2">
-                      {leitos.map(leito => (
+                      {(leitos as any[]).map(leito => (
                         <Card 
                           key={leito.id} 
                           className="cursor-pointer hover:bg-muted/50 transition-colors"
