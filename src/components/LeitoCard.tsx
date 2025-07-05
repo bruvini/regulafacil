@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -144,6 +143,22 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                   <p className="font-medium">Motivo do bloqueio:</p>
                   <p>{leito.motivoBloqueio}</p>
                 </div>
+              </div>
+            ) : leito.statusLeito === 'Regulado' && leito.regulacao ? (
+              <div className="text-center p-2 bg-purple-50 border border-purple-200 rounded-md">
+                <p className="text-xs font-bold text-purple-700">REGULADO PARA:</p>
+                <p className="text-xs text-purple-600">{leito.regulacao.paraSetor} - {leito.regulacao.paraLeito}</p>
+                {leito.regulacao.observacoes && (
+                  <p className="text-xs text-purple-500 mt-1">{leito.regulacao.observacoes}</p>
+                )}
+              </div>
+            ) : leito.statusLeito === 'Reservado' && leito.dadosPaciente ? (
+              <div className="text-center p-2 bg-teal-50 border border-teal-200 rounded-md">
+                <p className="text-xs font-bold text-teal-700">RESERVADO PARA:</p>
+                <p className="text-sm font-medium text-teal-800">{leito.dadosPaciente.nomePaciente}</p>
+                {leito.dadosPaciente.origem && (
+                  <p className="text-xs text-teal-600">Vindo de: {leito.dadosPaciente.origem.deSetor} - {leito.dadosPaciente.origem.deLeito}</p>
+                )}
               </div>
             ) : (
               <div className="h-full w-full"></div>

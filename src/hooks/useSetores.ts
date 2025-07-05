@@ -6,7 +6,8 @@ import {
   updateDoc, 
   deleteDoc, 
   doc,
-  onSnapshot 
+  onSnapshot,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Setor, SetorFormData, LeitoFormData, Leito } from '@/types/hospital';
@@ -536,6 +537,84 @@ export const useSetores = () => {
     }
   };
 
+  const confirmarRegulacao = async (paciente: any, leitoOrigem: any, leitoDestino: any, observacoes: string) => {
+    try {
+      setLoading(true);
+      const agora = new Date().toISOString();
+      const batch = writeBatch(db);
+
+      const setorOrigemRef = doc(db, 'setoresRegulaFacil', leitoOrigem.setorId);
+      const setorDestinoRef = doc(db, 'setoresRegulaFacil', leitoDestino.setorId);
+
+      // Atualiza o leito de ORIGEM
+      const setorOrigemData = setores.find(s => s.id === leitoOrigem.setorId)!;
+      const leitosOrigemAtualizado = setorOrigemData.leitos.map(l => {
+          if (l.id === leitoOrigem.leitoId) {
+              return {
+                  ...l,
+                  statusLeito: 'Regulado' as const,
+                  dataAtualizacaoStatus: agora,
+                  regulacao: {
+                      paraSetor: leitoDestino.setorNome,
+                      paraLeito: leitoDestino.codigoLeito,
+                      data: agora,
+                      observacoes: observacoes
+                  }
+              };
+          }
+          return l;
+      });
+      batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
+
+      // Atualiza o leito de DESTINO
+      const setorDestinoData = setores.find(s => s.id === leitoDestino.setorId)!;
+      const leitosDestinoAtualizado = setorDestinoData.leitos.map(l => {
+          if (l.id === leitoDestino.id) {
+              return {
+                  ...l,
+                  statusLeito: 'Reservado' as const,
+                  dataAtualizacaoStatus: agora,
+                  dadosPaciente: {
+                      ...paciente,
+                      origem: {
+                          deSetor: leitoOrigem.setorOrigem,
+                          deLeito: leitoOrigem.leitoCodigo
+                      }
+                  }
+              };
+          }
+          return l;
+      });
+      
+      // Se origem e destino estão no mesmo setor
+      if (setorOrigemRef.path === setorDestinoRef.path) {
+          const leitosCombinados = leitosOrigemAtualizado.map(l => {
+              const leitoDestinoModificado = leitosDestinoAtualizado.find(ld => ld.id === l.id);
+              return leitoDestinoModificado || l;
+          });
+          batch.update(setorOrigemRef, { leitos: leitosCombinados });
+      } else {
+          batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizado });
+      }
+
+      await batch.commit();
+      
+      toast({
+        title: 'Regulação Confirmada',
+        description: `Leito ${leitoDestino.codigoLeito} regulado com sucesso!`,
+      });
+    } catch (error) {
+      console.error('Erro ao confirmar regulação:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível confirmar a regulação.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     setores,
     loading,
@@ -557,5 +636,6 @@ export const useSetores = () => {
     altaAposRecuperacao,
     adicionarIsolamentoPaciente,
     atualizarRegrasIsolamento,
+    confirmarRegulacao,
   };
 };

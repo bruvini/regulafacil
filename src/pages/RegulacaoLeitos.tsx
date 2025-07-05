@@ -37,7 +37,7 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
@@ -281,14 +281,16 @@ const RegulacaoLeitos = () => {
     setRegulacaoModalOpen(true);
   };
 
-  const handleConfirmarRegulacao = (leitoDestino: any, observacoes: string) => {
-    console.log("Regulação confirmada para:", leitoDestino, "Obs:", observacoes);
-    // Lógica final de atualização no Firestore virá aqui
-    setRegulacaoModalOpen(false);
-    toast({
-      title: "Regulação Confirmada",
-      description: `Leito ${leitoDestino.codigoLeito} regulado com sucesso.`
-    });
+  const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string) => {
+    if (!pacienteParaRegular) return;
+    
+    try {
+      await confirmarRegulacao(pacienteParaRegular, pacienteParaRegular, leitoDestino, observacoes);
+      setRegulacaoModalOpen(false);
+      setPacienteParaRegular(null);
+    } catch (error) {
+      console.error('Erro ao confirmar regulação:', error);
+    }
   };
 
   return (

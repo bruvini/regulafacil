@@ -1,5 +1,5 @@
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useSetores } from './useSetores';
 import { Leito, DadosPaciente } from '@/types/hospital';
 
@@ -20,8 +20,8 @@ const calcularIdade = (dataNascimento: string): number => {
 export const useLeitoFinder = () => {
   const { setores } = useSetores();
 
-  const findAvailableLeitos = (paciente: DadosPaciente) => {
-    if (!paciente) return [];
+  const findAvailableLeitos = useCallback((paciente: DadosPaciente) => {
+    if (!paciente || !setores) return [];
 
     const todosLeitosComSetor = setores.flatMap(setor => 
         setor.leitos.map(leito => ({ ...leito, setorNome: setor.nomeSetor, setorId: setor.id }))
@@ -82,7 +82,7 @@ export const useLeitoFinder = () => {
     });
 
     return leitosDisponiveis;
-  };
+  }, [setores]);
 
   return { findAvailableLeitos };
 };

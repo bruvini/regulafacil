@@ -27,7 +27,12 @@ export interface DadosPaciente {
   dataTransferencia?: string;
   statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
   
-  isolamentosVigentes?: IsolamentoVigente[]; // <-- NOVO CAMPO
+  isolamentosVigentes?: IsolamentoVigente[];
+  
+  origem?: {
+    deSetor: string;
+    deLeito: string;
+  };
 }
 
 export interface Leito {
@@ -35,10 +40,16 @@ export interface Leito {
   codigoLeito: string;
   leitoPCP: boolean;
   leitoIsolamento: boolean;
-  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
+  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
   dataAtualizacaoStatus: string;
   motivoBloqueio?: string;
-  dadosPaciente?: DadosPaciente | null; // <-- NOVO CAMPO
+  dadosPaciente?: DadosPaciente | null;
+  regulacao?: {
+    paraSetor: string;
+    paraLeito: string;
+    data: string;
+    observacoes?: string;
+  };
 }
 
 export interface Setor {
