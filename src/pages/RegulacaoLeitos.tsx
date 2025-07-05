@@ -48,25 +48,27 @@ const RegulacaoLeitos = () => {
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const { toast } = useToast();
 
-  const todosPacientesOcupados: (DadosPaciente & { setorOrigem: string; setorId: string; leitoId: string; leitoCodigo: string })[] = setores
+  const todosPacientesPendentes: (DadosPaciente & { setorOrigem: string; setorId: string; leitoId: string; leitoCodigo: string; statusLeito: string; regulacao?: any })[] = setores
     .flatMap(setor => 
       setor.leitos
-        .filter(leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente)
+        .filter(leito => ['Ocupado', 'Regulado'].includes(leito.statusLeito) && leito.dadosPaciente)
         .map(leito => ({ 
           ...leito.dadosPaciente!,
           setorOrigem: setor.nomeSetor,
           setorId: setor.id!,
           leitoId: leito.id,
-          leitoCodigo: leito.codigoLeito
+          leitoCodigo: leito.codigoLeito,
+          statusLeito: leito.statusLeito,
+          regulacao: leito.regulacao
         }))
     );
 
-  const decisaoCirurgica = todosPacientesOcupados.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
-  const decisaoClinica = todosPacientesOcupados.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
-  const recuperacaoCirurgica = todosPacientesOcupados.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
-  const pacientesAguardandoUTI = todosPacientesOcupados.filter(p => p.aguardaUTI);
-  const pacientesAguardandoTransferencia = todosPacientesOcupados.filter(p => p.transferirPaciente);
-  const pacientesAguardandoRemanejamento = todosPacientesOcupados.filter(p => p.remanejarPaciente);
+  const decisaoCirurgica = todosPacientesPendentes.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
+  const decisaoClinica = todosPacientesPendentes.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
+  const recuperacaoCirurgica = todosPacientesPendentes.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
+  const pacientesAguardandoUTI = todosPacientesPendentes.filter(p => p.aguardaUTI);
+  const pacientesAguardandoTransferencia = todosPacientesPendentes.filter(p => p.transferirPaciente);
+  const pacientesAguardandoRemanejamento = todosPacientesPendentes.filter(p => p.remanejarPaciente);
 
   const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 

@@ -82,7 +82,7 @@ function AppSidebar() {
   const { state } = useSidebar();
   
   return (
-    <Sidebar className={state === 'collapsed' ? 'w-14' : 'w-60'} collapsible="offcanvas">
+    <Sidebar className={state === 'collapsed' ? 'w-14' : 'w-60'} collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-medical-primary font-semibold">
@@ -127,7 +127,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
-          <header className="h-14 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <header className="h-14 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
             <div className="flex items-center px-4 h-full">
               <SidebarTrigger className="mr-4" />
               <h1 className="font-semibold text-medical-primary">

@@ -3,7 +3,7 @@ import { DadosPaciente } from '@/types/hospital';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LogIn, LogOut, Clock } from 'lucide-react';
+import { LogIn, LogOut, Clock, CheckCheck, Pencil, XCircle } from 'lucide-react';
 import { intervalToDuration, parse } from 'date-fns';
 
 // Função para calcular idade
@@ -35,14 +35,13 @@ const calcularDuracao = (dataInternacao: string): string => {
 };
 
 interface PacientePendenteItemProps {
-  paciente: DadosPaciente;
+  paciente: any;
   onRegularClick: () => void;
   onAlta?: () => void;
 }
 
 export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
-  const tempoInternado = calcularDuracao(paciente.dataInternacao);
 
   return (
     <div className="flex items-start gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
@@ -54,22 +53,62 @@ export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: Pacie
           </Badge>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-          <span>{paciente.especialidadePaciente}</span>
-          <span className="text-gray-400">•</span>
-          <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {tempoInternado}</div>
+          {paciente.statusLeito === 'Regulado' ? (
+            <>
+              <span className="font-semibold text-purple-600">Destino:</span>
+              <span>{paciente.regulacao.paraSetor} - {paciente.regulacao.paraLeito}</span>
+              <span className="text-gray-400">•</span>
+              <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {calcularDuracao(paciente.regulacao.data)}</div>
+            </>
+          ) : (
+            <>
+              <span>{paciente.especialidadePaciente}</span>
+              <span className="text-gray-400">•</span>
+              <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {calcularDuracao(paciente.dataInternacao)}</div>
+            </>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={onRegularClick}>
-                <LogIn className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Regular Leito</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {paciente.statusLeito === 'Regulado' ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <CheckCheck className="h-4 w-4 text-green-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Concluir Regulação</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Alterar Regulação</p></TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <XCircle className="h-4 w-4 text-destructive" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Cancelar Regulação</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={onRegularClick}>
+                  <LogIn className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Regular Leito</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         
         {onAlta && (
           <TooltipProvider>

@@ -144,11 +144,12 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                   <p>{leito.motivoBloqueio}</p>
                 </div>
               </div>
-            ) : leito.statusLeito === 'Regulado' && leito.regulacao ? (
+            ) : leito.statusLeito === 'Regulado' && leito.dadosPaciente && (
               <div className="text-center p-2 bg-purple-50 border border-purple-200 rounded-md">
-                <p className="text-xs font-bold text-purple-700">REGULADO PARA:</p>
-                <p className="text-xs text-purple-600">{leito.regulacao.paraSetor} - {leito.regulacao.paraLeito}</p>
-                {leito.regulacao.observacoes && (
+                <p className="text-sm font-semibold text-purple-800">{leito.dadosPaciente.nomePaciente}</p>
+                <p className="text-xs font-bold text-purple-700 mt-1">REGULADO PARA:</p>
+                <p className="text-xs text-purple-600">{leito.regulacao?.paraSetor} - {leito.regulacao?.paraLeito}</p>
+                {leito.regulacao?.observacoes && (
                   <p className="text-xs text-purple-500 mt-1">{leito.regulacao.observacoes}</p>
                 )}
               </div>
