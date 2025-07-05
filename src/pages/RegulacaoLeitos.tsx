@@ -10,6 +10,8 @@ import { useSetores } from '@/hooks/useSetores';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
+import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
+import { AguardandoTransferenciaItem } from '@/components/AguardandoTransferenciaItem';
 import { DadosPaciente } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
@@ -42,7 +44,6 @@ const RegulacaoLeitos = () => {
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const { toast } = useToast();
 
-  // Lógica para extrair e filtrar os pacientes
   const todosPacientesOcupados: (DadosPaciente & { setorOrigem: string; setorId: string; leitoId: string })[] = setores
     .flatMap(setor => 
       setor.leitos
@@ -63,7 +64,6 @@ const RegulacaoLeitos = () => {
 
   const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 
-  // Função para calcular tempo de espera
   const calcularTempoEspera = (dataInicio: string): string => {
     const inicio = new Date(dataInicio);
     const duracao = intervalToDuration({ start: inicio, end: new Date() });
@@ -88,7 +88,6 @@ const RegulacaoLeitos = () => {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        // A leitura dos dados começa da linha 4 (índice 3 do array)
         const dadosPlanilha = jsonData.slice(3);
         
         const setoresPlanilha = new Set<string>();
@@ -130,10 +129,8 @@ const RegulacaoLeitos = () => {
         const temInconsistencias = setoresFaltantes.length > 0 || Object.keys(leitosFaltantes).length > 0;
 
         if (temInconsistencias) {
-          // Show validation errors
           setValidationResult({ setoresFaltantes, leitosFaltantes });
         } else {
-          // If validation passes, proceed to sync summary generation
           const pacientesPlanilha: PacienteDaPlanilha[] = dadosPlanilha
             .map((row: any) => ({
               nomeCompleto: row[0]?.trim(),
@@ -151,7 +148,6 @@ const RegulacaoLeitos = () => {
 
           const summary: SyncSummary = { novasInternacoes: [], transferencias: [], altas: [] };
 
-          // 1. Identificar Altas: Pacientes no sistema que não estão na planilha
           leitosOcupados.forEach(leitoOcupado => {
             if (leitoOcupado.dadosPaciente && !pacientesPlanilha.some(p => p.nomeCompleto === leitoOcupado.dadosPaciente?.nomePaciente)) {
               summary.altas.push({ 
@@ -161,15 +157,13 @@ const RegulacaoLeitos = () => {
             }
           });
 
-          // 2. Identificar Novas Internações e Transferências
           pacientesPlanilha.forEach(pacientePlanilha => {
             const leitoAtual = leitosOcupados.find(l => l.dadosPaciente?.nomePaciente === pacientePlanilha.nomeCompleto);
             const leitoDaPlanilha = todosLeitos.find(l => l.codigoLeito === pacientePlanilha.leitoCodigo);
 
-            if (!leitoDaPlanilha) return; // Leito inválido, já foi pego na validação
+            if (!leitoDaPlanilha) return;
 
             if (leitoAtual) {
-              // Paciente já existe - verifica transferência
               if (leitoAtual.id !== leitoDaPlanilha.id) {
                 summary.transferencias.push({ 
                   paciente: pacientePlanilha, 
@@ -177,7 +171,6 @@ const RegulacaoLeitos = () => {
                 });
               }
             } else {
-              // Paciente novo - nova internação
               summary.novasInternacoes.push(pacientePlanilha);
             }
           });
@@ -216,12 +209,9 @@ const RegulacaoLeitos = () => {
     const agora = new Date().toISOString();
     const batch = writeBatch(db);
 
-    // Cria uma cópia profunda dos setores para manipulação segura
     const setoresAtualizados = JSON.parse(JSON.stringify(setores));
 
     try {
-      // 1. LIMPEZA: Percorre todos os leitos e desocupa todos que não estão bloqueados.
-      // Isso garante que pacientes que tiveram alta sejam removidos.
       for (const setor of setoresAtualizados) {
         for (const leito of setor.leitos) {
           if (leito.statusLeito === 'Ocupado') {
@@ -232,7 +222,6 @@ const RegulacaoLeitos = () => {
         }
       }
 
-      // 2. OCUPAÇÃO: Preenche os leitos com os dados da planilha
       dadosPlanilhaProcessados.forEach((pacientePlanilha: any) => {
         const setorTarget = setoresAtualizados.find(s => s.nomeSetor === pacientePlanilha.setorNome);
         if (setorTarget) {
@@ -251,16 +240,13 @@ const RegulacaoLeitos = () => {
         }
       });
 
-      // 3. Prepara o batch para enviar as atualizações ao Firestore
       setoresAtualizados.forEach(setor => {
         const setorRef = doc(db, 'setoresRegulaFacil', setor.id);
         batch.update(setorRef, { leitos: setor.leitos });
       });
 
-      // Simulação de tempo para a barra de progresso ser visível
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Executar todas as operações atomicamente
       await batch.commit();
       
       toast({ 
@@ -287,13 +273,11 @@ const RegulacaoLeitos = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Cabeçalho da Página */}
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-medical-primary">Central de Regulação</h1>
           <p className="text-muted-foreground">Visão geral e controle das solicitações e pendências de leitos.</p>
         </header>
 
-        {/* --- Bloco 1: Indicadores --- */}
         <Card className="shadow-card border border-border/50">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-medical-primary">Indicadores</CardTitle>
@@ -303,9 +287,7 @@ const RegulacaoLeitos = () => {
           </CardContent>
         </Card>
 
-        {/* --- Bloco 2: Filtros e Ações --- */}
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Coluna da Esquerda (70%) */}
           <div className="w-full md:w-[70%]">
             <Card className="h-full shadow-card border border-border/50">
               <CardContent className="pt-6">
@@ -313,7 +295,6 @@ const RegulacaoLeitos = () => {
               </CardContent>
             </Card>
           </div>
-          {/* Coluna da Direita (30%) */}
           <div className="w-full md:w-[30%]">
             <Card className="h-full shadow-card border border-border/50">
               <CardHeader className="pb-2 pt-4">
@@ -337,9 +318,7 @@ const RegulacaoLeitos = () => {
           </div>
         </div>
 
-        {/* --- Bloco 3: Listas de Espera --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Aguardando UTI */}
           <Card className="shadow-card border border-border/50">
             <CardHeader className="flex-row items-center justify-between py-3 px-4">
               <CardTitle className="text-base font-semibold">Aguardando UTI</CardTitle>
@@ -347,36 +326,14 @@ const RegulacaoLeitos = () => {
             </CardHeader>
             <CardContent className="p-2">
               {pacientesAguardandoUTI.length > 0 ? (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="space-y-1 max-h-64 overflow-y-auto">
                   {pacientesAguardandoUTI.map(p => (
-                    <div key={`${p.setorId}-${p.leitoId}`} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                      <div className="flex-grow">
-                        <p className="font-medium text-sm">{p.nomePaciente}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{p.especialidadePaciente}</span>
-                          <span>•</span>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {p.dataPedidoUTI && calcularTempoEspera(p.dataPedidoUTI)}
-                          </div>
-                        </div>
-                      </div>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Cancelar Solicitação</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <AguardandoUTIItem 
+                      key={p.leitoId}
+                      paciente={p}
+                      onCancel={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
+                      onTransfer={() => { /* lógica para abrir modal de transferência */ }}
+                    />
                   ))}
                 </div>
               ) : (
@@ -385,7 +342,6 @@ const RegulacaoLeitos = () => {
             </CardContent>
           </Card>
 
-          {/* Aguardando Transferência */}
           <Card className="shadow-card border border-border/50">
             <CardHeader className="flex-row items-center justify-between py-3 px-4">
               <CardTitle className="text-base font-semibold">Aguardando Transferência</CardTitle>
@@ -393,35 +349,13 @@ const RegulacaoLeitos = () => {
             </CardHeader>
             <CardContent className="p-2">
               {pacientesAguardandoTransferencia.length > 0 ? (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="space-y-1 max-h-64 overflow-y-auto">
                   {pacientesAguardandoTransferencia.map(p => (
-                    <div key={`${p.setorId}-${p.leitoId}`} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                      <div className="flex-grow">
-                        <p className="font-medium text-sm">{p.nomePaciente}</p>
-                        <div className="text-xs text-muted-foreground">
-                          <div>Destino: {p.destinoTransferencia}</div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <Clock className="h-3 w-3" />
-                            {p.dataTransferencia && calcularTempoEspera(p.dataTransferencia)}
-                          </div>
-                        </div>
-                      </div>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8"
-                              onClick={() => cancelarTransferencia(p.setorId, p.leitoId)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Cancelar Transferência</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <AguardandoTransferenciaItem 
+                      key={p.leitoId}
+                      paciente={p}
+                      onCancel={() => cancelarTransferencia(p.setorId, p.leitoId)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -430,14 +364,12 @@ const RegulacaoLeitos = () => {
             </CardContent>
           </Card>
 
-          {/* Cirurgias Eletivas */}
           <Card className="shadow-card border border-border/50">
             <CardHeader><CardTitle>Cirurgias Eletivas</CardTitle></CardHeader>
             <CardContent><p className="text-sm text-muted-foreground italic">Aqui serão listados os pacientes que aguardam leito para cirurgia eletiva.</p></CardContent>
           </Card>
         </div>
 
-        {/* --- Bloco 4 & 5: Acordeões de Pendências --- */}
         <Accordion type="multiple" className="w-full space-y-4">
           <AccordionItem value="item-1" className="border rounded-lg bg-card shadow-card">
             <AccordionTrigger className="px-4 hover:no-underline">
@@ -469,7 +401,6 @@ const RegulacaoLeitos = () => {
           </AccordionItem>
         </Accordion>
 
-        {/* Modal de Importação */}
         <ImportacaoMVModal 
           open={importModalOpen}
           onOpenChange={(isOpen) => {

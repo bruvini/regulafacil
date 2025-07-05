@@ -3,7 +3,7 @@ import { DadosPaciente } from '@/types/hospital';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { LogIn, User, Calendar, Stethoscope, Clock } from 'lucide-react';
+import { LogIn, LogOut, Clock } from 'lucide-react';
 import { intervalToDuration, parse } from 'date-fns';
 
 // Função para calcular idade
@@ -36,9 +36,10 @@ const calcularDuracao = (dataInternacao: string): string => {
 
 interface PacientePendenteItemProps {
   paciente: DadosPaciente;
+  onAlta?: () => void;
 }
 
-export const PacientePendenteItem = ({ paciente }: PacientePendenteItemProps) => {
+export const PacientePendenteItem = ({ paciente, onAlta }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
   const tempoInternado = calcularDuracao(paciente.dataInternacao);
 
@@ -57,16 +58,31 @@ export const PacientePendenteItem = ({ paciente }: PacientePendenteItemProps) =>
           <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {tempoInternado}</div>
         </div>
       </div>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-              <LogIn className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p>Regular Leito</p></TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="flex items-center gap-1">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                <LogIn className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Regular Leito</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
+        {onAlta && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={onAlta}>
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Dar Alta da Recuperação</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
     </div>
   );
 };
