@@ -2,81 +2,200 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield, Settings } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Settings, UserPlus, BarChart2, Bell } from 'lucide-react';
 import GerenciamentoIsolamentoModal from '@/components/modals/GerenciamentoIsolamentoModal';
+import { GerenciarPacientesIsolamentoModal } from '@/components/modals/GerenciarPacientesIsolamentoModal';
+import { PacienteEmVigilanciaCard } from '@/components/PacienteEmVigilanciaCard';
+import { useSetores } from '@/hooks/useSetores';
 
 const GestaoIsolamentos = () => {
-  const [modalOpen, setModalOpen] = useState(false);
+  const [gerenciarTiposModalOpen, setGerenciarTiposModalOpen] = useState(false);
+  const [gerenciarPacientesModalOpen, setGerenciarPacientesModalOpen] = useState(false);
+  const { setores } = useSetores();
+  
+  // Lógica para encontrar pacientes em vigilância
+  const pacientesEmVigilancia = setores
+    .flatMap(setor => 
+      setor.leitos
+        .filter(leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente?.isolamentosVigentes && leito.dadosPaciente.isolamentosVigentes.length > 0)
+        .map(leito => ({ 
+          paciente: leito.dadosPaciente!, 
+          setorNome: setor.nomeSetor, 
+          setorId: setor.id!,
+          leitoId: leito.id,
+          leitoCodigo: leito.codigoLeito 
+        }))
+    )
+    .reduce((acc, item) => {
+        (acc[item.setorNome] = acc[item.setorNome] || []).push(item);
+        return acc;
+    }, {} as Record<string, any[]>);
+
+  const totalPacientesVigilancia = Object.values(pacientesEmVigilancia).reduce((total, setor) => total + setor.length, 0);
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <header className="mb-8">
             <div className="flex items-center justify-center mb-4">
               <div className="w-16 h-16 rounded-lg bg-medical-danger flex items-center justify-center">
-                <Shield className="h-8 w-8 text-white" />
+                <Settings className="h-8 w-8 text-white" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold text-medical-primary mb-4">
+            <h1 className="text-3xl font-bold text-medical-primary text-center mb-4">
               Gestão de Isolamentos
             </h1>
-            <p className="text-lg text-muted-foreground">
-              Controle e monitore os leitos de isolamento e precauções especiais
+            <p className="text-lg text-muted-foreground text-center">
+              Controle e monitore os pacientes em precauções especiais
             </p>
-          </div>
+          </header>
 
-          <div className="grid gap-6">
+          {/* Bloco 1: Indicadores */}
+          <Card className="shadow-card border border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart2 className="h-5 w-5" />
+                Indicadores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-medical-primary">{totalPacientesVigilancia}</p>
+                  <p className="text-sm text-muted-foreground">Em Vigilância</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-medical-warning">0</p>
+                  <p className="text-sm text-muted-foreground">Alertas Ativos</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-medical-success">0</p>
+                  <p className="text-sm text-muted-foreground">Finalizados Hoje</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-medical-danger">0</p>
+                  <p className="text-sm text-muted-foreground">Vencidos</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bloco 2: Filtros e Ações */}
+          <div className="grid md:grid-cols-2 gap-6">
             <Card className="shadow-card border border-border/50">
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-medical-primary flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Configuração de Tipos de Isolamento
-                </CardTitle>
+                <CardTitle>Filtros</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <p className="text-muted-foreground">
-                    Configure os tipos de isolamento, microorganismos e regras de precaução 
-                    que serão utilizados pela equipe de Controle de Infecção Hospitalar (CCIH).
-                  </p>
-                  
+                <p className="italic text-muted-foreground">
+                  Filtros avançados serão implementados em desenvolvimento futuro.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-card border border-border/50">
+              <CardHeader>
+                <CardTitle>Ações</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-4">
                   <Button 
-                    onClick={() => setModalOpen(true)}
-                    variant="medical"
-                    size="lg"
-                    className="w-full"
+                    onClick={() => setGerenciarTiposModalOpen(true)} 
+                    variant="medical-outline"
+                    className="flex-1"
                   >
-                    <Settings className="h-5 w-5 mr-2" />
-                    Gerenciar Tipos de Isolamento
+                    <Settings className="mr-2 h-4 w-4" />
+                    Gerenciar Tipos
+                  </Button>
+                  <Button 
+                    onClick={() => setGerenciarPacientesModalOpen(true)}
+                    variant="medical"
+                    className="flex-1"
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Gerenciar Pacientes
                   </Button>
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="shadow-card border border-border/50">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-medical-primary">
-                  Funcionalidades Futuras
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-muted-foreground">
-                  <p>• Monitoramento em tempo real dos leitos em isolamento</p>
-                  <p>• Alertas automáticos para revisão de precauções</p>
-                  <p>• Relatórios de conformidade com protocolos</p>
-                  <p>• Integração com sistema de laboratório</p>
-                  <p>• Dashboard executivo de controle de infecção</p>
-                </div>
-              </CardContent>
-            </Card>
           </div>
+
+          {/* Bloco 3: Alertas */}
+          <Card className="shadow-card border border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Alertas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="italic text-muted-foreground">
+                Sistema de alertas automáticos será implementado em desenvolvimento futuro.
+              </p>
+            </CardContent>
+          </Card>
+          
+          {/* Bloco 4: Pacientes em Vigilância */}
+          <Card className="shadow-card border border-border/50">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Pacientes em Vigilância</span>
+                {totalPacientesVigilancia > 0 && (
+                  <Badge variant="secondary">{totalPacientesVigilancia}</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {Object.keys(pacientesEmVigilancia).length > 0 ? (
+                Object.entries(pacientesEmVigilancia).map(([setorNome, pacientes]) => (
+                  <div key={setorNome} className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-lg text-medical-primary">{setorNome}</h3>
+                      <Badge variant="outline">{pacientes.length}</Badge>
+                    </div>
+                    <div className="space-y-3">
+                      {pacientes.map((item: any) => (
+                        <PacienteEmVigilanciaCard 
+                          key={`${item.setorId}-${item.leitoId}`}
+                          paciente={{ ...item.paciente, leitoCodigo: item.leitoCodigo }}
+                          setorId={item.setorId}
+                          leitoId={item.leitoId}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center mx-auto mb-4">
+                    <Bell className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground">
+                    Nenhum paciente em vigilância no momento.
+                  </p>
+                  <Button 
+                    onClick={() => setGerenciarPacientesModalOpen(true)}
+                    className="mt-4"
+                    variant="medical"
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Adicionar Paciente
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       <GerenciamentoIsolamentoModal 
-        open={modalOpen} 
-        onOpenChange={setModalOpen} 
+        open={gerenciarTiposModalOpen} 
+        onOpenChange={setGerenciarTiposModalOpen} 
+      />
+      <GerenciarPacientesIsolamentoModal 
+        open={gerenciarPacientesModalOpen} 
+        onOpenChange={setGerenciarPacientesModalOpen} 
       />
     </div>
   );

@@ -1,5 +1,11 @@
-
 // Adicione esta nova interface no topo
+export interface IsolamentoVigente {
+  isolamentoId: string; // ID do tipo de isolamento da coleção isolamentosRegulaFacil
+  sigla: string;
+  dataInicioVigilancia: string;
+  regrasCumpridas: string[]; // Array com os IDs das regras já cumpridas
+}
+
 export interface DadosPaciente {
   nomePaciente: string;
   dataNascimento: string;
@@ -20,6 +26,8 @@ export interface DadosPaciente {
   motivoTransferencia?: string;
   dataTransferencia?: string;
   statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
+  
+  isolamentosVigentes?: IsolamentoVigente[]; // <-- NOVO CAMPO
 }
 
 export interface Leito {

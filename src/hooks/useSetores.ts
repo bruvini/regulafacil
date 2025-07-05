@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -499,6 +498,44 @@ export const useSetores = () => {
     }
   };
 
+  const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, novoIsolamento: any) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente) return;
+
+      const isolamentosAtuais = leito.dadosPaciente.isolamentosVigentes || [];
+      const dadosPacienteAtualizado = {
+        ...leito.dadosPaciente,
+        isolamentosVigentes: [...isolamentosAtuais, novoIsolamento]
+      };
+
+      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: dadosPacienteAtualizado });
+      toast({ title: "Vigilância Iniciada", description: `Isolamento ${novoIsolamento.sigla} adicionado ao paciente.` });
+    } catch (error) {
+      console.error('Erro ao adicionar isolamento:', error);
+      toast({ title: "Erro", description: "Não foi possível adicionar o isolamento.", variant: "destructive" });
+    }
+  };
+
+  const atualizarRegrasIsolamento = async (setorId: string, leitoId: string, isolamentoVigenteId: string, regrasCumpridas: string[]) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente?.isolamentosVigentes) return;
+
+      const isolamentosAtualizados = leito.dadosPaciente.isolamentosVigentes.map(iso => 
+        iso.isolamentoId === isolamentoVigenteId ? { ...iso, regrasCumpridas } : iso
+      );
+      
+      const dadosPacienteAtualizado = { ...leito.dadosPaciente, isolamentosVigentes: isolamentosAtualizados };
+      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: dadosPacienteAtualizado });
+      
+      toast({ title: "Regras Atualizadas", description: "Status das regras de isolamento atualizado." });
+    } catch (error) {
+      console.error('Erro ao atualizar regras:', error);
+      toast({ title: "Erro", description: "Não foi possível atualizar as regras.", variant: "destructive" });
+    }
+  };
+
   return {
     setores,
     loading,
@@ -518,5 +555,7 @@ export const useSetores = () => {
     cancelarPedidoUTI,
     cancelarTransferencia,
     altaAposRecuperacao,
+    adicionarIsolamentoPaciente,
+    atualizarRegrasIsolamento,
   };
 };
