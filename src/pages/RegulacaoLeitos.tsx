@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -9,6 +8,8 @@ import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
+import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
+import { DadosPaciente } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -38,6 +39,21 @@ const RegulacaoLeitos = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const { toast } = useToast();
+
+  // Lógica para extrair e filtrar os pacientes
+  const todosPacientesOcupados: (DadosPaciente & { setorOrigem: string })[] = setores
+    .flatMap(setor => 
+      setor.leitos
+        .filter(leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente)
+        .map(leito => ({ 
+          ...leito.dadosPaciente!,
+          setorOrigem: setor.nomeSetor
+        }))
+    );
+
+  const decisaoCirurgica = todosPacientesOcupados.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
+  const decisaoClinica = todosPacientesOcupados.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
+  const recuperacaoCirurgica = todosPacientesOcupados.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
 
   const handleProcessFileRequest = (file: File) => {
     setProcessing(true);
@@ -174,7 +190,6 @@ const RegulacaoLeitos = () => {
     reader.readAsBinaryString(file);
   };
 
-  // Nova função de sincronização
   const handleSync = async () => {
     if (!dadosPlanilhaProcessados || setoresLoading) return;
     setIsSyncing(true);
@@ -326,7 +341,11 @@ const RegulacaoLeitos = () => {
               <h3 className="font-semibold text-foreground">REGULAÇÕES PENDENTES</h3>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
-              <p className="text-sm text-muted-foreground italic">Aqui serão listados os pacientes do PS ou da Recuperação Cirúrgica que aguardam leito.</p>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <ListaPacientesPendentes titulo="Decisão Cirúrgica" pacientes={decisaoCirurgica} />
+                <ListaPacientesPendentes titulo="Decisão Clínica" pacientes={decisaoClinica} />
+                <ListaPacientesPendentes titulo="Recuperação Cirúrgica" pacientes={recuperacaoCirurgica} />
+              </div>
             </AccordionContent>
           </AccordionItem>
           
