@@ -1,9 +1,11 @@
 
-export interface HistoricoLeito {
-  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
-  data: string;
-  pacienteId?: string; // ID do paciente se o status for 'Ocupado'
-  motivoBloqueio?: string;
+// Adicione esta nova interface no topo
+export interface DadosPaciente {
+  nomePaciente: string;
+  dataNascimento: string;
+  sexoPaciente: 'Masculino' | 'Feminino';
+  dataInternacao: string;
+  especialidadePaciente: string;
 }
 
 export interface Leito {
@@ -14,36 +16,7 @@ export interface Leito {
   statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao';
   dataAtualizacaoStatus: string;
   motivoBloqueio?: string;
-  // Novos campos:
-  pacienteId?: string; // ID do paciente atualmente no leito
-  historico: HistoricoLeito[]; // Log de todas as movimentações
-}
-
-export interface Paciente {
-  id?: string; // ID será o nome do paciente normalizado
-  nomeCompleto: string;
-  dataNascimento: string;
-  sexo: 'Masculino' | 'Feminino';
-  dataInternacao: string;
-  especialidade: string;
-  leitoAtualId?: string; // ID do leito que ele ocupa
-  setorAtualId?: string;
-}
-
-export interface PacienteDaPlanilha {
-  nomeCompleto: string;
-  dataNascimento: string;
-  sexo: 'Masculino' | 'Feminino';
-  dataInternacao: string;
-  setorNome: string;
-  leitoCodigo: string;
-  especialidade: string;
-}
-
-export interface SyncSummary {
-  novasInternacoes: PacienteDaPlanilha[];
-  transferencias: { paciente: PacienteDaPlanilha; leitoAntigo: string }[];
-  altas: { nomePaciente: string; leitoAntigo: string }[];
+  dadosPaciente?: DadosPaciente | null; // <-- NOVO CAMPO
 }
 
 export interface Setor {

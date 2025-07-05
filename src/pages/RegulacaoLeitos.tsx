@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -6,17 +7,30 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
-import { usePacientes } from '@/hooks/usePacientes';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { useToast } from '@/hooks/use-toast';
-import { Paciente, HistoricoLeito, SyncSummary, PacienteDaPlanilha } from '@/types/hospital';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+interface PacienteDaPlanilha {
+  nomeCompleto: string;
+  dataNascimento: string;
+  sexo: 'Masculino' | 'Feminino';
+  dataInternacao: string;
+  setorNome: string;
+  leitoCodigo: string;
+  especialidade: string;
+}
+
+interface SyncSummary {
+  novasInternacoes: PacienteDaPlanilha[];
+  transferencias: { paciente: PacienteDaPlanilha; leitoAntigo: string }[];
+  altas: { nomePaciente: string; leitoAntigo: string }[];
+}
+
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading } = useSetores();
-  const { pacientes } = usePacientes();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
@@ -104,10 +118,9 @@ const RegulacaoLeitos = () => {
 
           // 1. Identificar Altas: Pacientes no sistema que não estão na planilha
           leitosOcupados.forEach(leitoOcupado => {
-            const pacienteNoLeito = pacientes.find(p => p.id === leitoOcupado.pacienteId);
-            if (pacienteNoLeito && !pacientesPlanilha.some(p => p.nomeCompleto === pacienteNoLeito.nomeCompleto)) {
+            if (leitoOcupado.dadosPaciente && !pacientesPlanilha.some(p => p.nomeCompleto === leitoOcupado.dadosPaciente?.nomePaciente)) {
               summary.altas.push({ 
-                nomePaciente: pacienteNoLeito.nomeCompleto, 
+                nomePaciente: leitoOcupado.dadosPaciente.nomePaciente, 
                 leitoAntigo: leitoOcupado.codigoLeito 
               });
             }
@@ -115,25 +128,22 @@ const RegulacaoLeitos = () => {
 
           // 2. Identificar Novas Internações e Transferências
           pacientesPlanilha.forEach(pacientePlanilha => {
-            const pacienteExistente = pacientes.find(p => p.nomeCompleto === pacientePlanilha.nomeCompleto);
+            const leitoAtual = leitosOcupados.find(l => l.dadosPaciente?.nomePaciente === pacientePlanilha.nomeCompleto);
             const leitoDaPlanilha = todosLeitos.find(l => l.codigoLeito === pacientePlanilha.leitoCodigo);
 
             if (!leitoDaPlanilha) return; // Leito inválido, já foi pego na validação
 
-            if (pacienteExistente) {
+            if (leitoAtual) {
               // Paciente já existe - verifica transferência
-              if (pacienteExistente.leitoAtualId !== leitoDaPlanilha.id) {
-                const leitoAntigo = todosLeitos.find(l => l.id === pacienteExistente.leitoAtualId);
+              if (leitoAtual.id !== leitoDaPlanilha.id) {
                 summary.transferencias.push({ 
                   paciente: pacientePlanilha, 
-                  leitoAntigo: leitoAntigo?.codigoLeito || 'N/A' 
+                  leitoAntigo: leitoAtual.codigoLeito
                 });
               }
             } else {
               // Paciente novo - nova internação
-              if (leitoDaPlanilha.statusLeito === 'Vago') {
-                summary.novasInternacoes.push(pacientePlanilha);
-              }
+              summary.novasInternacoes.push(pacientePlanilha);
             }
           });
 
@@ -164,79 +174,53 @@ const RegulacaoLeitos = () => {
     reader.readAsBinaryString(file);
   };
 
-  // Nova função de sincronização corrigida
+  // Nova função de sincronização
   const handleSync = async () => {
-    if (!syncSummary || setoresLoading || !dadosPlanilhaProcessados) {
-      toast({ title: 'Aguarde', description: 'Dados ainda estão sendo carregados ou processados.' });
-      return;
-    }
+    if (!dadosPlanilhaProcessados || setoresLoading) return;
     setIsSyncing(true);
 
-    const batch = writeBatch(db);
     const agora = new Date().toISOString();
-    
-    // Mapeia todos os leitos de todos os setores para fácil acesso
-    let todosLeitosDoSistema = setores.flatMap(setor => 
-        setor.leitos.map(leito => ({ ...leito, setorId: setor.id, setorNome: setor.nomeSetor }))
-    );
+    const batch = writeBatch(db);
+
+    // Cria uma cópia profunda dos setores para manipulação segura
+    const setoresAtualizados = JSON.parse(JSON.stringify(setores));
 
     try {
-      // 1. Processar Altas
-      syncSummary.altas.forEach(alta => {
-          const leitoIndex = todosLeitosDoSistema.findIndex(l => l.codigoLeito === alta.leitoAntigo);
-          if (leitoIndex !== -1) {
-              todosLeitosDoSistema[leitoIndex].statusLeito = 'Vago';
-              todosLeitosDoSistema[leitoIndex].pacienteId = undefined;
-              todosLeitosDoSistema[leitoIndex].dataAtualizacaoStatus = agora;
-              todosLeitosDoSistema[leitoIndex].historico.push({ statusLeito: 'Vago', data: agora });
+      // 1. LIMPEZA: Percorre todos os leitos e desocupa todos que não estão bloqueados.
+      // Isso garante que pacientes que tiveram alta sejam removidos.
+      for (const setor of setoresAtualizados) {
+        for (const leito of setor.leitos) {
+          if (leito.statusLeito === 'Ocupado') {
+            leito.statusLeito = 'Vago';
+            leito.dadosPaciente = null;
+            leito.dataAtualizacaoStatus = agora;
           }
+        }
+      }
+
+      // 2. OCUPAÇÃO: Preenche os leitos com os dados da planilha
+      dadosPlanilhaProcessados.forEach((pacientePlanilha: any) => {
+        const setorTarget = setoresAtualizados.find(s => s.nomeSetor === pacientePlanilha.setorNome);
+        if (setorTarget) {
+          const leitoTarget = setorTarget.leitos.find(l => l.codigoLeito === pacientePlanilha.leitoCodigo);
+          if (leitoTarget) {
+            leitoTarget.statusLeito = 'Ocupado';
+            leitoTarget.dataAtualizacaoStatus = agora;
+            leitoTarget.dadosPaciente = {
+              nomePaciente: pacientePlanilha.nomeCompleto,
+              dataNascimento: pacientePlanilha.dataNascimento,
+              sexoPaciente: pacientePlanilha.sexo,
+              dataInternacao: pacientePlanilha.dataInternacao,
+              especialidadePaciente: pacientePlanilha.especialidade
+            };
+          }
+        }
       });
 
-      // 2. Processar Transferências
-      syncSummary.transferencias.forEach(transf => {
-          // Libera leito antigo
-          const leitoAntigoIndex = todosLeitosDoSistema.findIndex(l => l.codigoLeito === transf.leitoAntigo);
-          if (leitoAntigoIndex !== -1) {
-              todosLeitosDoSistema[leitoAntigoIndex].statusLeito = 'Vago';
-              todosLeitosDoSistema[leitoAntigoIndex].pacienteId = undefined;
-              todosLeitosDoSistema[leitoAntigoIndex].dataAtualizacaoStatus = agora;
-              todosLeitosDoSistema[leitoAntigoIndex].historico.push({ statusLeito: 'Vago', data: agora });
-          }
-          // Ocupa leito novo
-          const leitoNovoIndex = todosLeitosDoSistema.findIndex(l => l.codigoLeito === transf.paciente.leitoCodigo);
-          if (leitoNovoIndex !== -1) {
-              todosLeitosDoSistema[leitoNovoIndex].statusLeito = 'Ocupado';
-              todosLeitosDoSistema[leitoNovoIndex].pacienteId = transf.paciente.nomeCompleto;
-              todosLeitosDoSistema[leitoNovoIndex].dataAtualizacaoStatus = agora;
-              todosLeitosDoSistema[leitoNovoIndex].historico.push({ statusLeito: 'Ocupado', data: agora, pacienteId: transf.paciente.nomeCompleto });
-          }
-      });
-
-      // 3. Processar Novas Internações
-      syncSummary.novasInternacoes.forEach(internacao => {
-          const leitoIndex = todosLeitosDoSistema.findIndex(l => l.codigoLeito === internacao.leitoCodigo);
-          if (leitoIndex !== -1) {
-              todosLeitosDoSistema[leitoIndex].statusLeito = 'Ocupado';
-              todosLeitosDoSistema[leitoIndex].pacienteId = internacao.nomeCompleto;
-              todosLeitosDoSistema[leitoIndex].dataAtualizacaoStatus = agora;
-              todosLeitosDoSistema[leitoIndex].historico.push({ statusLeito: 'Ocupado', data: agora, pacienteId: internacao.nomeCompleto });
-          }
-      });
-      
-      // 4. Reagrupar leitos por setor e preparar o batch para o Firestore
-      const setoresParaSalvar: Record<string, any[]> = {};
-      todosLeitosDoSistema.forEach(leito => {
-          if (!setoresParaSalvar[leito.setorId!]) {
-              setoresParaSalvar[leito.setorId!] = [];
-          }
-          // Remove as propriedades temporárias 'setorId' e 'setorNome' antes de salvar
-          const { setorId, setorNome, ...leitoParaSalvar } = leito;
-          setoresParaSalvar[leito.setorId!].push(leitoParaSalvar);
-      });
-
-      Object.entries(setoresParaSalvar).forEach(([setorId, leitos]) => {
-          const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-          batch.update(setorRef, { leitos });
+      // 3. Prepara o batch para enviar as atualizações ao Firestore
+      setoresAtualizados.forEach(setor => {
+        const setorRef = doc(db, 'setoresRegulaFacil', setor.id);
+        batch.update(setorRef, { leitos: setor.leitos });
       });
 
       // Simulação de tempo para a barra de progresso ser visível
@@ -247,7 +231,7 @@ const RegulacaoLeitos = () => {
       
       toast({ 
         title: 'Sucesso!', 
-        description: `Sincronização concluída! ${syncSummary.novasInternacoes.length + syncSummary.transferencias.length + syncSummary.altas.length} operações realizadas.`,
+        description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} operações realizadas.`,
       });
       
       setImportModalOpen(false);
