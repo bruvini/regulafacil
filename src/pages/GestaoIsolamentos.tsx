@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Settings, UserPlus, BarChart2, Bell } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import GerenciamentoIsolamentoModal from '@/components/modals/GerenciamentoIsolamentoModal';
 import { GerenciarPacientesIsolamentoModal } from '@/components/modals/GerenciarPacientesIsolamentoModal';
 import { PacienteEmVigilanciaCard } from '@/components/PacienteEmVigilanciaCard';
@@ -52,7 +53,7 @@ const GestaoIsolamentos = () => {
             </p>
           </header>
 
-          {/* Bloco 1: Indicadores */}
+          {/* Bloco 1: Indicadores (Simplificado) */}
           <Card className="shadow-card border border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -136,7 +137,7 @@ const GestaoIsolamentos = () => {
             </CardContent>
           </Card>
           
-          {/* Bloco 4: Pacientes em Vigilância */}
+          {/* Bloco 4: Pacientes em Vigilância (com Accordion) */}
           <Card className="shadow-card border border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -146,26 +147,30 @@ const GestaoIsolamentos = () => {
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent>
               {Object.keys(pacientesEmVigilancia).length > 0 ? (
-                Object.entries(pacientesEmVigilancia).map(([setorNome, pacientes]) => (
-                  <div key={setorNome} className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg text-medical-primary">{setorNome}</h3>
-                      <Badge variant="outline">{pacientes.length}</Badge>
-                    </div>
-                    <div className="space-y-3">
-                      {pacientes.map((item: any) => (
-                        <PacienteEmVigilanciaCard 
-                          key={`${item.setorId}-${item.leitoId}`}
-                          paciente={{ ...item.paciente, leitoCodigo: item.leitoCodigo }}
-                          setorId={item.setorId}
-                          leitoId={item.leitoId}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))
+                <Accordion type="multiple" className="w-full space-y-2">
+                  {Object.entries(pacientesEmVigilancia).map(([setorNome, pacientes]) => (
+                    <AccordionItem key={setorNome} value={setorNome} className="border rounded-lg px-4">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex justify-between items-center w-full pr-4">
+                          <h3 className="text-lg font-semibold text-foreground">{setorNome}</h3>
+                          <Badge variant="outline">{pacientes.length}</Badge>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4 space-y-2">
+                        {pacientes.map((item: any) => (
+                          <PacienteEmVigilanciaCard 
+                            key={`${item.setorId}-${item.leitoId}`}
+                            paciente={{ ...item.paciente, leitoCodigo: item.leitoCodigo }}
+                            setorId={item.setorId}
+                            leitoId={item.leitoId}
+                          />
+                        ))}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               ) : (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center mx-auto mb-4">
