@@ -1,16 +1,19 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import LeitoCard from '@/components/LeitoCard';
 import QuartoCard from '@/components/QuartoCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
+import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
 import { useSetores } from '@/hooks/useSetores';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
+import { Settings } from 'lucide-react';
 
-const RegulacaoLeitos = () => {
+const MapaLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { setores, loading } = useSetores();
 
@@ -29,8 +32,8 @@ const RegulacaoLeitos = () => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-medical-primary">Regulação de Leitos</h1>
-              <p className="text-muted-foreground">Gestão em tempo real dos leitos hospitalares</p>
+              <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
+              <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
             </div>
           </div>
 
@@ -72,21 +75,37 @@ const RegulacaoLeitos = () => {
             </CardContent>
           </Card>
 
-          {/* Bloco 2: Filtros e Gestão */}
-          <Card className="shadow-card border border-border/50">
-            <CardHeader>
-              <h2 className="text-xl font-semibold text-medical-primary">Gestão</h2>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={() => setModalOpen(true)}
-                className="w-full bg-medical-primary hover:bg-medical-secondary text-white font-semibold py-3 px-6 rounded-lg shadow-medical transition-all duration-200 hover:shadow-lg"
-                size="lg"
-              >
-                Gerenciar Setores e Leitos
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Bloco 2: Filtros e Ações */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Bloco de Filtros */}
+            <div className="lg:col-span-2">
+              <FiltrosMapaLeitos />
+            </div>
+
+            {/* Bloco de Ações Rápidas */}
+            <div className="lg:col-span-1">
+              <Card className="shadow-card border border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold text-medical-primary">Ações Rápidas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button onClick={() => setModalOpen(true)} variant="outline" className="w-full">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Gerenciar Setores e Leitos
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Abrir painel de gerenciamento</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
 
           {/* Bloco 3: Mapa de Setores */}
           <Card className="shadow-card border border-border/50">
@@ -196,4 +215,4 @@ const RegulacaoLeitos = () => {
   );
 };
 
-export default RegulacaoLeitos;
+export default MapaLeitos;
