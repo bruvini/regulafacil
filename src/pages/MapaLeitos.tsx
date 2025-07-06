@@ -10,12 +10,22 @@ import QuartoCard from '@/components/QuartoCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
 import { useSetores } from '@/hooks/useSetores';
+import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
 import { Settings } from 'lucide-react';
 
 const MapaLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { setores, loading } = useSetores();
+  
+  const { 
+    searchTerm, setSearchTerm, 
+    filtrosAvancados, setFiltrosAvancados,
+    resetFiltros,
+    filteredSetores,
+    especialidades,
+    todosStatus
+  } = useFiltrosMapaLeitos(setores);
 
   const calcularTaxaOcupacao = (leitos: any[]) => {
     if (leitos.length === 0) return 0;
@@ -79,7 +89,16 @@ const MapaLeitos = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Bloco de Filtros */}
             <div className="lg:col-span-2">
-              <FiltrosMapaLeitos />
+              <FiltrosMapaLeitos 
+                setores={setores}
+                filtros={filtrosAvancados}
+                setFiltros={setFiltrosAvancados}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                resetFiltros={resetFiltros}
+                especialidades={especialidades}
+                todosStatus={todosStatus}
+              />
             </div>
 
             {/* Bloco de Ações Rápidas */}
@@ -123,9 +142,9 @@ const MapaLeitos = () => {
                     </Card>
                   ))}
                 </div>
-              ) : setores.length > 0 ? (
+              ) : filteredSetores.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-2">
-                  {setores.map((setor) => {
+                  {filteredSetores.map((setor) => {
                     const taxaOcupacao = calcularTaxaOcupacao(setor.leitos);
                     return (
                       <AccordionItem 
@@ -188,17 +207,28 @@ const MapaLeitos = () => {
                 <div className="text-center py-12">
                   <div className="max-w-md mx-auto">
                     <p className="text-lg text-muted-foreground mb-4">
-                      Nenhum setor cadastrado ainda
+                      {setores.length === 0 ? "Nenhum setor cadastrado ainda" : "Nenhum resultado encontrado para os filtros aplicados."}
                     </p>
-                    <p className="text-sm text-muted-foreground mb-6">
-                      Comece criando seu primeiro setor e adicionando leitos para visualizar o mapa hospitalar
-                    </p>
-                    <Button 
-                      onClick={() => setModalOpen(true)}
-                      className="bg-medical-primary hover:bg-medical-secondary"
-                    >
-                      Criar Primeiro Setor
-                    </Button>
+                    {setores.length === 0 ? (
+                      <>
+                        <p className="text-sm text-muted-foreground mb-6">
+                          Comece criando seu primeiro setor e adicionando leitos para visualizar o mapa hospitalar
+                        </p>
+                        <Button 
+                          onClick={() => setModalOpen(true)}
+                          className="bg-medical-primary hover:bg-medical-secondary"
+                        >
+                          Criar Primeiro Setor
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        onClick={resetFiltros}
+                        variant="outline"
+                      >
+                        Limpar Filtros
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
