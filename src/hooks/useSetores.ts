@@ -618,19 +618,17 @@ export const useSetores = () => {
     }
   };
 
-  const concluirRegulacao = async (leitoOrigem: any) => {
+  const concluirRegulacao = async (pacienteRegulado: any) => {
     try {
       setLoading(true);
       const batch = writeBatch(db);
       const agora = new Date().toISOString();
 
-      // Encontra o setor e leito de origem
-      const setorOrigem = setores.find(s => s.id === leitoOrigem.setorId);
-      if (!setorOrigem) throw new Error('Setor de origem não encontrado');
-
-      const setorOrigemRef = doc(db, 'setoresRegulaFacil', leitoOrigem.setorId);
-      const leitosOrigemAtualizado = setorOrigem.leitos.map(l => {
-        if (l.id === leitoOrigem.leitoId) {
+      // 1. Acha o leito de origem (que está "Regulado")
+      const setorOrigemRef = doc(db, 'setoresRegulaFacil', pacienteRegulado.setorId);
+      const setorOrigemData = setores.find(s => s.id === pacienteRegulado.setorId)!;
+      const leitosOrigemAtualizado = setorOrigemData.leitos.map(l => {
+        if (l.id === pacienteRegulado.leitoId) {
           return { 
             ...l, 
             statusLeito: 'Higienizacao' as const, 
@@ -641,19 +639,132 @@ export const useSetores = () => {
         }
         return l;
       });
-
       batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
+
+      // 2. Acha o leito de destino (que está "Reservado") e o torna "Ocupado"
+      const setorDestino = setores.find(s => s.nomeSetor === pacienteRegulado.regulacao.paraSetor);
+      if (setorDestino) {
+        const setorDestinoRef = doc(db, 'setoresRegulaFacil', setorDestino.id);
+        const leitosDestinoAtualizado = setorDestino.leitos.map(l => {
+          if (l.codigoLeito === pacienteRegulado.regulacao.paraLeito) {
+            const dadosPacienteFinal = { ...l.dadosPaciente };
+            delete dadosPacienteFinal.origem; // Limpa a informação de origem
+            return { 
+              ...l, 
+              statusLeito: 'Ocupado' as const, 
+              dataAtualizacaoStatus: agora, 
+              dadosPaciente: dadosPacienteFinal 
+            };
+          }
+          return l;
+        });
+        batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizado });
+      }
+
       await batch.commit();
-      
       toast({ 
         title: 'Regulação Concluída!', 
-        description: 'O paciente foi movido e o leito de origem está em higienização.' 
+        description: 'O paciente foi efetivamente transferido.' 
       });
     } catch (error) {
       console.error('Erro ao concluir regulação:', error);
       toast({ 
         title: 'Erro', 
         description: 'Não foi possível concluir a regulação.', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const alterarRegulacao = async (paciente: any, leitoOrigem: any, leitoDestinoNovo: any, observacoes: string) => {
+    try {
+      setLoading(true);
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      // 1. Libera o leito que estava reservado ANTERIORMENTE
+      const leitoReservadoAntigo = setores.flatMap(s => 
+        s.leitos.map(l => ({...l, setorId: s.id}))
+      ).find(l => l.statusLeito === 'Reservado' && l.dadosPaciente?.nomePaciente === paciente.nomePaciente);
+      
+      if (leitoReservadoAntigo) {
+        const setorAntigoRef = doc(db, 'setoresRegulaFacil', leitoReservadoAntigo.setorId);
+        const setorAntigoData = setores.find(s => s.id === leitoReservadoAntigo.setorId)!;
+        const leitosSetorAntigo = setorAntigoData.leitos.map(l => 
+          l.id === leitoReservadoAntigo.id ? { 
+            ...l, 
+            statusLeito: 'Vago' as const, 
+            dataAtualizacaoStatus: agora,
+            dadosPaciente: null 
+          } : l
+        );
+        batch.update(setorAntigoRef, { leitos: leitosSetorAntigo });
+      }
+
+      // 2. Atualiza o leito de origem com a NOVA regulação
+      const setorOrigemRef = doc(db, 'setoresRegulaFacil', leitoOrigem.setorId);
+      const setorOrigemData = setores.find(s => s.id === leitoOrigem.setorId)!;
+      const leitosOrigemAtualizado = setorOrigemData.leitos.map(l => {
+        if (l.id === leitoOrigem.leitoId) {
+          return {
+            ...l,
+            statusLeito: 'Regulado' as const,
+            dataAtualizacaoStatus: agora,
+            regulacao: {
+              paraSetor: leitoDestinoNovo.setorNome || '',
+              paraLeito: leitoDestinoNovo.codigoLeito || '',
+              data: agora,
+              observacoes: observacoes || ''
+            }
+          };
+        }
+        return l;
+      });
+      batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
+
+      // 3. Reserva o NOVO leito de destino
+      const setorDestinoRef = doc(db, 'setoresRegulaFacil', leitoDestinoNovo.setorId);
+      const setorDestinoData = setores.find(s => s.id === leitoDestinoNovo.setorId)!;
+      const leitosDestinoAtualizado = setorDestinoData.leitos.map(l => {
+        if (l.id === leitoDestinoNovo.id) {
+          return {
+            ...l,
+            statusLeito: 'Reservado' as const,
+            dataAtualizacaoStatus: agora,
+            dadosPaciente: {
+              ...paciente,
+              origem: {
+                deSetor: leitoOrigem.setorOrigem || '',
+                deLeito: leitoOrigem.leitoCodigo || ''
+              }
+            }
+          };
+        }
+        return l;
+      });
+      
+      // Se origem e destino são no mesmo setor
+      if (setorOrigemRef.path === setorDestinoRef.path) {
+        const leitosCombinados = leitosOrigemAtualizado.map(l => 
+          l.id === leitoDestinoNovo.id ? leitosDestinoAtualizado.find(ld => ld.id === l.id) || l : l
+        );
+        batch.update(setorOrigemRef, { leitos: leitosCombinados });
+      } else {
+        batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizado });
+      }
+
+      await batch.commit();
+      toast({ 
+        title: 'Regulação Alterada!', 
+        description: 'O destino do paciente foi atualizado.' 
+      });
+    } catch (error) {
+      console.error('Erro ao alterar regulação:', error);
+      toast({ 
+        title: 'Erro', 
+        description: 'Não foi possível alterar a regulação.', 
         variant: 'destructive' 
       });
     } finally {
@@ -757,6 +868,8 @@ export const useSetores = () => {
     atualizarRegrasIsolamento,
     confirmarRegulacao,
     concluirRegulacao,
+    alterarRegulacao: (paciente: any, leitoOrigem: any, leitoDestino: any, observacoes: string) => 
+      alterarRegulacao(paciente, leitoOrigem, leitoDestino, observacoes),
     cancelarRegulacao,
   };
 };

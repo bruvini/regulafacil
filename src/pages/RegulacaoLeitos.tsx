@@ -22,6 +22,7 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { intervalToDuration, parse } from 'date-fns';
 import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
+import { PacienteReguladoItem } from '@/components/PacienteReguladoItem';
 
 interface PacienteDaPlanilha {
   nomeCompleto: string;
@@ -78,9 +79,13 @@ const RegulacaoLeitos = () => {
         })
     );
 
-  const decisaoCirurgica = todosPacientesPendentes.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
-  const decisaoClinica = todosPacientesPendentes.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
-  const recuperacaoCirurgica = todosPacientesPendentes.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
+  // Separar pacientes por status
+  const pacientesAguardandoRegulacao = todosPacientesPendentes.filter(p => p.statusLeito === 'Ocupado');
+  const pacientesJaRegulados = todosPacientesPendentes.filter(p => p.statusLeito === 'Regulado');
+
+  const decisaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
+  const decisaoClinica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
+  const recuperacaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
   const pacientesAguardandoUTI = todosPacientesPendentes.filter(p => p.aguardaUTI);
   const pacientesAguardandoTransferencia = todosPacientesPendentes.filter(p => p.transferirPaciente);
   const pacientesAguardandoRemanejamento = todosPacientesPendentes.filter(p => p.remanejarPaciente);
@@ -496,7 +501,8 @@ const RegulacaoLeitos = () => {
                 <Badge>{totalPendentes}</Badge>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
+            <AccordionContent className="px-4 pb-4 space-y-6">
+              {/* Bloco 1: Listas por especialidade */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {renderListaComAgrupamento(
                   "Decisão Cirúrgica", 
@@ -515,6 +521,27 @@ const RegulacaoLeitos = () => {
                   altaAposRecuperacao
                 )}
               </div>
+
+              {/* Bloco 2: Pacientes já regulados */}
+              {pacientesJaRegulados.length > 0 && (
+                <div className="pt-4 border-t">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    Pacientes com Regulação Definida
+                    <Badge variant="secondary">{pacientesJaRegulados.length}</Badge>
+                  </h4>
+                  <div className="space-y-2">
+                    {pacientesJaRegulados.map(paciente => (
+                      <PacienteReguladoItem 
+                        key={paciente.leitoId}
+                        paciente={paciente}
+                        onConcluir={handleConcluir}
+                        onAlterar={handleAlterar}
+                        onCancelar={handleCancelar}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </AccordionContent>
           </AccordionItem>
           

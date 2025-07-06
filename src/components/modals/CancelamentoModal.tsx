@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Copy } from 'lucide-react';
 
 // Função para calcular idade
 const calcularIdade = (dataNascimento: string): string => {
@@ -69,6 +69,12 @@ Data e hora do cancelamento: ${new Date().toLocaleString('pt-BR')}`;
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button 
+            variant="secondary" 
+            onClick={() => navigator.clipboard.writeText(getMensagemCancelamento())}
+          >
+            <Copy className="mr-2 h-4 w-4"/>Copiar
+          </Button>
           <Button variant="destructive" onClick={handleConfirm} disabled={!motivo.trim()}>
             Confirmar Cancelamento
           </Button>

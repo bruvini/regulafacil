@@ -220,7 +220,11 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
               <div className="p-4 bg-blue-50 dark:bg-blue-900/50 rounded-lg border border-blue-200">
                   <p className="whitespace-pre-wrap font-mono text-xs">{getMensagemConfirmacao()}</p>
               </div>
-              <Textarea placeholder="Adicionar observações do NIR (opcional)..." value={observacoes} onChange={e => setObservacoes(e.target.value)} />
+              <Textarea 
+                placeholder={isAlteracao ? "Descreva o motivo da alteração..." : "Adicionar observações do NIR (opcional)..."} 
+                value={observacoes} 
+                onChange={e => setObservacoes(e.target.value)} 
+              />
             </div>
             <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setEtapa(leitoSelecionado?.leitoPCP ? 2 : 1)}>Voltar</Button>
