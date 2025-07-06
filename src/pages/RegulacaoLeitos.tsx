@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { intervalToDuration, parse } from 'date-fns';
+import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
 
 interface PacienteDaPlanilha {
   nomeCompleto: string;
@@ -39,10 +40,12 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
+  const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
+  const [pacienteParaAcao, setPacienteParaAcao] = useState<any | null>(null);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -101,6 +104,28 @@ const RegulacaoLeitos = () => {
     }, {} as Record<string, any[]>);
   };
 
+  const handleConcluir = (paciente: any) => {
+    concluirRegulacao(paciente);
+  };
+
+  const handleAlterar = (paciente: any) => {
+    setPacienteParaRegular(paciente);
+    setRegulacaoModalOpen(true);
+  };
+
+  const handleCancelar = (paciente: any) => {
+    setPacienteParaAcao(paciente);
+    setCancelamentoModalOpen(true);
+  };
+
+  const onConfirmarCancelamento = (motivo: string) => {
+    if (pacienteParaAcao) {
+      cancelarRegulacao(pacienteParaAcao, motivo);
+    }
+    setCancelamentoModalOpen(false);
+    setPacienteParaAcao(null);
+  };
+
   const renderListaComAgrupamento = (titulo: string, pacientes: any[], onRegularClick?: (paciente: any) => void, onAlta?: (setorId: string, leitoId: string) => void) => {
     const pacientesAgrupados = agruparPorEspecialidade(pacientes);
     
@@ -128,6 +153,9 @@ const RegulacaoLeitos = () => {
                           paciente={paciente} 
                           onRegularClick={onRegularClick ? () => onRegularClick(paciente) : undefined}
                           onAlta={onAlta ? () => onAlta(paciente.setorId, paciente.leitoId) : undefined}
+                          onConcluir={handleConcluir}
+                          onAlterar={handleAlterar}
+                          onCancelar={handleCancelar}
                         />
                       ))}
                     </AccordionContent>
@@ -522,6 +550,12 @@ const RegulacaoLeitos = () => {
           processing={processing}
           isSyncing={isSyncing}
           onConfirmSync={handleSync}
+        />
+
+        <CancelamentoModal
+          open={cancelamentoModalOpen}
+          onOpenChange={setCancelamentoModalOpen}
+          onConfirm={onConfirmarCancelamento}
         />
 
         {pacienteParaRegular && (

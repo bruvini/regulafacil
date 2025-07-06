@@ -38,9 +38,19 @@ interface PacientePendenteItemProps {
   paciente: any;
   onRegularClick?: () => void;
   onAlta?: () => void;
+  onConcluir?: (paciente: any) => void;
+  onAlterar?: (paciente: any) => void;
+  onCancelar?: (paciente: any) => void;
 }
 
-export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: PacientePendenteItemProps) => {
+export const PacientePendenteItem = ({ 
+  paciente, 
+  onRegularClick, 
+  onAlta, 
+  onConcluir, 
+  onAlterar, 
+  onCancelar 
+}: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
 
   return (
@@ -56,7 +66,7 @@ export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: Pacie
           {paciente.statusLeito === 'Regulado' ? (
             <>
               <span className="font-semibold text-purple-600">Destino:</span>
-              <span>{paciente.regulacao.paraSetorSigla || paciente.regulacao.paraSetor} - {paciente.regulacao.paraLeito}</span>
+              <span>{paciente.regulacao.paraSetorSigla} - {paciente.regulacao.paraLeito}</span>
               <span className="text-gray-400">•</span>
               <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {calcularDuracao(paciente.regulacao.data)}</div>
             </>
@@ -72,7 +82,12 @@ export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: Pacie
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => onConcluir?.(paciente)}
+                >
                   <CheckCheck className="h-4 w-4 text-green-600" />
                 </Button>
               </TooltipTrigger>
@@ -80,7 +95,12 @@ export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: Pacie
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => onAlterar?.(paciente)}
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -88,7 +108,12 @@ export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: Pacie
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => onCancelar?.(paciente)}
+                >
                   <XCircle className="h-4 w-4 text-destructive" />
                 </Button>
               </TooltipTrigger>

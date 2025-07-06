@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   collection, 
@@ -619,6 +618,122 @@ export const useSetores = () => {
     }
   };
 
+  const concluirRegulacao = async (leitoOrigem: any) => {
+    try {
+      setLoading(true);
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      // Encontra o setor e leito de origem
+      const setorOrigem = setores.find(s => s.id === leitoOrigem.setorId);
+      if (!setorOrigem) throw new Error('Setor de origem não encontrado');
+
+      const setorOrigemRef = doc(db, 'setoresRegulaFacil', leitoOrigem.setorId);
+      const leitosOrigemAtualizado = setorOrigem.leitos.map(l => {
+        if (l.id === leitoOrigem.leitoId) {
+          return { 
+            ...l, 
+            statusLeito: 'Higienizacao' as const, 
+            dataAtualizacaoStatus: agora, 
+            dadosPaciente: null, 
+            regulacao: undefined 
+          };
+        }
+        return l;
+      });
+
+      batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
+      await batch.commit();
+      
+      toast({ 
+        title: 'Regulação Concluída!', 
+        description: 'O paciente foi movido e o leito de origem está em higienização.' 
+      });
+    } catch (error) {
+      console.error('Erro ao concluir regulação:', error);
+      toast({ 
+        title: 'Erro', 
+        description: 'Não foi possível concluir a regulação.', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelarRegulacao = async (paciente: any, motivo: string) => {
+    try {
+      setLoading(true);
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      // Encontra o leito de origem (que está regulado)
+      const leitoOrigem = setores.flatMap(s => 
+        s.leitos.map(l => ({ ...l, setorId: s.id }))
+      ).find(l => l.statusLeito === 'Regulado' && l.dadosPaciente?.nomePaciente === paciente.nomePaciente);
+
+      if (!leitoOrigem) throw new Error('Leito de origem não encontrado');
+
+      const setorOrigem = setores.find(s => s.id === leitoOrigem.setorId);
+      if (!setorOrigem) throw new Error('Setor de origem não encontrado');
+
+      // Volta o leito de origem para 'Ocupado'
+      const setorOrigemRef = doc(db, 'setoresRegulaFacil', leitoOrigem.setorId);
+      const leitosOrigemAtualizado = setorOrigem.leitos.map(l => {
+        if (l.id === leitoOrigem.id) {
+          return { 
+            ...l, 
+            statusLeito: 'Ocupado' as const, 
+            dataAtualizacaoStatus: agora,
+            regulacao: undefined
+          };
+        }
+        return l;
+      });
+
+      // Encontra e libera o leito que estava reservado
+      const leitoReservado = setores.flatMap(s => 
+        s.leitos.map(l => ({ ...l, setorId: s.id, setorNome: s.nomeSetor }))
+      ).find(l => l.statusLeito === 'Reservado' && l.dadosPaciente?.nomePaciente === paciente.nomePaciente);
+
+      if (leitoReservado) {
+        const setorDestino = setores.find(s => s.id === leitoReservado.setorId);
+        if (setorDestino) {
+          const setorDestinoRef = doc(db, 'setoresRegulaFacil', leitoReservado.setorId);
+          const leitosDestinoAtualizado = setorDestino.leitos.map(l => {
+            if (l.id === leitoReservado.id) {
+              return { 
+                ...l, 
+                statusLeito: 'Vago' as const, 
+                dataAtualizacaoStatus: agora,
+                dadosPaciente: null
+              };
+            }
+            return l;
+          });
+          batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizado });
+        }
+      }
+
+      batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
+      await batch.commit();
+      
+      toast({ 
+        title: 'Regulação Cancelada!', 
+        description: 'A reserva do leito de destino foi cancelada.' 
+      });
+    } catch (error) {
+      console.error('Erro ao cancelar regulação:', error);
+      toast({ 
+        title: 'Erro', 
+        description: 'Não foi possível cancelar a regulação.', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     setores,
     loading,
@@ -641,5 +756,7 @@ export const useSetores = () => {
     adicionarIsolamentoPaciente,
     atualizarRegrasIsolamento,
     confirmarRegulacao,
+    concluirRegulacao,
+    cancelarRegulacao,
   };
 };
