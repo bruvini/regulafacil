@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Leito } from '@/types/hospital';
@@ -11,6 +12,7 @@ import MotivoBloqueioModal from './modals/MotivoBloqueioModal';
 import { RemanejamentoModal } from './modals/RemanejamentoModal';
 import { TransferenciaModal } from './modals/TransferenciaModal';
 import { useSetores } from '@/hooks/useSetores';
+import { useIsolamentos } from '@/hooks/useIsolamentos';
 import { cn } from '@/lib/utils';
 
 interface LeitoCardProps {
@@ -37,6 +39,7 @@ const calcularIdade = (dataNascimento: string): string => {
 
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente } = useSetores();
+  const { isolamentos: tiposDeIsolamento } = useIsolamentos();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
   const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
   const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
@@ -135,6 +138,27 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                   <Stethoscope className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <p className="text-xs text-muted-foreground">{paciente.especialidadePaciente}</p>
                 </div>
+
+                {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {paciente.isolamentosVigentes.map(isoVigente => {
+                      const tipoIso = tiposDeIsolamento.find(t => t.id === isoVigente.isolamentoId);
+                      return (
+                        <Badge
+                          key={isoVigente.isolamentoId}
+                          style={{ 
+                            backgroundColor: tipoIso?.cor || '#718096', 
+                            color: 'white',
+                            border: `1px solid ${tipoIso?.cor || '#718096'}`
+                          }}
+                          className="text-xs"
+                        >
+                          {isoVigente.sigla}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ) : leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio ? (
               <div className="flex items-start space-x-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">

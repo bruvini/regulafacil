@@ -3,17 +3,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Download, BedDouble, Ambulance, X, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
+import { useAlertasIsolamento } from '@/hooks/useAlertasIsolamento';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
 import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
 import { AguardandoTransferenciaItem } from '@/components/AguardandoTransferenciaItem';
-import { RemanejamentoPendenteItem } from '@/components/RemanejamentoPendenteItem';
+import { PacientePendenteItem } from '@/components/PacientePendenteItem';
 import { DadosPaciente } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
@@ -38,6 +40,7 @@ interface SyncSummary {
 
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao } = useSetores();
+  const { alertas: pacientesAguardandoRemanejamento } = useAlertasIsolamento();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
@@ -48,13 +51,14 @@ const RegulacaoLeitos = () => {
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const { toast } = useToast();
 
-  const todosPacientesPendentes: (DadosPaciente & { setorOrigem: string; setorId: string; leitoId: string; leitoCodigo: string; statusLeito: string; regulacao?: any })[] = setores
+  const todosPacientesPendentes: (DadosPaciente & { setorOrigem: string; siglaSetorOrigem: string; setorId: string; leitoId: string; leitoCodigo: string; statusLeito: string; regulacao?: any })[] = setores
     .flatMap(setor => 
       setor.leitos
         .filter(leito => ['Ocupado', 'Regulado'].includes(leito.statusLeito) && leito.dadosPaciente)
         .map(leito => ({ 
           ...leito.dadosPaciente!,
           setorOrigem: setor.nomeSetor,
+          siglaSetorOrigem: setor.siglaSetor,
           setorId: setor.id!,
           leitoId: leito.id,
           leitoCodigo: leito.codigoLeito,
@@ -68,7 +72,6 @@ const RegulacaoLeitos = () => {
   const recuperacaoCirurgica = todosPacientesPendentes.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
   const pacientesAguardandoUTI = todosPacientesPendentes.filter(p => p.aguardaUTI);
   const pacientesAguardandoTransferencia = todosPacientesPendentes.filter(p => p.transferirPaciente);
-  const pacientesAguardandoRemanejamento = todosPacientesPendentes.filter(p => p.remanejarPaciente);
 
   const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 
@@ -80,6 +83,57 @@ const RegulacaoLeitos = () => {
     if (duracao.hours && duracao.hours > 0) partes.push(`${duracao.hours}h`);
     if (duracao.minutes) partes.push(`${duracao.minutes}m`);
     return partes.length > 0 ? partes.join(' ') : 'Recente';
+  };
+
+  // Função para agrupar pacientes por especialidade
+  const agruparPorEspecialidade = (pacientes: any[]) => {
+    return pacientes.reduce((acc, paciente) => {
+      const especialidade = paciente.especialidadePaciente || 'Não especificada';
+      (acc[especialidade] = acc[especialidade] || []).push(paciente);
+      return acc;
+    }, {} as Record<string, any[]>);
+  };
+
+  const renderListaComAgrupamento = (titulo: string, pacientes: any[], onRegularClick?: (paciente: any) => void, onAlta?: (setorId: string, leitoId: string) => void) => {
+    const pacientesAgrupados = agruparPorEspecialidade(pacientes);
+    
+    return (
+      <Card className="shadow-card border border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+            {titulo}
+            <Badge variant="secondary">{pacientes.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {pacientes.length > 0 ? (
+            <ScrollArea className="h-72 pr-4">
+              <Accordion type="multiple" className="w-full">
+                {Object.entries(pacientesAgrupados).map(([especialidade, pacientesDoGrupo]) => (
+                  <AccordionItem key={especialidade} value={especialidade}>
+                    <AccordionTrigger className="text-sm font-semibold py-2">
+                      {especialidade} ({pacientesDoGrupo.length})
+                    </AccordionTrigger>
+                    <AccordionContent className="pl-2 space-y-1">
+                      {pacientesDoGrupo.map(paciente => (
+                        <PacientePendenteItem 
+                          key={paciente.leitoId} 
+                          paciente={paciente} 
+                          onRegularClick={onRegularClick}
+                          onAlta={onAlta}
+                        />
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </ScrollArea>
+          ) : (
+            <p className="text-sm text-muted-foreground italic text-center py-8">Nenhum paciente aguardando regulação.</p>
+          )}
+        </CardContent>
+      </Card>
+    );
   };
 
   const handleProcessFileRequest = (file: File) => {
@@ -405,22 +459,22 @@ const RegulacaoLeitos = () => {
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <ListaPacientesPendentes 
-                  titulo="Decisão Cirúrgica" 
-                  pacientes={decisaoCirurgica}
-                  onRegularClick={handleOpenRegulacaoModal}
-                />
-                <ListaPacientesPendentes 
-                  titulo="Decisão Clínica" 
-                  pacientes={decisaoClinica}
-                  onRegularClick={handleOpenRegulacaoModal}
-                />
-                <ListaPacientesPendentes 
-                  titulo="Recuperação Cirúrgica" 
-                  pacientes={recuperacaoCirurgica}
-                  onRegularClick={handleOpenRegulacaoModal}
-                  onAlta={altaAposRecuperacao}
-                />
+                {renderListaComAgrupamento(
+                  "Decisão Cirúrgica", 
+                  decisaoCirurgica,
+                  handleOpenRegulacaoModal
+                )}
+                {renderListaComAgrupamento(
+                  "Decisão Clínica", 
+                  decisaoClinica,
+                  handleOpenRegulacaoModal
+                )}
+                {renderListaComAgrupamento(
+                  "Recuperação Cirúrgica", 
+                  recuperacaoCirurgica,
+                  handleOpenRegulacaoModal,
+                  altaAposRecuperacao
+                )}
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -434,9 +488,22 @@ const RegulacaoLeitos = () => {
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               {pacientesAguardandoRemanejamento.length > 0 ? (
-                <div className="space-y-1">
-                  {pacientesAguardandoRemanejamento.map(p => (
-                    <RemanejamentoPendenteItem key={p.leitoId} paciente={p} />
+                <div className="space-y-2">
+                  {pacientesAguardandoRemanejamento.map(alerta => (
+                    <Card key={`${alerta.nomePaciente}-${alerta.leitoCodigo}`} className="p-3 border-medical-danger/20">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{alerta.nomePaciente}</p>
+                          <p className="text-xs text-muted-foreground">{alerta.setorNome} - {alerta.leitoCodigo}</p>
+                          <p className="text-xs text-medical-danger mt-1">{alerta.motivo}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          {alerta.isolamentos.map(iso => (
+                            <Badge key={iso} variant="destructive" className="text-xs">{iso}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </Card>
                   ))}
                 </div>
               ) : (

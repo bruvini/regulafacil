@@ -13,7 +13,7 @@ export interface AlertaIncompatibilidade {
 }
 
 export const useAlertasIsolamento = () => {
-  const { setores, solicitarRemanejamento } = useSetores();
+  const { setores } = useSetores();
   const [alertas, setAlertas] = useState<AlertaIncompatibilidade[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,7 +57,7 @@ export const useAlertasIsolamento = () => {
       });
 
       if (temIncompatibilidade) {
-        const motivo = `Risco de contaminação cruzada. Paciente isolado por [${isolamentosPaciente.join(', ')}]`;
+        const motivo = `Risco de contaminação cruzada. Paciente com isolamento por [${isolamentosPaciente.join(', ')}]`;
         novosAlertas.push({
             pacienteId: dadosPaciente.nomePaciente, // Usando nome como ID temporário
             nomePaciente: dadosPaciente.nomePaciente,
@@ -66,18 +66,13 @@ export const useAlertasIsolamento = () => {
             isolamentos: isolamentosPaciente,
             motivo
         });
-
-        // 4. Se o paciente ainda não tiver a flag, solicita o remanejamento
-        if (!dadosPaciente.remanejarPaciente) {
-            solicitarRemanejamento(leitoComIsolamento.setorId!, leitoComIsolamento.id, motivo);
-        }
       }
     });
 
     setAlertas(novosAlertas);
     setLoading(false);
 
-  }, [setores, solicitarRemanejamento]);
+  }, [setores]);
 
   return { alertas, loading };
 };
