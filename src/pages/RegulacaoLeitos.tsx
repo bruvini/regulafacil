@@ -460,6 +460,7 @@ const RegulacaoLeitos = () => {
                       paciente={p}
                       onCancel={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
                       onTransfer={() => handleOpenRegulacaoModal(p, 'uti')}
+                      onRegularUTI={() => handleOpenRegulacaoModal(p, 'uti')}
                     />
                   ))}
                 </div>
