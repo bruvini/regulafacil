@@ -9,7 +9,9 @@ import LeitoCard from '@/components/LeitoCard';
 import QuartoCard from '@/components/QuartoCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
+import { IndicadoresGerais } from '@/components/IndicadoresGerais';
 import { useSetores } from '@/hooks/useSetores';
+import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
 import { Settings } from 'lucide-react';
@@ -18,6 +20,9 @@ const MapaLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { setores, loading } = useSetores();
   
+  // Chama o novo hook para obter as métricas
+  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus } = useIndicadoresHospital(setores);
+
   const { 
     searchTerm, setSearchTerm, 
     filtrosAvancados, setFiltrosAvancados,
@@ -47,43 +52,33 @@ const MapaLeitos = () => {
             </div>
           </div>
 
-          {/* Bloco 1: Indicadores */}
-          <Card className="shadow-card border border-border/50">
-            <CardHeader>
-              <h2 className="text-xl font-semibold text-medical-primary">Indicadores</h2>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-2">
+          {/* Bloco 1: Indicadores Gerais Aprimorados */}
+          {loading ? (
+            <Card className="shadow-card border border-border/50">
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
                   <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-6 w-3/4" />
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-medical-primary">
-                      {setores.length}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Total de Setores</div>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-medical-success">
-                      {setores.reduce((acc, setor) => acc + setor.leitos.length, 0)}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Total de Leitos</div>
-                  </div>
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <div className="text-2xl font-bold text-medical-success">
-                      {setores.reduce((acc, setor) => 
-                        acc + setor.leitos.filter(leito => leito.statusLeito === 'Vago').length, 0
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Leitos Vagos</div>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="text-center">
+                        <Skeleton className="h-8 w-full mb-2" />
+                        <Skeleton className="h-4 w-full" />
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : (
+            <IndicadoresGerais 
+              contagem={contagemPorStatus} 
+              taxa={taxaOcupacao} 
+              tempos={tempoMedioStatus} 
+            />
+          )}
 
           {/* Bloco 2: Filtros e Ações */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
