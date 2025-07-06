@@ -23,6 +23,7 @@ import { db } from '@/lib/firebase';
 import { intervalToDuration, parse } from 'date-fns';
 import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
 import { PacienteReguladoItem } from '@/components/PacienteReguladoItem';
+import { ResumoRegulacoesModal } from '@/components/modals/ResumoRegulacoesModal';
 
 interface PacienteDaPlanilha {
   nomeCompleto: string;
@@ -53,6 +54,8 @@ const RegulacaoLeitos = () => {
   const [processing, setProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
+  const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti'>('normal');
+  const [resumoModalOpen, setResumoModalOpen] = useState(false);
   const { toast } = useToast();
 
   const todosPacientesPendentes: (DadosPaciente & { setorOrigem: string; siglaSetorOrigem: string; setorId: string; leitoId: string; leitoCodigo: string; statusLeito: string; regulacao?: any })[] = setores
@@ -374,8 +377,9 @@ const RegulacaoLeitos = () => {
     }
   };
 
-  const handleOpenRegulacaoModal = (paciente: any) => {
+  const handleOpenRegulacaoModal = (paciente: any, modo: 'normal' | 'uti' = 'normal') => {
     setPacienteParaRegular(paciente);
+    setModoRegulacao(modo);
     setIsAlteracaoMode(false);
     setRegulacaoModalOpen(true);
   };
@@ -455,7 +459,7 @@ const RegulacaoLeitos = () => {
                       key={p.leitoId}
                       paciente={p}
                       onCancel={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
-                      onTransfer={() => { /* lógica para abrir modal de transferência */ }}
+                      onTransfer={() => handleOpenRegulacaoModal(p, 'uti')}
                     />
                   ))}
                 </div>
@@ -525,10 +529,15 @@ const RegulacaoLeitos = () => {
               {/* Bloco 2: Pacientes já regulados */}
               {pacientesJaRegulados.length > 0 && (
                 <div className="pt-4 border-t">
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    Pacientes com Regulação Definida
-                    <Badge variant="secondary">{pacientesJaRegulados.length}</Badge>
-                  </h4>
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      Pacientes com Regulação Definida
+                      <Badge variant="secondary">{pacientesJaRegulados.length}</Badge>
+                    </h4>
+                    <Button size="sm" variant="outline" onClick={() => setResumoModalOpen(true)}>
+                      Ver Resumo
+                    </Button>
+                  </div>
                   <div className="space-y-2">
                     {pacientesJaRegulados.map(paciente => (
                       <PacienteReguladoItem 
@@ -590,6 +599,12 @@ const RegulacaoLeitos = () => {
           paciente={pacienteParaAcao}
         />
 
+        <ResumoRegulacoesModal
+          open={resumoModalOpen}
+          onOpenChange={setResumoModalOpen}
+          pacientesRegulados={pacientesJaRegulados}
+        />
+
         {pacienteParaRegular && (
           <RegulacaoModal
             open={regulacaoModalOpen}
@@ -598,12 +613,14 @@ const RegulacaoLeitos = () => {
               if (!isOpen) {
                 setIsAlteracaoMode(false);
                 setPacienteParaRegular(null);
+                setModoRegulacao('normal');
               }
             }}
             paciente={pacienteParaRegular}
             origem={{ setor: pacienteParaRegular.setorOrigem, leito: pacienteParaRegular.leitoCodigo }}
             onConfirmRegulacao={handleConfirmarRegulacao}
             isAlteracao={isAlteracaoMode}
+            modo={modoRegulacao}
           />
         )}
 

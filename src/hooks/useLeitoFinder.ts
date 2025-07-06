@@ -1,4 +1,3 @@
-
 import { useMemo, useCallback } from 'react';
 import { useSetores } from './useSetores';
 import { Leito, DadosPaciente } from '@/types/hospital';
@@ -20,12 +19,19 @@ const calcularIdade = (dataNascimento: string): number => {
 export const useLeitoFinder = () => {
   const { setores } = useSetores();
 
-  const findAvailableLeitos = useCallback((paciente: DadosPaciente) => {
+  const findAvailableLeitos = useCallback((paciente: DadosPaciente, modo: 'normal' | 'uti' = 'normal') => {
     if (!paciente || !setores) return [];
 
     const todosLeitosComSetor = setores.flatMap(setor => 
         setor.leitos.map(leito => ({ ...leito, setorNome: setor.nomeSetor, setorId: setor.id }))
     );
+
+    // Se o modo for 'uti', filtre apenas leitos da UTI
+    if (modo === 'uti') {
+      return todosLeitosComSetor.filter(leito => {
+        return leito.setorNome === 'UTI' && ['Vago', 'Higienizacao'].includes(leito.statusLeito);
+      });
+    }
 
     const setoresExcluidos = [
       "UTI", "CC - PRE OPERATORIO", "CC - RECUPERAÇÃO", "CC - SALAS CIRURGICAS",

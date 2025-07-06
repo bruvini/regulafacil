@@ -20,6 +20,7 @@ interface RegulacaoModalProps {
   origem: { setor: string, leito: string };
   onConfirmRegulacao: (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => void;
   isAlteracao?: boolean;
+  modo?: 'normal' | 'uti';
 }
 
 const pcpChecklist = [
@@ -47,7 +48,7 @@ const calcularIdade = (dataNascimento?: string): string => {
     return idade.toString();
 };
 
-export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao, isAlteracao = false }: RegulacaoModalProps) => {
+export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao, isAlteracao = false, modo = 'normal' }: RegulacaoModalProps) => {
   const { findAvailableLeitos } = useLeitoFinder();
   const { toast } = useToast();
   const [leitosDisponiveis, setLeitosDisponiveis] = useState<any[]>([]);
@@ -59,7 +60,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
 
   useEffect(() => {
     if (open && paciente) {
-      setLeitosDisponiveis(findAvailableLeitos(paciente));
+      setLeitosDisponiveis(findAvailableLeitos(paciente, modo));
     }
     if (!open) {
       // Resetar tudo quando o modal fechar
@@ -69,7 +70,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
       setObservacoes('');
       setMotivoAlteracao('');
     }
-  }, [open, paciente, findAvailableLeitos, isAlteracao]);
+  }, [open, paciente, findAvailableLeitos, isAlteracao, modo]);
 
   const leitosAgrupadosPorSetor = useMemo(() => {
     return leitosDisponiveis.reduce((acc, leito) => {
@@ -242,7 +243,9 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{isAlteracao ? 'Alterar Regulação para' : 'Regular Leito para'}: {paciente?.nomePaciente}</DialogTitle>
+          <DialogTitle>
+            {modo === 'uti' ? 'Regular Leito de UTI para' : isAlteracao ? 'Alterar Regulação para' : 'Regular Leito para'}: {paciente?.nomePaciente}
+          </DialogTitle>
         </DialogHeader>
         {renderContent()}
       </DialogContent>

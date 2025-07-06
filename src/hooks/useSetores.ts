@@ -686,7 +686,7 @@ export const useSetores = () => {
 
       // 1. Libera o leito que estava reservado ANTERIORMENTE
       const leitoReservadoAntigo = setores.flatMap(s => 
-        s.leitos.map(l => ({...l, setorId: s.id}))
+        s.leitos.map(l => ({...l, setorId: s.id, setorNome: s.nomeSetor }))
       ).find(l => l.statusLeito === 'Reservado' && l.dadosPaciente?.nomePaciente === paciente.nomePaciente);
       
       if (leitoReservadoAntigo) {
