@@ -36,7 +36,7 @@ const calcularDuracao = (dataInternacao: string): string => {
 
 interface PacientePendenteItemProps {
   paciente: any;
-  onRegularClick: () => void;
+  onRegularClick?: () => void;
   onAlta?: () => void;
 }
 
@@ -56,14 +56,12 @@ export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: Pacie
           {paciente.statusLeito === 'Regulado' ? (
             <>
               <span className="font-semibold text-purple-600">Destino:</span>
-              <span>{paciente.regulacao.paraSetor} - {paciente.regulacao.paraLeito}</span>
+              <span>{paciente.regulacao.paraSetorSigla || paciente.regulacao.paraSetor} - {paciente.regulacao.paraLeito}</span>
               <span className="text-gray-400">•</span>
               <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {calcularDuracao(paciente.regulacao.data)}</div>
             </>
           ) : (
             <>
-              <span>{paciente.especialidadePaciente}</span>
-              <span className="text-gray-400">•</span>
               <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {calcularDuracao(paciente.dataInternacao)}</div>
             </>
           )}

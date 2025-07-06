@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Download, BedDouble, Ambulance, X, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
-import { useAlertasIsolamento } from '@/hooks/useAlertasIsolamento';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
@@ -16,6 +15,7 @@ import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
 import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
 import { AguardandoTransferenciaItem } from '@/components/AguardandoTransferenciaItem';
 import { PacientePendenteItem } from '@/components/PacientePendenteItem';
+import { RemanejamentoPendenteItem } from '@/components/RemanejamentoPendenteItem';
 import { DadosPaciente } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
@@ -40,7 +40,6 @@ interface SyncSummary {
 
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao } = useSetores();
-  const { alertas: pacientesAguardandoRemanejamento } = useAlertasIsolamento();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
@@ -55,16 +54,24 @@ const RegulacaoLeitos = () => {
     .flatMap(setor => 
       setor.leitos
         .filter(leito => ['Ocupado', 'Regulado'].includes(leito.statusLeito) && leito.dadosPaciente)
-        .map(leito => ({ 
-          ...leito.dadosPaciente!,
-          setorOrigem: setor.nomeSetor,
-          siglaSetorOrigem: setor.siglaSetor,
-          setorId: setor.id!,
-          leitoId: leito.id,
-          leitoCodigo: leito.codigoLeito,
-          statusLeito: leito.statusLeito,
-          regulacao: leito.regulacao
-        }))
+        .map(leito => {
+          let paraSetorSigla = '';
+          if (leito.regulacao) {
+            const setorDestino = setores.find(s => s.nomeSetor === leito.regulacao.paraSetor);
+            paraSetorSigla = setorDestino?.siglaSetor || '';
+          }
+
+          return { 
+            ...leito.dadosPaciente!,
+            setorOrigem: setor.nomeSetor,
+            siglaSetorOrigem: setor.siglaSetor,
+            setorId: setor.id!,
+            leitoId: leito.id,
+            leitoCodigo: leito.codigoLeito,
+            statusLeito: leito.statusLeito,
+            regulacao: leito.regulacao ? { ...leito.regulacao, paraSetorSigla } : undefined
+          };
+        })
     );
 
   const decisaoCirurgica = todosPacientesPendentes.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
@@ -72,6 +79,7 @@ const RegulacaoLeitos = () => {
   const recuperacaoCirurgica = todosPacientesPendentes.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
   const pacientesAguardandoUTI = todosPacientesPendentes.filter(p => p.aguardaUTI);
   const pacientesAguardandoTransferencia = todosPacientesPendentes.filter(p => p.transferirPaciente);
+  const pacientesAguardandoRemanejamento = todosPacientesPendentes.filter(p => p.remanejarPaciente);
 
   const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 
@@ -85,7 +93,6 @@ const RegulacaoLeitos = () => {
     return partes.length > 0 ? partes.join(' ') : 'Recente';
   };
 
-  // Função para agrupar pacientes por especialidade
   const agruparPorEspecialidade = (pacientes: any[]) => {
     return pacientes.reduce((acc, paciente) => {
       const especialidade = paciente.especialidadePaciente || 'Não especificada';
@@ -489,21 +496,8 @@ const RegulacaoLeitos = () => {
             <AccordionContent className="px-4 pb-4">
               {pacientesAguardandoRemanejamento.length > 0 ? (
                 <div className="space-y-2">
-                  {pacientesAguardandoRemanejamento.map(alerta => (
-                    <Card key={`${alerta.nomePaciente}-${alerta.leitoCodigo}`} className="p-3 border-medical-danger/20">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-sm">{alerta.nomePaciente}</p>
-                          <p className="text-xs text-muted-foreground">{alerta.setorNome} - {alerta.leitoCodigo}</p>
-                          <p className="text-xs text-medical-danger mt-1">{alerta.motivo}</p>
-                        </div>
-                        <div className="flex gap-1">
-                          {alerta.isolamentos.map(iso => (
-                            <Badge key={iso} variant="destructive" className="text-xs">{iso}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </Card>
+                  {pacientesAguardandoRemanejamento.map(paciente => (
+                    <RemanejamentoPendenteItem key={`${paciente.nomePaciente}-${paciente.leitoCodigo}`} paciente={paciente} />
                   ))}
                 </div>
               ) : (
