@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,8 @@ interface RegulacaoModalProps {
   onOpenChange: (open: boolean) => void;
   paciente: DadosPaciente | null;
   origem: { setor: string, leito: string };
-  onConfirmRegulacao: (leitoDestino: any, observacoes: string) => void;
+  onConfirmRegulacao: (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => void;
+  isAlteracao?: boolean;
 }
 
 const pcpChecklist = [
@@ -47,7 +47,7 @@ const calcularIdade = (dataNascimento?: string): string => {
     return idade.toString();
 };
 
-export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao }: RegulacaoModalProps) => {
+export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao, isAlteracao = false }: RegulacaoModalProps) => {
   const { findAvailableLeitos } = useLeitoFinder();
   const { toast } = useToast();
   const [leitosDisponiveis, setLeitosDisponiveis] = useState<any[]>([]);
@@ -55,6 +55,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
   const [etapa, setEtapa] = useState(1);
   const [pcpChecks, setPcpChecks] = useState<boolean[]>(Array(pcpChecklist.length).fill(false));
   const [observacoes, setObservacoes] = useState('');
+  const [motivoAlteracao, setMotivoAlteracao] = useState('');
 
   useEffect(() => {
     if (open && paciente) {
@@ -62,12 +63,13 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
     }
     if (!open) {
       // Resetar tudo quando o modal fechar
-      setEtapa(1);
+      setEtapa(isAlteracao ? 0 : 1);
       setLeitoSelecionado(null);
       setPcpChecks(Array(pcpChecklist.length).fill(false));
       setObservacoes('');
+      setMotivoAlteracao('');
     }
-  }, [open, paciente, findAvailableLeitos]);
+  }, [open, paciente, findAvailableLeitos, isAlteracao]);
 
   const leitosAgrupadosPorSetor = useMemo(() => {
     return leitosDisponiveis.reduce((acc, leito) => {
@@ -83,7 +85,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
   };
 
   const handlePcpConfirm = () => {
-    if (pcpChecks.every(Boolean)) setEtapa(3);
+    if (pcpChecks.every(Boolean)) setEtapa(isAlteracao ? 4 : 3);
     else toast({ title: "Atenção", description: "Todos os critérios para o Leito PCP devem ser confirmados.", variant: "destructive" });
   };
 
@@ -92,8 +94,19 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
     const idade = calcularIdade(paciente.dataNascimento);
     const isolamentos = paciente.isolamentosVigentes?.map(i => i.sigla).join(', ') || 'Nenhum';
     const obs = observacoes ? `\nObservações NIR: ${observacoes}` : "";
+    const motivoAlt = isAlteracao && motivoAlteracao ? `\nMotivo da Alteração: ${motivoAlteracao}` : "";
 
-    return `⚠️ LEITO REGULADO ⚠️
+    if (isAlteracao) {
+      return `⚠️ ALTERAÇÃO DE REGULAÇÃO ⚠️
+Paciente: ${paciente.nomePaciente} - ${paciente.sexoPaciente} - ${idade} anos
+Origem: ${origem.setor} - ${origem.leito}
+Regulação Prévia: ${(paciente as any).regulacao?.paraSetorSigla || 'N/A'} - ${(paciente as any).regulacao?.paraLeito || 'N/A'}
+Novo Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
+Isolamento: ${isolamentos}${motivoAlt}${obs}
+
+Data e hora da alteração: ${new Date().toLocaleString('pt-BR')}`;
+    } else {
+      return `⚠️ LEITO REGULADO ⚠️
 Paciente: ${paciente.nomePaciente} - ${paciente.sexoPaciente} - ${idade} anos
 Origem: ${origem.setor} - ${origem.leito}
 Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
@@ -102,6 +115,7 @@ Isolamento: ${isolamentos}${obs}
 - Fazer contato com o destino para passar plantão e agilizar transferências. Avisar o NIR caso haja alguma intercorrência, dificuldade na passagem de plantão ou demais eventualidades!
 
 Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
+    }
   };
 
   const copiarParaClipboard = () => {
@@ -112,6 +126,28 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
 
   const renderContent = () => {
     switch (etapa) {
+      case 0: // Nova Etapa: Motivo da Alteração (só para isAlteracao)
+        return (
+          <>
+            <DialogDescription>Informe o motivo da alteração da regulação.</DialogDescription>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="motivo-alteracao">Motivo da Alteração</Label>
+                <Textarea 
+                  id="motivo-alteracao"
+                  value={motivoAlteracao} 
+                  onChange={(e) => setMotivoAlteracao(e.target.value)}
+                  placeholder="Descreva o motivo da alteração..."
+                  className="mt-2"
+                />
+              </div>
+            </div>
+            <DialogFooter className="mt-4">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button onClick={() => setEtapa(1)} disabled={!motivoAlteracao.trim()}>Continuar</Button>
+            </DialogFooter>
+          </>
+        );
       case 1: // Seleção de Leito
         return (
           <>
@@ -170,12 +206,13 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                 </CardContent></Card>
             </ScrollArea>
             <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setEtapa(1)}>Voltar</Button>
+              <Button variant="outline" onClick={() => setEtapa(isAlteracao ? 1 : 1)}>Voltar</Button>
               <Button onClick={handlePcpConfirm}><ClipboardCheck className="mr-2 h-4 w-4"/>Confirmar Critérios</Button>
             </DialogFooter>
           </>
         );
-      case 3: // Confirmação Final
+      case 3: // Confirmação Final (etapa original)
+      case 4: // Confirmação Final (para modo alteração)
         return (
           <>
             <DialogDescription>Revise os dados da regulação e adicione observações se necessário.</DialogDescription>
@@ -188,7 +225,7 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
             <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setEtapa(leitoSelecionado?.leitoPCP ? 2 : 1)}>Voltar</Button>
               <Button variant="secondary" onClick={copiarParaClipboard}><Copy className="mr-2 h-4 w-4"/>Copiar</Button>
-              <Button onClick={() => onConfirmRegulacao(leitoSelecionado, observacoes)}><CheckCircle className="mr-2 h-4 w-4"/>Confirmar Regulação</Button>
+              <Button onClick={() => onConfirmRegulacao(leitoSelecionado, observacoes, motivoAlteracao)}><CheckCircle className="mr-2 h-4 w-4"/>{isAlteracao ? 'Confirmar Alteração' : 'Confirmar Regulação'}</Button>
             </DialogFooter>
           </>
         );
@@ -201,7 +238,7 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Regular Leito para: {paciente?.nomePaciente}</DialogTitle>
+          <DialogTitle>{isAlteracao ? 'Alterar Regulação para' : 'Regular Leito para'}: {paciente?.nomePaciente}</DialogTitle>
         </DialogHeader>
         {renderContent()}
       </DialogContent>

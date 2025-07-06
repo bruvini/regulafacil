@@ -46,6 +46,7 @@ const RegulacaoLeitos = () => {
   const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
   const [pacienteParaAcao, setPacienteParaAcao] = useState<any | null>(null);
+  const [isAlteracaoMode, setIsAlteracaoMode] = useState(false);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -110,6 +111,7 @@ const RegulacaoLeitos = () => {
 
   const handleAlterar = (paciente: any) => {
     setPacienteParaRegular(paciente);
+    setIsAlteracaoMode(true);
     setRegulacaoModalOpen(true);
   };
 
@@ -369,16 +371,18 @@ const RegulacaoLeitos = () => {
 
   const handleOpenRegulacaoModal = (paciente: any) => {
     setPacienteParaRegular(paciente);
+    setIsAlteracaoMode(false);
     setRegulacaoModalOpen(true);
   };
 
-  const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string) => {
+  const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => {
     if (!pacienteParaRegular) return;
     
     try {
       await confirmarRegulacao(pacienteParaRegular, pacienteParaRegular, leitoDestino, observacoes);
       setRegulacaoModalOpen(false);
       setPacienteParaRegular(null);
+      setIsAlteracaoMode(false);
     } catch (error) {
       console.error('Erro ao confirmar regulação:', error);
     }
@@ -556,15 +560,23 @@ const RegulacaoLeitos = () => {
           open={cancelamentoModalOpen}
           onOpenChange={setCancelamentoModalOpen}
           onConfirm={onConfirmarCancelamento}
+          paciente={pacienteParaAcao}
         />
 
         {pacienteParaRegular && (
           <RegulacaoModal
             open={regulacaoModalOpen}
-            onOpenChange={setRegulacaoModalOpen}
+            onOpenChange={(isOpen) => {
+              setRegulacaoModalOpen(isOpen);
+              if (!isOpen) {
+                setIsAlteracaoMode(false);
+                setPacienteParaRegular(null);
+              }
+            }}
             paciente={pacienteParaRegular}
             origem={{ setor: pacienteParaRegular.setorOrigem, leito: pacienteParaRegular.leitoCodigo }}
             onConfirmRegulacao={handleConfirmarRegulacao}
+            isAlteracao={isAlteracaoMode}
           />
         )}
 

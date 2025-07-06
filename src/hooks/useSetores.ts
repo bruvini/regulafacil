@@ -636,7 +636,7 @@ export const useSetores = () => {
             statusLeito: 'Higienizacao' as const, 
             dataAtualizacaoStatus: agora, 
             dadosPaciente: null, 
-            regulacao: undefined 
+            regulacao: null 
           };
         }
         return l;
@@ -685,7 +685,7 @@ export const useSetores = () => {
             ...l, 
             statusLeito: 'Ocupado' as const, 
             dataAtualizacaoStatus: agora,
-            regulacao: undefined
+            regulacao: null
           };
         }
         return l;
