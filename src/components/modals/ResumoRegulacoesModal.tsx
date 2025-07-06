@@ -13,29 +13,26 @@ interface ResumoRegulacoesModalProps {
   pacientesRegulados: any[];
 }
 
-// Função para agrupar dados. Pode ser colocada aqui ou em um arquivo de utils.
 const groupBy = (array: any[], key: string) => {
   return array.reduce((result, currentValue) => {
     (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
     return result;
-  }, {});
+  }, {} as Record<string, any[]>);
 };
 
 export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }: ResumoRegulacoesModalProps) => {
     const { toast } = useToast();
 
-    // 1. Processa e agrupa os dados
     const { origens, destinos } = useMemo(() => {
         const reguladosComDados = pacientesRegulados.filter(p => p.regulacao);
-        const origensAgrupadas = groupBy(reguladosComDados, 'setorOrigem');
-        const destinosAgrupados = groupBy(reguladosComDados.map(p => ({...p, setorDestino: p.regulacao.paraSetor})), 'setorDestino');
+        const origensAgrupadas = groupBy(reguladosComDados, 'siglaSetorOrigem');
+        const destinosAgrupados = groupBy(reguladosComDados.map(p => ({...p, setorDestinoSigla: p.regulacao.paraSetorSigla})), 'setorDestinoSigla');
         return { origens: origensAgrupadas, destinos: destinosAgrupados };
     }, [pacientesRegulados]);
 
-    // 2. Funções para gerar os textos personalizados
     const gerarTextoOrigem = (pacientes: any[]) => {
         const listaPacientes = pacientes.map(p => 
-            `${p.leitoCodigo} - ${p.nomePaciente} / VAI PARA: ${p.regulacao.paraSetor} - ${p.regulacao.paraLeito}`
+            `_${p.leitoCodigo}_ - *${p.nomePaciente}* / VAI PARA: *${p.regulacao.paraSetorSigla} - ${p.regulacao.paraLeito}*`
         ).join('\n');
 
         return `*REGULAÇÕES PENDENTES*
@@ -48,7 +45,7 @@ ${listaPacientes}
 
     const gerarTextoDestino = (pacientes: any[]) => {
         const listaPacientes = pacientes.map(p => 
-            `${p.regulacao.paraLeito} - ${p.nomePaciente} / VEM DE: ${p.setorOrigem} - ${p.leitoCodigo}`
+            `_${p.regulacao.paraLeito}_ - *${p.nomePaciente}* / VEM DE: *${p.siglaSetorOrigem} - ${p.leitoCodigo}*`
         ).join('\n');
 
         return `*REGULAÇÕES PENDENTES*
@@ -66,23 +63,21 @@ ${listaPacientes}
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
+            <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Resumo de Regulações Pendentes</DialogTitle>
                 </DialogHeader>
                 <div className="grid md:grid-cols-2 gap-6 py-4 flex-grow min-h-0">
-                    {/* Coluna de Origens */}
                     <Card className="flex flex-col">
-                        <CardHeader><CardTitle className="text-lg">Setores de Origem</CardTitle></CardHeader>
-                        <CardContent className="flex-grow overflow-hidden">
-                            <ScrollArea className="h-full pr-4">
-                                <div className="space-y-4">
+                        <CardHeader><CardTitle className="text-base">ORIGENS (QUEM ESTÁ ENVIANDO)</CardTitle></CardHeader>
+                        <CardContent className="flex-grow overflow-hidden p-2">
+                            <ScrollArea className="h-full">
+                                <div className="space-y-2 pr-4">
                                     {Object.entries(origens as Record<string, any[]>).map(([setor, pacientes]) => (
-                                        <div key={setor} className="p-3 border rounded-lg">
-                                            <h4 className="font-semibold text-sm mb-2">{setor}</h4>
-                                            <pre className="whitespace-pre-wrap font-mono text-xs bg-muted p-2 rounded-md">{gerarTextoOrigem(pacientes)}</pre>
-                                            <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => handleCopy(gerarTextoOrigem(pacientes))}>
-                                                <Copy className="mr-2 h-4 w-4" /> Copiar para a Origem
+                                        <div key={setor} className="flex items-center justify-between p-2 border rounded-lg">
+                                            <h4 className="font-semibold text-sm">{setor}</h4>
+                                            <Button size="sm" variant="ghost" onClick={() => handleCopy(gerarTextoOrigem(pacientes))}>
+                                                <Copy className="mr-2 h-4 w-4" /> Copiar
                                             </Button>
                                         </div>
                                     ))}
@@ -91,18 +86,16 @@ ${listaPacientes}
                         </CardContent>
                     </Card>
 
-                    {/* Coluna de Destinos */}
                     <Card className="flex flex-col">
-                        <CardHeader><CardTitle className="text-lg">Setores de Destino</CardTitle></CardHeader>
-                        <CardContent className="flex-grow overflow-hidden">
-                            <ScrollArea className="h-full pr-4">
-                                <div className="space-y-4">
+                        <CardHeader><CardTitle className="text-base">DESTINOS (QUEM ESTÁ RECEBENDO)</CardTitle></CardHeader>
+                        <CardContent className="flex-grow overflow-hidden p-2">
+                            <ScrollArea className="h-full">
+                                <div className="space-y-2 pr-4">
                                     {Object.entries(destinos as Record<string, any[]>).map(([setor, pacientes]) => (
-                                        <div key={setor} className="p-3 border rounded-lg">
-                                            <h4 className="font-semibold text-sm mb-2">{setor}</h4>
-                                            <pre className="whitespace-pre-wrap font-mono text-xs bg-muted p-2 rounded-md">{gerarTextoDestino(pacientes)}</pre>
-                                            <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => handleCopy(gerarTextoDestino(pacientes))}>
-                                                <Copy className="mr-2 h-4 w-4" /> Copiar para o Destino
+                                        <div key={setor} className="flex items-center justify-between p-2 border rounded-lg">
+                                            <h4 className="font-semibold text-sm">{setor}</h4>
+                                            <Button size="sm" variant="ghost" onClick={() => handleCopy(gerarTextoDestino(pacientes))}>
+                                                <Copy className="mr-2 h-4 w-4" /> Copiar
                                             </Button>
                                         </div>
                                     ))}

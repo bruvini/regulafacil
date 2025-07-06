@@ -19,9 +19,10 @@ interface Props {
   paciente: any;
   onCancel: () => void;
   onTransfer: () => void;
+  onRegularUTI: () => void;
 }
 
-export const AguardandoUTIItem = ({ paciente, onCancel, onTransfer }: Props) => {
+export const AguardandoUTIItem = ({ paciente, onCancel, onTransfer, onRegularUTI }: Props) => {
   const tempoAguardando = calcularDuracao(paciente.dataPedidoUTI);
   
   return (
@@ -40,7 +41,7 @@ export const AguardandoUTIItem = ({ paciente, onCancel, onTransfer }: Props) => 
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRegularUTI}>
                 <BedDouble className="h-4 w-4"/>
               </Button>
             </TooltipTrigger>
