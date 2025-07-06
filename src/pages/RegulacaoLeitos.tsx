@@ -112,15 +112,15 @@ const RegulacaoLeitos = () => {
                 {Object.entries(pacientesAgrupados).map(([especialidade, pacientesDoGrupo]) => (
                   <AccordionItem key={especialidade} value={especialidade}>
                     <AccordionTrigger className="text-sm font-semibold py-2">
-                      {especialidade} ({pacientesDoGrupo.length})
+                      {especialidade} ({(pacientesDoGrupo as any[]).length})
                     </AccordionTrigger>
                     <AccordionContent className="pl-2 space-y-1">
-                      {pacientesDoGrupo.map(paciente => (
+                      {(pacientesDoGrupo as any[]).map(paciente => (
                         <PacientePendenteItem 
                           key={paciente.leitoId} 
                           paciente={paciente} 
-                          onRegularClick={onRegularClick}
-                          onAlta={onAlta}
+                          onRegularClick={onRegularClick ? () => onRegularClick(paciente) : undefined}
+                          onAlta={onAlta ? () => onAlta(paciente.setorId, paciente.leitoId) : undefined}
                         />
                       ))}
                     </AccordionContent>
