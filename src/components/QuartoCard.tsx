@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import LeitoCard from '@/components/LeitoCard';
@@ -22,7 +23,7 @@ const QuartoCard = ({ nomeQuarto, leitos, setorId, onMoverPaciente }: QuartoCard
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
           {leitosSorteados.map((leito) => (
             <LeitoCard 
               key={leito.id} 

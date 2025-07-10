@@ -22,7 +22,6 @@ const MapaLeitos = () => {
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
   const { setores, loading, moverPaciente } = useSetores();
   
-  // Chama o hook para obter as métricas incluindo nivelPCP
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setores);
 
   const { 
@@ -185,15 +184,11 @@ const MapaLeitos = () => {
                           <div className="pt-4">
                             {setor.leitos.length > 0 ? (
                               (() => {
-                                // A lógica de agrupamento que já existe
                                 const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
                                 const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
                                 return (
-                                  // ESTE É O CONTAINER GRID QUE PRECISA SER RESTAURADO
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-
-                                    {/* 1. Renderiza os QUARTOS AGRUPADOS primeiro */}
+                                  <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
                                     {Object.entries(quartos)
                                       .sort(([nomeQuartoA], [nomeQuartoB]) => comparadorNatural(nomeQuartoA, nomeQuartoB))
                                       .map(([nomeQuarto, leitosDoQuarto]) => (
@@ -206,7 +201,6 @@ const MapaLeitos = () => {
                                         />
                                       ))}
 
-                                    {/* 2. Renderiza os LEITOS SOLTOS (que não estão em quartos) depois */}
                                     {leitosSoltos
                                       .sort((a, b) => comparadorNatural(a.codigoLeito, b.codigoLeito))
                                       .map((leito) => (
@@ -214,7 +208,6 @@ const MapaLeitos = () => {
                                           key={leito.id}
                                           leito={leito}
                                           setorId={setor.id!}
-                                          // A prop abaixo é crucial para a lógica de bloqueio por isolamento
                                           todosLeitosDoSetor={setor.leitos}
                                           onMoverPaciente={handleOpenMovimentacaoModal}
                                         />
