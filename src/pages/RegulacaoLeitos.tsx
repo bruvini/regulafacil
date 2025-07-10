@@ -24,8 +24,6 @@ import { intervalToDuration, parse } from 'date-fns';
 import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
 import { PacienteReguladoItem } from '@/components/PacienteReguladoItem';
 import { ResumoRegulacoesModal } from '@/components/modals/ResumoRegulacoesModal';
-import { useIsolamentoSugestoes, SugestaoRemanejamento } from '@/hooks/useIsolamentoSugestoes';
-import { SugestaoIsolamentoItem } from '@/components/SugestaoIsolamentoItem';
 
 interface PacienteDaPlanilha {
   nomeCompleto: string;
@@ -44,7 +42,7 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, confirmarRemanejamento, cancelarRemanejamentoPendente } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
@@ -56,9 +54,8 @@ const RegulacaoLeitos = () => {
   const [processing, setProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
-  const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti' | 'remanejamento'>('normal');
+  const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti'>('normal');
   const [resumoModalOpen, setResumoModalOpen] = useState(false);
-  const sugestoesIsolamento = useIsolamentoSugestoes(setores);
   const { toast } = useToast();
 
   const todosPacientesPendentes: (DadosPaciente & { setorOrigem: string; siglaSetorOrigem: string; setorId: string; leitoId: string; leitoCodigo: string; statusLeito: string; regulacao?: any })[] = setores
@@ -137,47 +134,6 @@ const RegulacaoLeitos = () => {
     }
     setCancelamentoModalOpen(false);
     setPacienteParaAcao(null);
-  };
-
-  const handleOpenRemanejamentoModal = (paciente: any) => {
-    setPacienteParaRegular(paciente);
-    setModoRegulacao('remanejamento');
-    setIsAlteracaoMode(false);
-    setRegulacaoModalOpen(true);
-  };
-
-  const handleCancelarRemanejamento = (paciente: any) => {
-    cancelarRemanejamentoPendente(paciente.setorId, paciente.leitoId);
-  };
-
-  // Handler para o fluxo de REGULAÇÃO NORMAL
-  const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string) => {
-    if (!pacienteParaRegular) return;
-    try {
-      await confirmarRegulacao(pacienteParaRegular, pacienteParaRegular, leitoDestino, observacoes);
-      setRegulacaoModalOpen(false);
-      setPacienteParaRegular(null);
-      setIsAlteracaoMode(false);
-    } catch (error) {
-      console.error('Erro ao confirmar regulação:', error);
-    }
-  };
-
-  // Handler para o fluxo de REMANEJAMENTO
-  const handleConfirmarRemanejamento = async (leitoDestino: any, observacoes: string, motivo?: string) => {
-      if (!pacienteParaRegular) return;
-      try {
-          await confirmarRemanejamento(pacienteParaRegular, leitoDestino, observacoes, motivo || '');
-          setRegulacaoModalOpen(false);
-          setPacienteParaRegular(null);
-      } catch (error) {
-          console.error('Erro ao confirmar remanejamento:', error);
-      }
-  };
-
-  const handleAceitarSugestao = (sugestao: SugestaoRemanejamento) => {
-    // Chama a função de remanejamento já existente, passando os dados da sugestão
-    confirmarRemanejamento(sugestao.paciente, sugestao.leitoDestino, "Remanejamento automático para otimização de coorte.", sugestao.motivo);
   };
 
   const renderListaComAgrupamento = (titulo: string, pacientes: any[], onRegularClick?: (paciente: any) => void, onAlta?: (setorId: string, leitoId: string) => void) => {
@@ -507,6 +463,26 @@ const RegulacaoLeitos = () => {
     }
   };
 
+  const handleOpenRegulacaoModal = (paciente: any, modo: 'normal' | 'uti' = 'normal') => {
+    setPacienteParaRegular(paciente);
+    setModoRegulacao(modo);
+    setIsAlteracaoMode(false);
+    setRegulacaoModalOpen(true);
+  };
+
+  const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => {
+    if (!pacienteParaRegular) return;
+    
+    try {
+      await confirmarRegulacao(pacienteParaRegular, pacienteParaRegular, leitoDestino, observacoes);
+      setRegulacaoModalOpen(false);
+      setPacienteParaRegular(null);
+      setIsAlteracaoMode(false);
+    } catch (error) {
+      console.error('Erro ao confirmar regulação:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -569,8 +545,8 @@ const RegulacaoLeitos = () => {
                       key={p.leitoId}
                       paciente={p}
                       onCancel={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
-                      onTransfer={() => handleOpenRemanejamentoModal(p)}
-                      onRegularUTI={() => handleOpenRemanejamentoModal(p)}
+                      onTransfer={() => handleOpenRegulacaoModal(p, 'uti')}
+                      onRegularUTI={() => handleOpenRegulacaoModal(p, 'uti')}
                     />
                   ))}
                 </div>
@@ -622,17 +598,17 @@ const RegulacaoLeitos = () => {
                 {renderListaComAgrupamento(
                   "Decisão Cirúrgica", 
                   decisaoCirurgica,
-                  handleOpenRemanejamentoModal
+                  handleOpenRegulacaoModal
                 )}
                 {renderListaComAgrupamento(
                   "Decisão Clínica", 
                   decisaoClinica,
-                  handleOpenRemanejamentoModal
+                  handleOpenRegulacaoModal
                 )}
                 {renderListaComAgrupamento(
                   "Recuperação Cirúrgica", 
                   recuperacaoCirurgica,
-                  handleOpenRemanejamentoModal,
+                  handleOpenRegulacaoModal,
                   altaAposRecuperacao
                 )}
               </div>
@@ -676,12 +652,7 @@ const RegulacaoLeitos = () => {
               {pacientesAguardandoRemanejamento.length > 0 ? (
                 <div className="space-y-2">
                   {pacientesAguardandoRemanejamento.map(paciente => (
-                    <RemanejamentoPendenteItem 
-                      key={`${paciente.nomePaciente}-${paciente.leitoCodigo}`} 
-                      paciente={paciente}
-                      onRemanejar={handleOpenRemanejamentoModal}
-                      onCancelar={handleCancelarRemanejamento}
-                    />
+                    <RemanejamentoPendenteItem key={`${paciente.nomePaciente}-${paciente.leitoCodigo}`} paciente={paciente} />
                   ))}
                 </div>
               ) : (
@@ -689,27 +660,6 @@ const RegulacaoLeitos = () => {
               )}
             </AccordionContent>
           </AccordionItem>
-
-          {sugestoesIsolamento.length > 0 && (
-            <AccordionItem value="item-3" className="border rounded-lg bg-card shadow-card">
-              <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">SUGESTÕES DE OTIMIZAÇÃO DE ISOLAMENTO</h3>
-                  <Badge variant="secondary" className="bg-amber-100 text-amber-800">{sugestoesIsolamento.length}</Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4 space-y-4">
-                {sugestoesIsolamento.map((sugestao, index) => (
-                  <SugestaoIsolamentoItem
-                    key={`${sugestao.paciente.id}-${index}`}
-                    sugestao={sugestao}
-                    onAceitar={handleAceitarSugestao}
-                    loading={setoresLoading}
-                  />
-                ))}
-              </AccordionContent>
-            </AccordionItem>
-          )}
         </Accordion>
 
         <ImportacaoMVModal 
@@ -755,7 +705,7 @@ const RegulacaoLeitos = () => {
             }}
             paciente={pacienteParaRegular}
             origem={{ setor: pacienteParaRegular.setorOrigem, leito: pacienteParaRegular.leitoCodigo }}
-            onConfirmRegulacao={modoRegulacao === 'remanejamento' ? handleConfirmarRemanejamento : handleConfirmarRegulacao}
+            onConfirmRegulacao={handleConfirmarRegulacao}
             isAlteracao={isAlteracaoMode}
             modo={modoRegulacao}
           />

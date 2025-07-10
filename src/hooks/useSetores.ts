@@ -989,96 +989,6 @@ export const useSetores = () => {
     }
   };
 
-  const confirmarRemanejamento = async (paciente: any, leitoDestino: any, observacoes: string, motivo: string) => {
-    try {
-      setLoading(true);
-      const agora = new Date().toISOString();
-      const batch = writeBatch(db);
-
-      const setorOrigemRef = doc(db, 'setoresRegulaFacil', paciente.setorId);
-      const setorDestinoRef = doc(db, 'setoresRegulaFacil', leitoDestino.setorId);
-
-      // Limpa os dados de remanejamento do paciente antes de movê-lo
-      const dadosPacienteLimpo = { ...paciente };
-      delete dadosPacienteLimpo.remanejarPaciente;
-      delete dadosPacienteLimpo.motivoRemanejamento;
-      delete dadosPacienteLimpo.dataPedidoRemanejamento;
-
-      // Atualiza o leito de ORIGEM para 'Regulado'
-      const setorOrigemData = setores.find(s => s.id === paciente.setorId)!;
-      const leitosOrigemAtualizado = setorOrigemData.leitos.map(l => {
-          if (l.id === paciente.leitoId) {
-              return {
-                  ...l,
-                  statusLeito: 'Regulado' as const,
-                  dataAtualizacaoStatus: agora,
-                  regulacao: {
-                      paraSetor: leitoDestino.setorNome || '',
-                      paraLeito: leitoDestino.codigoLeito || '',
-                      data: agora,
-                      observacoes: observacoes || '',
-                      motivo: motivo || '' // ESSA ALTERAÇÃO É CRUCIAL. Garante que nunca será 'undefined'.
-                  }
-              };
-          }
-          return l;
-      });
-      batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
-
-      // Atualiza o leito de DESTINO para 'Reservado'
-      const setorDestinoData = setores.find(s => s.id === leitoDestino.setorId)!;
-      const leitosDestinoAtualizado = setorDestinoData.leitos.map(l => {
-          if (l.id === leitoDestino.id) {
-              return {
-                  ...l,
-                  statusLeito: 'Reservado' as const,
-                  dataAtualizacaoStatus: agora,
-                  dadosPaciente: {
-                      ...dadosPacienteLimpo,
-                      origem: {
-                          deSetor: paciente.setorOrigem || '',
-                          deLeito: paciente.leitoCodigo || ''
-                      }
-                  }
-              };
-          }
-          return l;
-      });
-
-      if (setorOrigemRef.path === setorDestinoRef.path) {
-          const leitosCombinados = leitosOrigemAtualizado.map(l => 
-              l.id === leitoDestino.id ? leitosDestinoAtualizado.find(ld => ld.id === l.id) || l : l
-          );
-          batch.update(setorOrigemRef, { leitos: leitosCombinados });
-      } else {
-          batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizado });
-      }
-
-      await batch.commit();
-      toast({ title: 'Remanejamento Confirmado', description: `Leito ${leitoDestino.codigoLeito} reservado com sucesso!` });
-    } catch (error) {
-      console.error('Erro ao confirmar remanejamento:', error);
-      toast({ title: 'Erro', description: 'Não foi possível confirmar o remanejamento.', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const cancelarRemanejamentoPendente = async (setorId: string, leitoId: string) => {
-    try {
-        const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
-        if (!leito?.dadosPaciente) return;
-
-        const { remanejarPaciente, motivoRemanejamento, dataPedidoRemanejamento, ...restoDados } = leito.dadosPaciente;
-
-        await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: restoDados });
-        toast({ title: "Solicitação Cancelada", description: "O pedido de remanejamento foi removido." });
-      } catch (error) {
-        console.error('Erro ao cancelar remanejamento:', error);
-        toast({ title: "Erro", description: "Não foi possível cancelar a solicitação.", variant: "destructive" });
-      }
-  };
-
   return {
     setores,
     loading,
@@ -1108,7 +1018,5 @@ export const useSetores = () => {
     cancelarRegulacao,
     finalizarIsolamentoPaciente,
     concluirTransferencia,
-    confirmarRemanejamento,
-    cancelarRemanejamentoPendente,
   };
 };
