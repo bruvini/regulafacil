@@ -42,7 +42,7 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, confirmarRemanejamento, cancelarRemanejamentoPendente } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
@@ -54,7 +54,7 @@ const RegulacaoLeitos = () => {
   const [processing, setProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
-  const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti'>('normal');
+  const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti' | 'remanejamento'>('normal');
   const [resumoModalOpen, setResumoModalOpen] = useState(false);
   const { toast } = useToast();
 
@@ -134,6 +134,34 @@ const RegulacaoLeitos = () => {
     }
     setCancelamentoModalOpen(false);
     setPacienteParaAcao(null);
+  };
+
+  const handleOpenRemanejamentoModal = (paciente: any) => {
+    setPacienteParaRegular(paciente);
+    setModoRegulacao('remanejamento');
+    setIsAlteracaoMode(false);
+    setRegulacaoModalOpen(true);
+  };
+
+  const handleCancelarRemanejamento = (paciente: any) => {
+    cancelarRemanejamentoPendente(paciente.setorId, paciente.leitoId);
+  };
+
+  const handleConfirmarAcaoModal = async (leitoDestino: any, observacoes: string, motivo?: string) => {
+    if (!pacienteParaRegular) return;
+    
+    try {
+      if (modoRegulacao === 'remanejamento') {
+        await confirmarRemanejamento(pacienteParaRegular, leitoDestino, observacoes, motivo || '');
+      } else {
+        await confirmarRegulacao(pacienteParaRegular, pacienteParaRegular, leitoDestino, observacoes);
+      }
+      setRegulacaoModalOpen(false);
+      setPacienteParaRegular(null);
+      setIsAlteracaoMode(false);
+    } catch (error) {
+      console.error('Erro ao confirmar ação no modal:', error);
+    }
   };
 
   const renderListaComAgrupamento = (titulo: string, pacientes: any[], onRegularClick?: (paciente: any) => void, onAlta?: (setorId: string, leitoId: string) => void) => {
@@ -463,26 +491,6 @@ const RegulacaoLeitos = () => {
     }
   };
 
-  const handleOpenRegulacaoModal = (paciente: any, modo: 'normal' | 'uti' = 'normal') => {
-    setPacienteParaRegular(paciente);
-    setModoRegulacao(modo);
-    setIsAlteracaoMode(false);
-    setRegulacaoModalOpen(true);
-  };
-
-  const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => {
-    if (!pacienteParaRegular) return;
-    
-    try {
-      await confirmarRegulacao(pacienteParaRegular, pacienteParaRegular, leitoDestino, observacoes);
-      setRegulacaoModalOpen(false);
-      setPacienteParaRegular(null);
-      setIsAlteracaoMode(false);
-    } catch (error) {
-      console.error('Erro ao confirmar regulação:', error);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -545,8 +553,8 @@ const RegulacaoLeitos = () => {
                       key={p.leitoId}
                       paciente={p}
                       onCancel={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
-                      onTransfer={() => handleOpenRegulacaoModal(p, 'uti')}
-                      onRegularUTI={() => handleOpenRegulacaoModal(p, 'uti')}
+                      onTransfer={() => handleOpenRemanejamentoModal(p)}
+                      onRegularUTI={() => handleOpenRemanejamentoModal(p)}
                     />
                   ))}
                 </div>
@@ -598,17 +606,17 @@ const RegulacaoLeitos = () => {
                 {renderListaComAgrupamento(
                   "Decisão Cirúrgica", 
                   decisaoCirurgica,
-                  handleOpenRegulacaoModal
+                  handleOpenRemanejamentoModal
                 )}
                 {renderListaComAgrupamento(
                   "Decisão Clínica", 
                   decisaoClinica,
-                  handleOpenRegulacaoModal
+                  handleOpenRemanejamentoModal
                 )}
                 {renderListaComAgrupamento(
                   "Recuperação Cirúrgica", 
                   recuperacaoCirurgica,
-                  handleOpenRegulacaoModal,
+                  handleOpenRemanejamentoModal,
                   altaAposRecuperacao
                 )}
               </div>
@@ -652,7 +660,12 @@ const RegulacaoLeitos = () => {
               {pacientesAguardandoRemanejamento.length > 0 ? (
                 <div className="space-y-2">
                   {pacientesAguardandoRemanejamento.map(paciente => (
-                    <RemanejamentoPendenteItem key={`${paciente.nomePaciente}-${paciente.leitoCodigo}`} paciente={paciente} />
+                    <RemanejamentoPendenteItem 
+                      key={`${paciente.nomePaciente}-${paciente.leitoCodigo}`} 
+                      paciente={paciente}
+                      onRemanejar={handleOpenRemanejamentoModal}
+                      onCancelar={handleCancelarRemanejamento}
+                    />
                   ))}
                 </div>
               ) : (
@@ -705,7 +718,7 @@ const RegulacaoLeitos = () => {
             }}
             paciente={pacienteParaRegular}
             origem={{ setor: pacienteParaRegular.setorOrigem, leito: pacienteParaRegular.leitoCodigo }}
-            onConfirmRegulacao={handleConfirmarRegulacao}
+            onConfirmRegulacao={handleConfirmarAcaoModal}
             isAlteracao={isAlteracaoMode}
             modo={modoRegulacao}
           />

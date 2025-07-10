@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ interface RegulacaoModalProps {
   origem: { setor: string, leito: string };
   onConfirmRegulacao: (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => void;
   isAlteracao?: boolean;
-  modo?: 'normal' | 'uti';
+  modo?: 'normal' | 'uti' | 'remanejamento';
 }
 
 const pcpChecklist = [
@@ -60,7 +61,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
 
   useEffect(() => {
     if (open && paciente) {
-      setLeitosDisponiveis(findAvailableLeitos(paciente, modo));
+      setLeitosDisponiveis(findAvailableLeitos(paciente, modo === 'uti' ? 'uti' : 'normal'));
     }
     if (!open) {
       // Resetar tudo quando o modal fechar
@@ -96,6 +97,17 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
     const isolamentos = paciente.isolamentosVigentes?.map(i => i.sigla).join(', ') || 'Nenhum';
     const obs = observacoes ? `\nObservações NIR: ${observacoes}` : "";
     const motivoAlt = isAlteracao && motivoAlteracao ? `\nMotivo da Alteração: ${motivoAlteracao}` : "";
+    const motivoRemanejamentoTxt = modo === 'remanejamento' && motivoAlteracao ? `\nMotivo do Remanejamento: ${motivoAlteracao}` : "";
+
+    if (modo === 'remanejamento') {
+      return `⚠️ REMANEJAMENTO SOLICITADO ⚠️
+Paciente: ${paciente.nomePaciente} - ${paciente.sexoPaciente} - ${idade} anos
+Origem: ${origem.setor} - ${origem.leito}
+Novo Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
+Isolamento: ${isolamentos}${motivoRemanejamentoTxt}${obs}
+
+Data e hora da solicitação: ${new Date().toLocaleString('pt-BR')}`;
+    }
 
     if (isAlteracao) {
       return `⚠️ ALTERAÇÃO DE REGULAÇÃO ⚠️
@@ -221,6 +233,15 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
               <div className="p-4 bg-blue-50 dark:bg-blue-900/50 rounded-lg border border-blue-200">
                   <p className="whitespace-pre-wrap font-mono text-xs">{getMensagemConfirmacao()}</p>
               </div>
+              
+              {modo === 'remanejamento' && (
+                <Textarea 
+                  placeholder="Descreva o motivo do remanejamento..." 
+                  value={motivoAlteracao} 
+                  onChange={e => setMotivoAlteracao(e.target.value)} 
+                />
+              )}
+
               <Textarea 
                 placeholder={isAlteracao ? "Descreva o motivo da alteração..." : "Adicionar observações do NIR (opcional)..."} 
                 value={observacoes} 
@@ -230,7 +251,10 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
             <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setEtapa(leitoSelecionado?.leitoPCP ? 2 : 1)}>Voltar</Button>
               <Button variant="secondary" onClick={copiarParaClipboard}><Copy className="mr-2 h-4 w-4"/>Copiar</Button>
-              <Button onClick={() => onConfirmRegulacao(leitoSelecionado, observacoes, motivoAlteracao)}><CheckCircle className="mr-2 h-4 w-4"/>{isAlteracao ? 'Confirmar Alteração' : 'Confirmar Regulação'}</Button>
+              <Button onClick={() => onConfirmRegulacao(leitoSelecionado, observacoes, motivoAlteracao)}>
+                <CheckCircle className="mr-2 h-4 w-4"/>
+                {isAlteracao ? 'Confirmar Alteração' : modo === 'remanejamento' ? 'Confirmar Remanejamento' : 'Confirmar Regulação'}
+              </Button>
             </DialogFooter>
           </>
         );
@@ -244,7 +268,7 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {modo === 'uti' ? 'Regular Leito de UTI para' : isAlteracao ? 'Alterar Regulação para' : 'Regular Leito para'}: {paciente?.nomePaciente}
+            {modo === 'remanejamento' ? 'Remanejar Paciente' : modo === 'uti' ? 'Regular Leito de UTI para' : isAlteracao ? 'Alterar Regulação para' : 'Regular Leito para'}: {paciente?.nomePaciente}
           </DialogTitle>
         </DialogHeader>
         {renderContent()}
