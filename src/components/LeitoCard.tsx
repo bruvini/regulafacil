@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,7 @@ const calcularIdade = (dataNascimento: string): string => {
 };
 
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
-  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente } = useSetores();
+  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente, cancelarReserva } = useSetores();
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
   const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
@@ -79,6 +79,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const handleSolicitarUTI = () => solicitarUTI(setorId, leito.id);
   const handleConfirmarRemanejamento = (motivo: string) => solicitarRemanejamento(setorId, leito.id, motivo);
   const handleConfirmarTransferencia = (destino: string, motivo: string) => transferirPaciente(setorId, leito.id, destino, motivo);
+  const handleCancelarReserva = () => cancelarReserva(setorId, leito.id);
 
   return (
     <>
@@ -194,6 +195,44 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
             <div className="pt-2 border-t border-border/30">
               <DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} />
             </div>
+
+            {leito.statusLeito === 'Reservado' && (
+              <div className="flex justify-center">
+                <AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Cancelar Reserva</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancelar Reserva do Leito?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação removerá a reserva do leito {leito.codigoLeito} e o tornará vago. Deseja continuar?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Fechar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleCancelarReserva}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        Confirmar Cancelamento
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
 
             {leito.statusLeito === 'Vago' && (
               <div className="flex justify-center space-x-2">

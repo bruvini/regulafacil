@@ -5,9 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useIsolamentos } from '@/hooks/useIsolamentos';
 import { Setor } from '@/types/hospital';
 
@@ -41,12 +44,14 @@ export const FiltrosMapaLeitos = ({
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
 
-  const handleMultiSelectChange = (id: string, checked: boolean) => {
+  const handleMultiSelectChange = (id: string) => {
     const currentIsolamentos = filtros.isolamentos || [];
-    if (checked) {
-      setFiltros({ ...filtros, isolamentos: [...currentIsolamentos, id] });
-    } else {
+    const isSelected = currentIsolamentos.includes(id);
+
+    if (isSelected) {
       setFiltros({ ...filtros, isolamentos: currentIsolamentos.filter(isoId => isoId !== id) });
+    } else {
+      setFiltros({ ...filtros, isolamentos: [...currentIsolamentos, id] });
     }
   };
 
@@ -114,20 +119,47 @@ export const FiltrosMapaLeitos = ({
               </Select>
             </div>
             
-            <div>
+            <div className="lg:col-span-3">
               <Label>Isolamento</Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-                {tiposDeIsolamento.map(iso => (
-                  <div key={iso.id} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={iso.id} 
-                      checked={filtros.isolamentos.includes(iso.id!)} 
-                      onCheckedChange={(c) => handleMultiSelectChange(iso.id!, !!c)} 
-                    />
-                    <Label htmlFor={iso.id} className="text-sm font-normal">{iso.sigla}</Label>
-                  </div>
-                ))}
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start font-normal mt-2">
+                    {filtros.isolamentos.length > 0
+                      ? `${filtros.isolamentos.length} selecionado(s)`
+                      : "Selecione um ou mais isolamentos"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar isolamento..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum isolamento encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {tiposDeIsolamento.map(iso => (
+                          <CommandItem
+                            key={iso.id}
+                            value={iso.nomeMicroorganismo}
+                            onSelect={() => handleMultiSelectChange(iso.id!)}
+                          >
+                            <div
+                              className={cn(
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                filtros.isolamentos.includes(iso.id!)
+                                  ? "bg-primary text-primary-foreground"
+                                  : "opacity-50 [&_svg]:invisible"
+                              )}
+                            >
+                              <Check className={cn("h-4 w-4")} />
+                            </div>
+                            <Badge style={{ backgroundColor: iso.cor, color: 'white' }} className="mr-2 text-xs border-none">{iso.sigla}</Badge>
+                            <span>{iso.nomeMicroorganismo}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             
             <Button variant="outline" size="sm" onClick={resetFiltros}>

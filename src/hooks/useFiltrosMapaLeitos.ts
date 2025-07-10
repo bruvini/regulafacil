@@ -22,6 +22,10 @@ export const useFiltrosMapaLeitos = (setores: Setor[]) => {
     isolamentos: [] as string[],
   });
 
+  const todosLeitosGeral = useMemo(() => setores.flatMap(s => 
+      s.leitos.map(l => ({ ...l, setorId: s.id, setorNome: s.nomeSetor }))
+  ), [setores]);
+
   const filteredSetores = useMemo(() => {
     if (!setores) return [];
 
@@ -51,7 +55,32 @@ export const useFiltrosMapaLeitos = (setores: Setor[]) => {
           const leitosFiltrados = s.leitos.filter(l => {
             if (setor && s.id !== setor) return false;
             if (status && l.statusLeito !== status) return false;
-            if (sexo && l.dadosPaciente?.sexoPaciente !== sexo) return false;
+            
+            // Lógica de filtro por sexo
+            if (sexo) {
+              if (l.statusLeito === 'Ocupado') {
+                if (l.dadosPaciente?.sexoPaciente !== sexo) return false;
+              } else if (l.statusLeito === 'Vago') {
+                // NOVA LÓGICA: Verifica o sexo dos companheiros de quarto
+                const quarto = l.codigoLeito.match(/^(\d+[\s-]?\w*|\w+[\s-]?\d+)\s/)?.[1].trim();
+                if (!quarto) return false; // Se não for um quarto, não filtra
+
+                const companheiros = todosLeitosGeral.filter(
+                  outroLeito =>
+                    outroLeito.codigoLeito.startsWith(quarto) &&
+                    outroLeito.statusLeito === 'Ocupado'
+                );
+                
+                // Se houver companheiros, verifica se o sexo deles bate com o filtro.
+                // Se não houver companheiros, o leito vago aparece para qualquer sexo.
+                if (companheiros.length > 0 && companheiros.some(c => c.dadosPaciente?.sexoPaciente !== sexo)) {
+                  return false;
+                }
+              } else {
+                 // Para outros status (Bloqueado, Higienização etc.), não aplica filtro de sexo
+              }
+            }
+
             if (especialidade && l.dadosPaciente?.especialidadePaciente !== especialidade) return false;
             if (isolamentos.length > 0) {
               const isolamentosPaciente = l.dadosPaciente?.isolamentosVigentes?.map(iso => iso.isolamentoId) || [];
@@ -65,7 +94,7 @@ export const useFiltrosMapaLeitos = (setores: Setor[]) => {
     }
     
     return setoresFiltrados;
-  }, [setores, searchTerm, filtrosAvancados]);
+  }, [setores, searchTerm, filtrosAvancados, todosLeitosGeral]);
 
   const resetFiltros = () => {
     setSearchTerm('');

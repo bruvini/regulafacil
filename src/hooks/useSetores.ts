@@ -499,6 +499,46 @@ export const useSetores = () => {
     }
   };
 
+  const cancelarReserva = async (setorId: string, leitoId: string) => {
+    try {
+      setLoading(true);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => {
+        if (l.id === leitoId && l.statusLeito === 'Reservado') {
+          // Remove os dados do paciente e da regulação, e atualiza o status
+          const { dadosPaciente, regulacao, ...leitoRestante } = l;
+          return {
+            ...leitoRestante,
+            statusLeito: 'Vago' as const,
+            dataAtualizacaoStatus: new Date().toISOString(),
+            dadosPaciente: null,
+            regulacao: null
+          };
+        }
+        return l;
+      });
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados } as any);
+
+      toast({
+        title: 'Sucesso',
+        description: 'Reserva do leito foi cancelada.',
+      });
+    } catch (error) {
+      console.error('Falha ao cancelar reserva do leito:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível cancelar a reserva.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, novoIsolamento: any) => {
     try {
       const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
@@ -864,6 +904,7 @@ export const useSetores = () => {
     cancelarPedidoUTI,
     cancelarTransferencia,
     altaAposRecuperacao,
+    cancelarReserva,
     adicionarIsolamentoPaciente,
     atualizarRegrasIsolamento,
     confirmarRegulacao,
