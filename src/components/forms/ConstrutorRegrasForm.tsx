@@ -256,7 +256,7 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
         const condicaoParam = regra.parametros.find(p => p.tipo === 'condicao_especifica');
         return (
           <Select
-            value={condicaoParam?.valor as string || ''}
+            value={condicaoParam?.valor as string}
             onValueChange={(value) => {
               const indiceParam = regra.parametros.findIndex(p => p.tipo === 'condicao_especifica');
               if (indiceParam >= 0) {

@@ -539,22 +539,33 @@ export const useSetores = () => {
     }
   };
 
-  const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, novoIsolamento: any) => {
+  const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, novosIsolamentos: any[]) => {
     try {
       const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
       if (!leito?.dadosPaciente) return;
 
+      // Obter array atual de isolamentos
       const isolamentosAtuais = leito.dadosPaciente.isolamentosVigentes || [];
+      
+      // Concatenar os novos isolamentos com os existentes
+      const isolamentosAtualizados = [...isolamentosAtuais, ...novosIsolamentos];
+      
       const dadosPacienteAtualizado = {
         ...leito.dadosPaciente,
-        isolamentosVigentes: [...isolamentosAtuais, novoIsolamento]
+        isolamentosVigentes: isolamentosAtualizados
       };
 
+      // Uma única chamada para atualizar
       await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: dadosPacienteAtualizado });
-      toast({ title: "Vigilância Iniciada", description: `Isolamento ${novoIsolamento.sigla} adicionado ao paciente.` });
+      
+      const siglas = novosIsolamentos.map(iso => iso.sigla).join(', ');
+      toast({ 
+        title: "Vigilância Iniciada", 
+        description: `Isolamento(s) ${siglas} adicionado(s) ao paciente.` 
+      });
     } catch (error) {
-      console.error('Erro ao adicionar isolamento:', error);
-      toast({ title: "Erro", description: "Não foi possível adicionar o isolamento.", variant: "destructive" });
+      console.error('Erro ao adicionar isolamentos:', error);
+      toast({ title: "Erro", description: "Não foi possível adicionar os isolamentos.", variant: "destructive" });
     }
   };
 

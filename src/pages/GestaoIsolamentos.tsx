@@ -18,25 +18,19 @@ const GestaoIsolamentos = () => {
   const { setores } = useSetores();
   const { alertas, loading: alertasLoading } = useAlertasIsolamento();
   
-  // Lógica para encontrar pacientes em vigilância
+  // Lógica para encontrar pacientes em vigilância (lista plana)
   const pacientesEmVigilancia = setores
     .flatMap(setor => 
       setor.leitos
-        .filter(leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente?.isolamentosVigentes && leito.dadosPaciente.isolamentosVigentes.length > 0)
+        .filter(leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente?.isolamentosVigentes?.length > 0)
         .map(leito => ({ 
-          paciente: leito.dadosPaciente!, 
-          setorNome: setor.nomeSetor, 
+          paciente: { ...leito.dadosPaciente!, leitoCodigo: leito.codigoLeito }, 
           setorId: setor.id!,
-          leitoId: leito.id,
-          leitoCodigo: leito.codigoLeito 
+          leitoId: leito.id
         }))
-    )
-    .reduce((acc, item) => {
-        (acc[item.setorNome] = acc[item.setorNome] || []).push(item);
-        return acc;
-    }, {} as Record<string, any[]>);
+    );
 
-  const totalPacientesVigilancia = Object.values(pacientesEmVigilancia).reduce((total, setor) => total + setor.length, 0);
+  const totalPacientesVigilancia = pacientesEmVigilancia.length;
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -161,29 +155,17 @@ const GestaoIsolamentos = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {Object.keys(pacientesEmVigilancia).length > 0 ? (
-                <Accordion type="multiple" className="w-full space-y-2">
-                  {Object.entries(pacientesEmVigilancia).map(([setorNome, pacientes]) => (
-                    <AccordionItem key={setorNome} value={setorNome} className="border rounded-lg px-4">
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex justify-between items-center w-full pr-4">
-                          <h3 className="text-lg font-semibold text-foreground">{setorNome}</h3>
-                          <Badge variant="outline">{pacientes.length}</Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pt-4 space-y-2">
-                        {pacientes.map((item: any) => (
-                          <PacienteEmVigilanciaCard 
-                            key={`${item.setorId}-${item.leitoId}`}
-                            paciente={{ ...item.paciente, leitoCodigo: item.leitoCodigo }}
-                            setorId={item.setorId}
-                            leitoId={item.leitoId}
-                          />
-                        ))}
-                      </AccordionContent>
-                    </AccordionItem>
+              {pacientesEmVigilancia.length > 0 ? (
+                <div className="space-y-4">
+                  {pacientesEmVigilancia.map((item) => (
+                    <PacienteEmVigilanciaCard 
+                      key={`${item.setorId}-${item.leitoId}`}
+                      paciente={item.paciente}
+                      setorId={item.setorId}
+                      leitoId={item.leitoId}
+                    />
                   ))}
-                </Accordion>
+                </div>
               ) : (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center mx-auto mb-4">

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -30,14 +29,13 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
   const { setores, adicionarIsolamentoPaciente } = useSetores();
   const { isolamentos } = useIsolamentos();
 
-  // Pacientes ocupando leitos sem isolamentos vigentes
+  // Todos os pacientes ocupando leitos (podem receber novos isolamentos)
   const pacientesDisponiveis = setores
     .flatMap(setor => 
       setor.leitos
         .filter(leito => 
           leito.statusLeito === 'Ocupado' && 
-          leito.dadosPaciente &&
-          (!leito.dadosPaciente.isolamentosVigentes || leito.dadosPaciente.isolamentosVigentes.length === 0)
+          leito.dadosPaciente
         )
         .map(leito => ({
           ...leito.dadosPaciente!,
@@ -74,6 +72,9 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
 
     if (!temDatasCompletas) return;
 
+    // Criar array de isolamentos para adicionar
+    const isolamentosParaAdicionar = [];
+    
     for (const isolamentoId of isolamentosSelecionados) {
       const tipoIsolamento = isolamentos.find(t => t.id === isolamentoId);
       if (tipoIsolamento) {
@@ -83,9 +84,13 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
           dataInicioVigilancia: datasIsolamentos[isolamentoId],
           regrasCumpridas: []
         };
-        
-        await adicionarIsolamentoPaciente(pacienteSelecionado.setorId, pacienteSelecionado.leitoId, novoIsolamento);
+        isolamentosParaAdicionar.push(novoIsolamento);
       }
+    }
+
+    // Uma única chamada para adicionar todos os isolamentos
+    if (isolamentosParaAdicionar.length > 0) {
+      await adicionarIsolamentoPaciente(pacienteSelecionado.setorId, pacienteSelecionado.leitoId, isolamentosParaAdicionar);
     }
 
     // Reset do modal
@@ -177,7 +182,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
                       <div>
                         <p className="font-semibold">{paciente.nomePaciente}</p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Badge variant="outline">{paciente.sexoPaciente.charAt(0)}</Badge>
+                          <Badge variant="outline">{paciente.sexoPaciente?.charAt(0)}</Badge>
                           <span>{paciente.setorNome}</span>
                           <span>•</span>
                           <span>Leito {paciente.leitoCodigo}</span>
@@ -216,42 +221,52 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
               <Label>Tipos de Isolamento</Label>
               <ScrollArea className="h-48 border rounded-md p-4 mt-2">
                 <div className="space-y-4">
-                  {isolamentosFiltrados.map(tipo => (
-                    <div key={tipo.id} className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id={tipo.id}
-                          checked={isolamentosSelecionados.includes(tipo.id!)}
-                          onCheckedChange={(checked) => handleIsolamentoToggle(tipo.id!, !!checked)}
-                        />
-                        <Label htmlFor={tipo.id} className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded-full" 
-                            style={{ backgroundColor: tipo.cor }}
+                  {isolamentosFiltrados.map(tipo => {
+                    const jaTemEsteIsolamento = pacienteSelecionado?.isolamentosVigentes?.some(
+                      (iso: any) => iso.isolamentoId === tipo.id
+                    );
+                    
+                    return (
+                      <div key={tipo.id} className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={tipo.id}
+                            checked={jaTemEsteIsolamento || isolamentosSelecionados.includes(tipo.id!)}
+                            disabled={jaTemEsteIsolamento}
+                            onCheckedChange={(checked) => handleIsolamentoToggle(tipo.id!, !!checked)}
                           />
-                          <span className="font-medium">{tipo.sigla}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {tipo.nomeMicroorganismo}
-                          </span>
-                        </Label>
-                      </div>
-                      
-                      {isolamentosSelecionados.includes(tipo.id!) && (
-                        <div className="ml-6 mt-2">
-                          <Label htmlFor={`data-${tipo.id}`} className="text-sm">
-                            Data de Início da Vigilância
+                          <Label htmlFor={tipo.id} className="flex items-center gap-2">
+                            <div 
+                              className="w-4 h-4 rounded-full" 
+                              style={{ backgroundColor: tipo.cor }}
+                            />
+                            <span className="font-medium">{tipo.sigla}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {tipo.nomeMicroorganismo}
+                            </span>
+                            {jaTemEsteIsolamento && (
+                              <span className="text-xs text-green-600 font-medium">(Em vigilância)</span>
+                            )}
                           </Label>
-                          <Input
-                            id={`data-${tipo.id}`}
-                            type="date"
-                            value={datasIsolamentos[tipo.id!] || ''}
-                            onChange={(e) => handleDataChange(tipo.id!, e.target.value)}
-                            className="mt-1"
-                          />
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        
+                        {isolamentosSelecionados.includes(tipo.id!) && (
+                          <div className="ml-6 mt-2">
+                            <Label htmlFor={`data-${tipo.id}`} className="text-sm">
+                              Data de Início da Vigilância
+                            </Label>
+                            <Input
+                              id={`data-${tipo.id}`}
+                              type="date"
+                              value={datasIsolamentos[tipo.id!] || ''}
+                              onChange={(e) => handleDataChange(tipo.id!, e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {isolamentosFiltrados.length === 0 && (
                     <p className="text-center text-muted-foreground py-4">
                       Nenhum isolamento encontrado para a busca.
