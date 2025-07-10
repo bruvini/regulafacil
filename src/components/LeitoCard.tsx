@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -289,7 +290,7 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
             )}
             
             {leito.statusLeito === 'Ocupado' && (
-              <div className="flex justify-center space-x-1">
+              <div className="flex justify-center flex-wrap gap-1">
                 <AlertDialog>
                   <TooltipProvider>
                     <Tooltip>
