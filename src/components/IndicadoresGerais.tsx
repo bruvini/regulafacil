@@ -30,12 +30,11 @@ export const IndicadoresGerais = ({ contagem, taxa, tempos, nivelPCP }: Indicado
             <h4 className="text-sm font-medium text-muted-foreground">Taxa de Ocupação</h4>
             <span className="font-bold text-lg text-medical-primary">{taxa}%</span>
           </div>
-          <Progress value={taxa} className="h-3" style={{ backgroundColor: 'hsl(var(--muted))' }}>
-             <div
-              className="h-3 rounded-full transition-all duration-500"
-              style={{ width: `${taxa}%`, backgroundColor: getProgressColor(taxa) }}
-            />
-          </Progress>
+          <Progress 
+            value={taxa} 
+            className="h-3"
+            indicatorStyle={{ backgroundColor: getProgressColor(taxa) }} 
+          />
         </div>
 
         <div className={cn("p-4 rounded-lg text-white text-center transition-colors", nivelPCP.cor)}>
