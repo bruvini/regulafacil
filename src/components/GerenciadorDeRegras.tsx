@@ -6,16 +6,67 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useSetores } from '@/hooks/useSetores';
 
 interface Props {
   regrasDoIsolamento: RegrasPrecaucao;
   regrasJaCumpridas: string[];
   onRegrasChange: (novasRegrasCumpridas: string[]) => void;
+  setorId: string;
+  leitoId: string;
+  isolamentoId: string;
 }
 
-export const GerenciadorDeRegras = ({ regrasDoIsolamento, regrasJaCumpridas, onRegrasChange }: Props) => {
+export const GerenciadorDeRegras = ({ 
+  regrasDoIsolamento, 
+  regrasJaCumpridas, 
+  onRegrasChange,
+  setorId,
+  leitoId,
+  isolamentoId
+}: Props) => {
   const [gruposSatisfeitos, setGruposSatisfeitos] = useState<number[]>([]);
   const [podeFinalizar, setPodeFinalizar] = useState(false);
+  const { finalizarIsolamentoPaciente } = useSetores();
+
+  // Função para formatar a descrição da regra com base nos parâmetros
+  const formatarDescricaoRegra = (regra: any): string => {
+    switch (regra.tipo) {
+      case 'EXAME_NEGATIVO':
+        const exameParam = regra.parametros?.find((p: any) => p.tipo === 'nome_exame');
+        return `Até resultado negativo de: ${exameParam?.valor || 'Exame'}`;
+      
+      case 'DIAS_COM_SINTOMA':
+        const diasComParam = regra.parametros?.find((p: any) => p.tipo === 'quantidade_dias');
+        const sintomaComParam = regra.parametros?.find((p: any) => p.tipo === 'sintoma');
+        return `Após ${diasComParam?.valor || 'X'} dias com ${sintomaComParam?.valor || 'sintoma'}`;
+      
+      case 'DIAS_SEM_SINTOMA':
+        const diasSemParam = regra.parametros?.find((p: any) => p.tipo === 'quantidade_dias');
+        const sintomaSemParam = regra.parametros?.find((p: any) => p.tipo === 'sintoma');
+        return `Após ${diasSemParam?.valor || 'X'} dias sem ${sintomaSemParam?.valor || 'sintoma'}`;
+      
+      case 'CONDICAO_ESPECIFICA':
+        const condicaoParam = regra.parametros?.find((p: any) => p.tipo === 'condicao_especifica');
+        const condicoes: Record<string, string> = {
+          'alta_hospitalar': 'Alta hospitalar',
+          'transferencia_uti': 'Transferência para UTI',
+          'cirurgia_realizada': 'Cirurgia realizada',
+          'exame_controle': 'Exame de controle',
+          'avaliacao_medica': 'Avaliação médica'
+        };
+        return condicoes[condicaoParam?.valor as string] || 'Condição específica';
+      
+      case 'TRATAMENTO_COMPLETO':
+        const antimicrobianoParam = regra.parametros?.find((p: any) => p.tipo === 'nome_antimicrobiano');
+        return antimicrobianoParam?.valor 
+          ? `Até fim do tratamento com ${antimicrobianoParam.valor}`
+          : 'Até fim do tratamento';
+      
+      default:
+        return regra.descricao || 'Regra não especificada';
+    }
+  };
 
   useEffect(() => {
     // Avalia quais grupos já estão satisfeitos com base nas regras cumpridas
@@ -24,13 +75,11 @@ export const GerenciadorDeRegras = ({ regrasDoIsolamento, regrasJaCumpridas, onR
       const idsRegrasDoGrupo = grupo.regras.map(r => r.id);
       
       if (grupo.logica === 'OU') {
-        // Para lógica OU, basta uma regra estar cumprida
         const algumaRegraDoGrupoCumprida = idsRegrasDoGrupo.some(id => regrasJaCumpridas.includes(id));
         if (algumaRegraDoGrupoCumprida) {
           satisfeitos.push(index);
         }
       } else {
-        // Para lógica E, todas as regras devem estar cumpridas
         const todasRegrasDoGrupoCumpridas = idsRegrasDoGrupo.every(id => regrasJaCumpridas.includes(id));
         if (todasRegrasDoGrupoCumpridas) {
           satisfeitos.push(index);
@@ -39,11 +88,10 @@ export const GerenciadorDeRegras = ({ regrasDoIsolamento, regrasJaCumpridas, onR
     });
     setGruposSatisfeitos(satisfeitos);
 
-    // Verifica se o isolamento pode ser finalizado
     const logicaPrincipal = regrasDoIsolamento.logica;
     if (logicaPrincipal === 'OU') {
       setPodeFinalizar(satisfeitos.length > 0);
-    } else { // Lógica 'E'
+    } else {
       setPodeFinalizar(satisfeitos.length === regrasDoIsolamento.grupos.length);
     }
   }, [regrasJaCumpridas, regrasDoIsolamento]);
@@ -56,6 +104,10 @@ export const GerenciadorDeRegras = ({ regrasDoIsolamento, regrasJaCumpridas, onR
       novasRegras = novasRegras.filter(id => id !== regraId);
     }
     onRegrasChange(novasRegras);
+  };
+
+  const handleFinalizarIsolamento = () => {
+    finalizarIsolamentoPaciente(setorId, leitoId, isolamentoId);
   };
 
   const algumGrupoSatisfeito = gruposSatisfeitos.length > 0;
@@ -98,7 +150,7 @@ export const GerenciadorDeRegras = ({ regrasDoIsolamento, regrasJaCumpridas, onR
                     htmlFor={regra.id} 
                     className={cn("text-sm cursor-pointer", deveDesabilitar && "cursor-not-allowed")}
                   >
-                    {regra.descricao}
+                    {formatarDescricaoRegra(regra)}
                   </Label>
                 </div>
               ))}
@@ -108,7 +160,11 @@ export const GerenciadorDeRegras = ({ regrasDoIsolamento, regrasJaCumpridas, onR
       })}
 
       <div className="flex justify-end">
-        <Button disabled={!podeFinalizar} className={podeFinalizar ? "bg-green-600 hover:bg-green-700" : ""}>
+        <Button 
+          disabled={!podeFinalizar} 
+          className={podeFinalizar ? "bg-green-600 hover:bg-green-700" : ""} 
+          onClick={handleFinalizarIsolamento}
+        >
           {podeFinalizar ? "✓ Finalizar Isolamento" : "Finalizar Isolamento"}
         </Button>
       </div>

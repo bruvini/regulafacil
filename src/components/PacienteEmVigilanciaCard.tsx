@@ -95,6 +95,9 @@ export const PacienteEmVigilanciaCard = ({ paciente, setorId, leitoId }: Pacient
                       onRegrasChange={(novasRegras) => {
                         atualizarRegrasIsolamento(setorId, leitoId, isolamento.isolamentoId, novasRegras);
                       }}
+                      setorId={setorId}
+                      leitoId={leitoId}
+                      isolamentoId={isolamento.isolamentoId}
                     />
                   </div>
                 );

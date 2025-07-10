@@ -885,6 +885,37 @@ export const useSetores = () => {
     }
   };
 
+  const finalizarIsolamentoPaciente = async (setorId: string, leitoId: string, isolamentoId: string) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente?.isolamentosVigentes) return;
+
+      // Remove o isolamento específico do array
+      const isolamentosAtualizados = leito.dadosPaciente.isolamentosVigentes.filter(
+        iso => iso.isolamentoId !== isolamentoId
+      );
+      
+      const dadosPacienteAtualizado = { 
+        ...leito.dadosPaciente, 
+        isolamentosVigentes: isolamentosAtualizados 
+      };
+      
+      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: dadosPacienteAtualizado });
+      
+      toast({ 
+        title: "Isolamento Finalizado", 
+        description: "O isolamento foi finalizado com sucesso." 
+      });
+    } catch (error) {
+      console.error('Erro ao finalizar isolamento:', error);
+      toast({ 
+        title: "Erro", 
+        description: "Não foi possível finalizar o isolamento.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   return {
     setores,
     loading,
@@ -912,5 +943,6 @@ export const useSetores = () => {
     alterarRegulacao: (paciente: any, leitoOrigem: any, leitoDestino: any, observacoes: string) => 
       alterarRegulacao(paciente, leitoOrigem, leitoDestino, observacoes),
     cancelarRegulacao,
+    finalizarIsolamentoPaciente,
   };
 };
