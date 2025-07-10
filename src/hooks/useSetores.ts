@@ -1017,7 +1017,7 @@ export const useSetores = () => {
                       paraLeito: leitoDestino.codigoLeito || '',
                       data: agora,
                       observacoes: observacoes || '',
-                      motivo: motivo || ''
+                      motivo: motivo || '' // Garantir que o motivo seja salvo
                   }
               };
           }

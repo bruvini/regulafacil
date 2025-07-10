@@ -24,6 +24,8 @@ import { intervalToDuration, parse } from 'date-fns';
 import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
 import { PacienteReguladoItem } from '@/components/PacienteReguladoItem';
 import { ResumoRegulacoesModal } from '@/components/modals/ResumoRegulacoesModal';
+import { useIsolamentoSugestoes, SugestaoRemanejamento } from '@/hooks/useIsolamentoSugestoes';
+import { SugestaoIsolamentoItem } from '@/components/SugestaoIsolamentoItem';
 
 interface PacienteDaPlanilha {
   nomeCompleto: string;
@@ -56,6 +58,7 @@ const RegulacaoLeitos = () => {
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti' | 'remanejamento'>('normal');
   const [resumoModalOpen, setResumoModalOpen] = useState(false);
+  const sugestoesIsolamento = useIsolamentoSugestoes(setores);
   const { toast } = useToast();
 
   const todosPacientesPendentes: (DadosPaciente & { setorOrigem: string; siglaSetorOrigem: string; setorId: string; leitoId: string; leitoCodigo: string; statusLeito: string; regulacao?: any })[] = setores
@@ -162,6 +165,11 @@ const RegulacaoLeitos = () => {
     } catch (error) {
       console.error('Erro ao confirmar ação no modal:', error);
     }
+  };
+
+  const handleAceitarSugestao = (sugestao: SugestaoRemanejamento) => {
+    // Chama a função de remanejamento já existente, passando os dados da sugestão
+    confirmarRemanejamento(sugestao.paciente, sugestao.leitoDestino, "Remanejamento automático para otimização de coorte.", sugestao.motivo);
   };
 
   const renderListaComAgrupamento = (titulo: string, pacientes: any[], onRegularClick?: (paciente: any) => void, onAlta?: (setorId: string, leitoId: string) => void) => {
@@ -673,6 +681,27 @@ const RegulacaoLeitos = () => {
               )}
             </AccordionContent>
           </AccordionItem>
+
+          {sugestoesIsolamento.length > 0 && (
+            <AccordionItem value="item-3" className="border rounded-lg bg-card shadow-card">
+              <AccordionTrigger className="px-4 hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-foreground">SUGESTÕES DE OTIMIZAÇÃO DE ISOLAMENTO</h3>
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800">{sugestoesIsolamento.length}</Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-4 space-y-4">
+                {sugestoesIsolamento.map((sugestao, index) => (
+                  <SugestaoIsolamentoItem
+                    key={`${sugestao.paciente.id}-${index}`}
+                    sugestao={sugestao}
+                    onAceitar={handleAceitarSugestao}
+                    loading={setoresLoading}
+                  />
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+          )}
         </Accordion>
 
         <ImportacaoMVModal 
