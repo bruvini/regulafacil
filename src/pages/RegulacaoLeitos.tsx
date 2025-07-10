@@ -250,11 +250,32 @@ const RegulacaoLeitos = () => {
             }))
             .filter(p => p.nomeCompleto && p.leitoCodigo);
 
+          // Validação de leitos bloqueados
           const todosLeitos = setores.flatMap(s => s.leitos.map(l => ({ ...l, setorNome: s.nomeSetor })));
-          const leitosOcupados = todosLeitos.filter(l => l.statusLeito === 'Ocupado');
+          const conflitosLeitosBloqueados = pacientesPlanilha.filter(paciente => {
+            const leito = todosLeitos.find(l => l.codigoLeito === paciente.leitoCodigo);
+            return leito && leito.statusLeito === 'Bloqueado';
+          });
 
+          if (conflitosLeitosBloqueados.length > 0) {
+            const conflitosDetalhados = conflitosLeitosBloqueados.map(p => 
+              `${p.nomeCompleto} - Leito ${p.leitoCodigo}`
+            ).join(', ');
+            
+            toast({
+              title: 'Erro: Leitos Bloqueados',
+              description: `Os seguintes pacientes estão alocados em leitos bloqueados: ${conflitosDetalhados}`,
+              variant: 'destructive',
+            });
+            setProcessing(false);
+            return;
+          }
+
+          // Gerar resumo das operações
+          const leitosOcupados = todosLeitos.filter(l => l.statusLeito === 'Ocupado');
           const summary: SyncSummary = { novasInternacoes: [], transferencias: [], altas: [] };
 
+          // Identificar altas
           leitosOcupados.forEach(leitoOcupado => {
             if (leitoOcupado.dadosPaciente && !pacientesPlanilha.some(p => p.nomeCompleto === leitoOcupado.dadosPaciente?.nomePaciente)) {
               summary.altas.push({ 
@@ -264,6 +285,7 @@ const RegulacaoLeitos = () => {
             }
           });
 
+          // Identificar transferências e novas internações
           pacientesPlanilha.forEach(pacientePlanilha => {
             const leitoAtual = leitosOcupados.find(l => l.dadosPaciente?.nomePaciente === pacientePlanilha.nomeCompleto);
             const leitoDaPlanilha = todosLeitos.find(l => l.codigoLeito === pacientePlanilha.leitoCodigo);
@@ -315,50 +337,114 @@ const RegulacaoLeitos = () => {
 
     const agora = new Date().toISOString();
     const batch = writeBatch(db);
-
     const setoresAtualizados = JSON.parse(JSON.stringify(setores));
 
     try {
+      // FASE 1: PRÉ-PROCESSAMENTO - Limpar leitos com status específicos
+      console.log('Fase 1: Pré-processamento - limpando leitos...');
       for (const setor of setoresAtualizados) {
         for (const leito of setor.leitos) {
-          if (leito.statusLeito === 'Ocupado') {
-            leito.statusLeito = 'Vago';
+          if (['Reservado', 'Regulado', 'Higienizacao'].includes(leito.statusLeito)) {
             leito.dadosPaciente = null;
+            leito.regulacao = null;
+            leito.statusLeito = 'Vago';
             leito.dataAtualizacaoStatus = agora;
           }
         }
       }
 
-      dadosPlanilhaProcessados.forEach((pacientePlanilha: any) => {
-        const setorTarget = setoresAtualizados.find(s => s.nomeSetor === pacientePlanilha.setorNome);
-        if (setorTarget) {
-          const leitoTarget = setorTarget.leitos.find(l => l.codigoLeito === pacientePlanilha.leitoCodigo);
-          if (leitoTarget) {
-            leitoTarget.statusLeito = 'Ocupado';
-            leitoTarget.dataAtualizacaoStatus = agora;
-            leitoTarget.dadosPaciente = {
-              nomePaciente: pacientePlanilha.nomeCompleto,
-              dataNascimento: pacientePlanilha.dataNascimento,
-              sexoPaciente: pacientePlanilha.sexo,
-              dataInternacao: pacientePlanilha.dataInternacao,
-              especialidadePaciente: pacientePlanilha.especialidade
-            };
+      // FASE 2: PROCESSAR ALTAS - Pacientes que saíram (estão no sistema mas não na planilha)
+      console.log('Fase 2: Processando altas...');
+      const leitosOcupados = setoresAtualizados.flatMap(s => 
+        s.leitos.filter(l => l.statusLeito === 'Ocupado' && l.dadosPaciente)
+      );
+
+      for (const leitoOcupado of leitosOcupados) {
+        const pacienteAindaInternado = dadosPlanilhaProcessados.some(p => 
+          p.nomeCompleto === leitoOcupado.dadosPaciente?.nomePaciente
+        );
+        
+        if (!pacienteAindaInternado) {
+          // Alta do paciente
+          leitoOcupado.dadosPaciente = null;
+          leitoOcupado.regulacao = null;
+          leitoOcupado.statusLeito = 'Vago';
+          leitoOcupado.dataAtualizacaoStatus = agora;
+        }
+      }
+
+      // FASE 3: PROCESSAR TRANSFERÊNCIAS E MOVIMENTAÇÕES
+      console.log('Fase 3: Processando transferências e movimentações...');
+      const todosLeitosAtualizados = setoresAtualizados.flatMap(s => 
+        s.leitos.map(l => ({ ...l, setorNome: s.nomeSetor }))
+      );
+
+      for (const pacientePlanilha of dadosPlanilhaProcessados) {
+        // Verificar se o paciente já existe no sistema
+        const leitoAtualPaciente = todosLeitosAtualizados.find(l => 
+          l.dadosPaciente?.nomePaciente === pacientePlanilha.nomeCompleto
+        );
+        
+        const leitoDestinoPlanilha = todosLeitosAtualizados.find(l => 
+          l.codigoLeito === pacientePlanilha.leitoCodigo
+        );
+
+        if (!leitoDestinoPlanilha) continue;
+
+        if (leitoAtualPaciente && leitoAtualPaciente.id !== leitoDestinoPlanilha.id) {
+          // É uma transferência - limpar leito origem
+          const setorOrigem = setoresAtualizados.find(s => 
+            s.leitos.some(l => l.id === leitoAtualPaciente.id)
+          );
+          if (setorOrigem) {
+            const leitoOrigem = setorOrigem.leitos.find(l => l.id === leitoAtualPaciente.id);
+            if (leitoOrigem) {
+              leitoOrigem.dadosPaciente = null;
+              leitoOrigem.regulacao = null;
+              leitoOrigem.statusLeito = 'Vago';
+              leitoOrigem.dataAtualizacaoStatus = agora;
+            }
           }
         }
-      });
+      }
 
+      // FASE 4: PROCESSAR NOVAS INTERNAÇÕES E ATUALIZAÇÕES DE DESTINO
+      console.log('Fase 4: Processando novas internações e atualizações...');
+      for (const pacientePlanilha of dadosPlanilhaProcessados) {
+        const setorDestino = setoresAtualizados.find(s => s.nomeSetor === pacientePlanilha.setorNome);
+        if (!setorDestino) continue;
+
+        const leitoDestino = setorDestino.leitos.find(l => l.codigoLeito === pacientePlanilha.leitoCodigo);
+        if (!leitoDestino) continue;
+
+        // Atualizar o leito de destino com os dados do paciente
+        leitoDestino.statusLeito = 'Ocupado';
+        leitoDestino.dataAtualizacaoStatus = agora;
+        leitoDestino.dadosPaciente = {
+          nomePaciente: pacientePlanilha.nomeCompleto,
+          dataNascimento: pacientePlanilha.dataNascimento,
+          sexoPaciente: pacientePlanilha.sexo,
+          dataInternacao: pacientePlanilha.dataInternacao,
+          especialidadePaciente: pacientePlanilha.especialidade
+        };
+      }
+
+      // FASE 5: EXECUÇÃO EM BATCH NO FIRESTORE
+      console.log('Fase 5: Salvando alterações no Firestore...');
       setoresAtualizados.forEach(setor => {
         const setorRef = doc(db, 'setoresRegulaFacil', setor.id);
         batch.update(setorRef, { leitos: setor.leitos });
       });
 
+      // Simular delay para feedback visual
       await new Promise(resolve => setTimeout(resolve, 2000));
       
+      // Commit das alterações
       await batch.commit();
       
       toast({ 
         title: 'Sucesso!', 
-        description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} operações realizadas.`,
+        description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} operações realizadas com sucesso.`,
       });
       
       setImportModalOpen(false);
@@ -366,8 +452,8 @@ const RegulacaoLeitos = () => {
     } catch (error) {
       console.error("Erro ao sincronizar:", error);
       toast({ 
-        title: 'Erro!', 
-        description: 'Não foi possível sincronizar os dados.', 
+        title: 'Erro na Sincronização!', 
+        description: 'Não foi possível sincronizar os dados. Tente novamente.', 
         variant: 'destructive' 
       });
     } finally {
