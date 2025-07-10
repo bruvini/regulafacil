@@ -14,10 +14,13 @@ import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
 import { Settings } from 'lucide-react';
+import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 
 const MapaLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
-  const { setores, loading } = useSetores();
+  const [movimentacaoModalOpen, setMovimentacaoModalOpen] = useState(false);
+  const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
+  const { setores, loading, moverPaciente } = useSetores();
   
   // Chama o hook para obter as métricas incluindo nivelPCP
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setores);
@@ -37,6 +40,23 @@ const MapaLeitos = () => {
       leito => !['Vago', 'Higienizacao', 'Bloqueado'].includes(leito.statusLeito)
     ).length;
     return Math.round((leitosOcupados / leitos.length) * 100);
+  };
+
+  const handleOpenMovimentacaoModal = (leito: any) => {
+    setPacienteParaMover({
+      dados: leito.dadosPaciente,
+      leitoOrigemId: leito.id,
+      setorOrigemId: setores.find(s => s.leitos.some(l => l.id === leito.id))?.id
+    });
+    setMovimentacaoModalOpen(true);
+  };
+
+  const handleConfirmarMovimentacao = (leitoDestino: any) => {
+    if (pacienteParaMover) {
+      moverPaciente(pacienteParaMover.dados, pacienteParaMover.leitoOrigemId, pacienteParaMover.setorOrigemId, leitoDestino);
+    }
+    setMovimentacaoModalOpen(false);
+    setPacienteParaMover(null);
   };
 
   return (
@@ -143,7 +163,7 @@ const MapaLeitos = () => {
                     const taxaOcupacao = calcularTaxaOcupacao(setor.leitos);
                     return (
                       <AccordionItem 
-                        key={setor.id} 
+                        key={setor.id!} 
                         value={setor.id!}
                         className="border border-border/50 rounded-lg px-4"
                       >
@@ -177,12 +197,19 @@ const MapaLeitos = () => {
                                           nomeQuarto={nomeQuarto}
                                           leitos={leitosDoQuarto}
                                           setorId={setor.id!}
+                                          onMoverPaciente={handleOpenMovimentacaoModal}
                                         />
                                       ))}
                                     {leitosSoltos
                                       .sort((a, b) => comparadorNatural(a.codigoLeito, b.codigoLeito))
                                       .map((leito) => (
-                                        <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} todosLeitosDoSetor={setor.leitos} />
+                                        <LeitoCard 
+                                          key={leito.id} 
+                                          leito={leito} 
+                                          setorId={setor.id!} 
+                                          todosLeitosDoSetor={setor.leitos}
+                                          onMoverPaciente={handleOpenMovimentacaoModal}
+                                        />
                                       ))}
                                   </div>
                                 );
@@ -235,6 +262,13 @@ const MapaLeitos = () => {
       <GerenciamentoModal 
         open={modalOpen} 
         onOpenChange={setModalOpen} 
+      />
+
+      <MovimentacaoModal
+        open={movimentacaoModalOpen}
+        onOpenChange={setMovimentacaoModalOpen}
+        pacienteNome={pacienteParaMover?.dados?.nomePaciente || ''}
+        onConfirm={handleConfirmarMovimentacao}
       />
     </div>
   );

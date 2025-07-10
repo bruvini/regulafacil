@@ -42,7 +42,7 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, cancelarPedidoRemanejamento } = useSetores();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
@@ -126,6 +126,10 @@ const RegulacaoLeitos = () => {
   const handleCancelar = (paciente: any) => {
     setPacienteParaAcao(paciente);
     setCancelamentoModalOpen(true);
+  };
+
+  const handleCancelarRemanejamento = (paciente: any) => {
+    cancelarPedidoRemanejamento(paciente.setorId, paciente.leitoId);
   };
 
   const onConfirmarCancelamento = (motivo: string) => {
@@ -652,7 +656,12 @@ const RegulacaoLeitos = () => {
               {pacientesAguardandoRemanejamento.length > 0 ? (
                 <div className="space-y-2">
                   {pacientesAguardandoRemanejamento.map(paciente => (
-                    <RemanejamentoPendenteItem key={`${paciente.nomePaciente}-${paciente.leitoCodigo}`} paciente={paciente} />
+                    <RemanejamentoPendenteItem 
+                      key={`${paciente.nomePaciente}-${paciente.leitoCodigo}`} 
+                      paciente={paciente}
+                      onRemanejar={() => handleOpenRegulacaoModal(paciente, 'normal')}
+                      onCancelar={handleCancelarRemanejamento}
+                    />
                   ))}
                 </div>
               ) : (

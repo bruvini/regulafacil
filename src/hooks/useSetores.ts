@@ -989,6 +989,65 @@ export const useSetores = () => {
     }
   };
 
+  const cancelarPedidoRemanejamento = async (setorId: string, leitoId: string) => {
+    try {
+      const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+      if (!leito?.dadosPaciente) return;
+
+      // Remove apenas os campos de remanejamento, mantendo o resto dos dados do paciente.
+      const { remanejarPaciente, motivoRemanejamento, dataPedidoRemanejamento, ...restoDados } = leito.dadosPaciente;
+
+      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: restoDados });
+      toast({ title: "Solicitação Cancelada", description: "O pedido de remanejamento foi removido." });
+    } catch (error) {
+      console.error('Erro ao cancelar remanejamento:', error);
+      toast({ title: "Erro", description: "Não foi possível cancelar a solicitação.", variant: "destructive" });
+    }
+  };
+
+  const moverPaciente = async (paciente: any, leitoOrigemId: string, setorOrigemId: string, leitoDestino: any) => {
+    try {
+      setLoading(true);
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      // 1. Libera o leito de origem
+      const setorOrigemRef = doc(db, 'setoresRegulaFacil', setorOrigemId);
+      const setorOrigemData = setores.find(s => s.id === setorOrigemId)!;
+      const leitosOrigemAtualizado = setorOrigemData.leitos.map(l =>
+        l.id === leitoOrigemId
+          ? { ...l, statusLeito: 'Vago' as const, dataAtualizacaoStatus: agora, dadosPaciente: null, regulacao: null }
+          : l
+      );
+      batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
+
+      // 2. Ocupa o leito de destino
+      const setorDestinoRef = doc(db, 'setoresRegulaFacil', leitoDestino.setorId);
+      const setorDestinoData = setores.find(s => s.id === leitoDestino.setorId)!;
+      const leitosDestinoAtualizado = setorDestinoData.leitos.map(l =>
+        l.id === leitoDestino.id
+          ? { ...l, statusLeito: 'Ocupado' as const, dataAtualizacaoStatus: agora, dadosPaciente: paciente }
+          : l
+      );
+
+      if (setorOrigemId === leitoDestino.setorId) {
+          // Se a movimentação for dentro do mesmo setor, precisamos mesclar as alterações
+          const leitosMesclados = leitosOrigemAtualizado.map(l => leitosDestinoAtualizado.find(ld => ld.id === l.id) || l);
+          batch.update(setorOrigemRef, { leitos: leitosMesclados });
+      } else {
+          batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizado });
+      }
+
+      await batch.commit();
+      toast({ title: 'Sucesso!', description: `Paciente movido para o leito ${leitoDestino.codigoLeito}.` });
+    } catch (error) {
+      console.error('Erro ao mover paciente:', error);
+      toast({ title: 'Erro', description: 'Não foi possível mover o paciente.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     setores,
     loading,
@@ -1018,5 +1077,7 @@ export const useSetores = () => {
     cancelarRegulacao,
     finalizarIsolamentoPaciente,
     concluirTransferencia,
+    cancelarPedidoRemanejamento,
+    moverPaciente,
   };
 };
