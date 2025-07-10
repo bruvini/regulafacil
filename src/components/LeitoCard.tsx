@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,7 @@ const calcularIdade = (dataNascimento: string): string => {
 };
 
 const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
-  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente, cancelarReserva } = useSetores();
+  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente, cancelarReserva, concluirTransferencia } = useSetores();
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
   const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
@@ -78,7 +78,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
   const handleLiberarLeito = () => liberarLeito(setorId, leito.id);
   const handleSolicitarUTI = () => solicitarUTI(setorId, leito.id);
   const handleConfirmarRemanejamento = (motivo: string) => solicitarRemanejamento(setorId, leito.id, motivo);
-  const handleConfirmarTransferencia = (destino: string, motivo: string) => transferirPaciente(setorId, leito.id, destino, motivo);
+  const handleConfirmarTransferencia = () => concluirTransferencia(leito, setorId);
   const handleCancelarReserva = () => cancelarReserva(setorId, leito.id);
 
   return (
@@ -197,7 +197,34 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
             </div>
 
             {leito.statusLeito === 'Reservado' && (
-              <div className="flex justify-center">
+              <div className="flex justify-center space-x-2">
+                <AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-medical-success">
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Confirmar Ocupação</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmar Ocupação do Leito?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação irá mover o paciente para o leito {leito.codigoLeito} e liberar o leito de origem para higienização.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Fechar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleConfirmarTransferencia}>Confirmar</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
                 <AlertDialog>
                   <TooltipProvider>
                     <Tooltip>
@@ -208,9 +235,7 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
                           </Button>
                         </AlertDialogTrigger>
                       </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Cancelar Reserva</p>
-                      </TooltipContent>
+                      <TooltipContent><p>Cancelar Reserva</p></TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                   <AlertDialogContent>

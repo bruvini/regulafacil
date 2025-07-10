@@ -7,21 +7,10 @@ export const useIndicadoresHospital = (setores: Setor[]) => {
 
   // 1. Contagem de Leitos por Status
   const contagemPorStatus = useMemo(() => {
-    const contagem: Record<string, number> = {
-      Ocupado: 0, 
-      Vago: 0, 
-      Bloqueado: 0, 
-      Higienizacao: 0, 
-      Regulado: 0, 
-      Reservado: 0,
-    };
-    
+    const contagem: Record<string, number> = { Ocupado: 0, Vago: 0, Bloqueado: 0, Higienizacao: 0, Regulado: 0, Reservado: 0 };
     todosLeitos.forEach(leito => {
-      if (leito.statusLeito in contagem) {
-        contagem[leito.statusLeito]++;
-      }
+      if (leito.statusLeito in contagem) contagem[leito.statusLeito]++;
     });
-    
     return contagem;
   }, [todosLeitos]);
 
@@ -33,15 +22,9 @@ export const useIndicadoresHospital = (setores: Setor[]) => {
     return Math.round((ocupadosEregulados / leitosOperacionais) * 100);
   }, [contagemPorStatus]);
 
-  // 3. Tempo Médio por Status (Cálculo Simplificado)
+  // 3. Tempo Médio por Status
   const tempoMedioStatus = useMemo(() => {
-    const duracoesPorStatus: Record<string, number[]> = {
-      Ocupado: [],
-      Vago: [],
-      Bloqueado: [],
-      Higienizacao: []
-    };
-    
+    const duracoesPorStatus: Record<string, number[]> = { Ocupado: [], Vago: [], Bloqueado: [], Higienizacao: [] };
     todosLeitos.forEach(leito => {
       if (leito.dataAtualizacaoStatus && duracoesPorStatus[leito.statusLeito]) {
         const inicio = new Date(leito.dataAtualizacaoStatus);
@@ -49,7 +32,6 @@ export const useIndicadoresHospital = (setores: Setor[]) => {
         duracoesPorStatus[leito.statusLeito].push(duracaoTotalMinutos);
       }
     });
-
     const formatarMedia = (temposEmMinutos: number[]) => {
       if (temposEmMinutos.length === 0) return 'N/A';
       const mediaMinutos = temposEmMinutos.reduce((a, b) => a + b, 0) / temposEmMinutos.length;
@@ -58,14 +40,22 @@ export const useIndicadoresHospital = (setores: Setor[]) => {
       if (dias > 0) return `${dias.toFixed(0)}d ${horas.toFixed(0)}h`;
       return `${horas.toFixed(0)}h`;
     };
-    
-    return {
-      Ocupado: formatarMedia(duracoesPorStatus.Ocupado),
-      Vago: formatarMedia(duracoesPorStatus.Vago),
-      Bloqueado: formatarMedia(duracoesPorStatus.Bloqueado),
-      Higienizacao: formatarMedia(duracoesPorStatus.Higienizacao),
-    };
+    return { Ocupado: formatarMedia(duracoesPorStatus.Ocupado), Vago: formatarMedia(duracoesPorStatus.Vago), Bloqueado: formatarMedia(duracoesPorStatus.Bloqueado), Higienizacao: formatarMedia(duracoesPorStatus.Higienizacao) };
   }, [todosLeitos]);
 
-  return { contagemPorStatus, taxaOcupacao, tempoMedioStatus };
+  // 4. Nível PCP (NOVA LÓGICA)
+  const nivelPCP = useMemo(() => {
+    const setoresDecisao = ["PS DECISÃO CIRURGICA", "PS DECISÃO CLINICA"];
+    const leitosOcupadosDecisao = setores
+      .filter(s => setoresDecisao.includes(s.nomeSetor))
+      .flatMap(s => s.leitos)
+      .filter(l => l.statusLeito === 'Ocupado').length;
+
+    if (leitosOcupadosDecisao <= 22) return { nivel: 'Rotina Diária', cor: 'bg-blue-500', count: leitosOcupadosDecisao };
+    if (leitosOcupadosDecisao <= 28) return { nivel: 'Nível 1', cor: 'bg-green-500', count: leitosOcupadosDecisao };
+    if (leitosOcupadosDecisao <= 32) return { nivel: 'Nível 2', cor: 'bg-yellow-500', count: leitosOcupadosDecisao };
+    return { nivel: 'Nível 3', cor: 'bg-red-500', count: leitosOcupadosDecisao };
+  }, [setores]);
+
+  return { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP };
 };

@@ -927,6 +927,68 @@ export const useSetores = () => {
     }
   };
 
+  const concluirTransferencia = async (leitoDestino: Leito, setorDestinoId: string) => {
+    if (!leitoDestino.dadosPaciente?.origem) {
+      toast({ title: "Erro de Dados", description: "Não foi possível encontrar a origem do paciente para concluir a transferência.", variant: "destructive" });
+      return;
+    }
+
+    const { deSetor, deLeito } = leitoDestino.dadosPaciente.origem;
+
+    try {
+      setLoading(true);
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      // 1. Atualiza o leito de ORIGEM (de 'Regulado' para 'Higienizacao')
+      const setorOrigem = setores.find(s => s.nomeSetor === deSetor);
+      if (setorOrigem) {
+        const setorOrigemRef = doc(db, 'setoresRegulaFacil', setorOrigem.id!);
+        const leitosOrigemAtualizado = setorOrigem.leitos.map(l => {
+          if (l.codigoLeito === deLeito) {
+            return { 
+              ...l, 
+              statusLeito: 'Higienizacao' as const, 
+              dataAtualizacaoStatus: agora, 
+              dadosPaciente: null, 
+              regulacao: undefined 
+            };
+          }
+          return l;
+        });
+        batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
+      }
+
+      // 2. Atualiza o leito de DESTINO (de 'Reservado' para 'Ocupado')
+      const setorDestinoData = setores.find(s => s.id === setorDestinoId);
+      if (setorDestinoData) {
+          const setorDestinoRef = doc(db, 'setoresRegulaFacil', setorDestinoId);
+          const leitosDestinoAtualizado = setorDestinoData.leitos.map(l => {
+            if (l.id === leitoDestino.id) {
+              const dadosPacienteFinal = { ...l.dadosPaciente };
+              delete dadosPacienteFinal.origem; // Remove a informação de origem
+              return { 
+                ...l, 
+                statusLeito: 'Ocupado' as const, 
+                dataAtualizacaoStatus: agora, 
+                dadosPaciente: dadosPacienteFinal 
+              };
+            }
+            return l;
+          });
+          batch.update(setorDestinoRef, { leitos: leitosDestinoAtualizado });
+      }
+
+      await batch.commit();
+      toast({ title: 'Transferência Concluída!', description: `Paciente alocado com sucesso no leito ${leitoDestino.codigoLeito}.` });
+    } catch (error) {
+      console.error('Erro ao concluir transferência:', error);
+      toast({ title: 'Erro', description: 'Não foi possível concluir a transferência.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     setores,
     loading,
@@ -955,5 +1017,6 @@ export const useSetores = () => {
       alterarRegulacao(paciente, leitoOrigem, leitoDestino, observacoes),
     cancelarRegulacao,
     finalizarIsolamentoPaciente,
+    concluirTransferencia,
   };
 };

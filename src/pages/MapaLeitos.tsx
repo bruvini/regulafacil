@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,8 +19,8 @@ const MapaLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const { setores, loading } = useSetores();
   
-  // Chama o novo hook para obter as métricas
-  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus } = useIndicadoresHospital(setores);
+  // Chama o hook para obter as métricas incluindo nivelPCP
+  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setores);
 
   const { 
     searchTerm, setSearchTerm, 
@@ -76,7 +75,8 @@ const MapaLeitos = () => {
             <IndicadoresGerais 
               contagem={contagemPorStatus} 
               taxa={taxaOcupacao} 
-              tempos={tempoMedioStatus} 
+              tempos={tempoMedioStatus}
+              nivelPCP={nivelPCP}
             />
           )}
 
