@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { LogIn, LogOut, Clock, CheckCheck, Pencil, XCircle } from 'lucide-react';
-import { formatarDuracao } from '@/lib/utils';
+import { intervalToDuration, parse } from 'date-fns';
 
 // Função para calcular idade
 const calcularIdade = (dataNascimento: string): string => {
@@ -18,6 +18,20 @@ const calcularIdade = (dataNascimento: string): string => {
     idade--;
   }
   return idade.toString();
+};
+
+// Função para calcular a duração da internação
+const calcularDuracao = (dataInternacao: string): string => {
+    if (!dataInternacao || !dataInternacao.includes(' ')) return 'N/A';
+    const dataEntrada = parse(dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+    if (isNaN(dataEntrada.getTime())) return 'Data inválida';
+    
+    const duracao = intervalToDuration({ start: dataEntrada, end: new Date() });
+    const partes = [];
+    if (duracao.days && duracao.days > 0) partes.push(`${duracao.days}d`);
+    if (duracao.hours && duracao.hours > 0) partes.push(`${duracao.hours}h`);
+    if (duracao.minutes) partes.push(`${duracao.minutes}m`);
+    return partes.length > 0 ? partes.join(' ') : 'Recente';
 };
 
 interface PacientePendenteItemProps {
@@ -54,11 +68,11 @@ export const PacientePendenteItem = ({
               <span className="font-semibold text-purple-600">Destino:</span>
               <span>{paciente.regulacao.paraSetorSigla} - {paciente.regulacao.paraLeito}</span>
               <span className="text-gray-400">•</span>
-              <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatarDuracao(paciente.regulacao.data)}</div>
+              <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {calcularDuracao(paciente.regulacao.data)}</div>
             </>
           ) : (
             <>
-              <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatarDuracao(paciente.dataInternacao)}</div>
+              <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {calcularDuracao(paciente.dataInternacao)}</div>
             </>
           )}
         </div>

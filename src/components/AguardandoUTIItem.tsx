@@ -3,7 +3,17 @@ import { DadosPaciente } from '@/types/hospital';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { BedDouble, Ambulance, X, Clock } from 'lucide-react';
-import { formatarDuracao } from '@/lib/utils';
+import { intervalToDuration, parseISO } from 'date-fns';
+
+const calcularDuracao = (dataISO?: string): string => {
+    if (!dataISO) return 'N/A';
+    const duracao = intervalToDuration({ start: parseISO(dataISO), end: new Date() });
+    const partes = [];
+    if (duracao.days && duracao.days > 0) partes.push(`${duracao.days}d`);
+    if (duracao.hours && duracao.hours > 0) partes.push(`${duracao.hours}h`);
+    if (duracao.minutes) partes.push(`${duracao.minutes}m`);
+    return partes.length > 0 ? partes.join(' ') : 'Recente';
+};
 
 interface Props {
   paciente: any;
@@ -13,7 +23,7 @@ interface Props {
 }
 
 export const AguardandoUTIItem = ({ paciente, onCancel, onTransfer, onRegularUTI }: Props) => {
-  const tempoAguardando = formatarDuracao(paciente.dataPedidoUTI);
+  const tempoAguardando = calcularDuracao(paciente.dataPedidoUTI);
   
   return (
     <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">

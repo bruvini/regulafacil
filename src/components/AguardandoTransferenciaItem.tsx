@@ -4,7 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ClipboardList, X, Clock } from 'lucide-react';
-import { formatarDuracao } from '@/lib/utils';
+import { intervalToDuration, parseISO } from 'date-fns';
+
+const calcularDuracao = (dataISO?: string): string => {
+    if (!dataISO) return 'N/A';
+    const duracao = intervalToDuration({ start: parseISO(dataISO), end: new Date() });
+    const partes = [];
+    if (duracao.days && duracao.days > 0) partes.push(`${duracao.days}d`);
+    if (duracao.hours && duracao.hours > 0) partes.push(`${duracao.hours}h`);
+    if (duracao.minutes) partes.push(`${duracao.minutes}m`);
+    return partes.length > 0 ? partes.join(' ') : 'Recente';
+};
 
 interface Props {
   paciente: any;
@@ -12,7 +22,7 @@ interface Props {
 }
 
 export const AguardandoTransferenciaItem = ({ paciente, onCancel }: Props) => {
-  const tempoAguardando = formatarDuracao(paciente.dataTransferencia);
+  const tempoAguardando = calcularDuracao(paciente.dataTransferencia);
   
   return (
     <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
