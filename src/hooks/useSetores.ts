@@ -1017,7 +1017,7 @@ export const useSetores = () => {
                       paraLeito: leitoDestino.codigoLeito || '',
                       data: agora,
                       observacoes: observacoes || '',
-                      motivo: motivo || '' // Garantir que o motivo seja salvo
+                      motivo: motivo || '' // ESSA ALTERAÇÃO É CRUCIAL. Garante que nunca será 'undefined'.
                   }
               };
           }

@@ -150,21 +150,29 @@ const RegulacaoLeitos = () => {
     cancelarRemanejamentoPendente(paciente.setorId, paciente.leitoId);
   };
 
-  const handleConfirmarAcaoModal = async (leitoDestino: any, observacoes: string, motivo?: string) => {
+  // Handler para o fluxo de REGULAÇÃO NORMAL
+  const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string) => {
     if (!pacienteParaRegular) return;
-    
     try {
-      if (modoRegulacao === 'remanejamento') {
-        await confirmarRemanejamento(pacienteParaRegular, leitoDestino, observacoes, motivo || '');
-      } else {
-        await confirmarRegulacao(pacienteParaRegular, pacienteParaRegular, leitoDestino, observacoes);
-      }
+      await confirmarRegulacao(pacienteParaRegular, pacienteParaRegular, leitoDestino, observacoes);
       setRegulacaoModalOpen(false);
       setPacienteParaRegular(null);
       setIsAlteracaoMode(false);
     } catch (error) {
-      console.error('Erro ao confirmar ação no modal:', error);
+      console.error('Erro ao confirmar regulação:', error);
     }
+  };
+
+  // Handler para o fluxo de REMANEJAMENTO
+  const handleConfirmarRemanejamento = async (leitoDestino: any, observacoes: string, motivo?: string) => {
+      if (!pacienteParaRegular) return;
+      try {
+          await confirmarRemanejamento(pacienteParaRegular, leitoDestino, observacoes, motivo || '');
+          setRegulacaoModalOpen(false);
+          setPacienteParaRegular(null);
+      } catch (error) {
+          console.error('Erro ao confirmar remanejamento:', error);
+      }
   };
 
   const handleAceitarSugestao = (sugestao: SugestaoRemanejamento) => {
@@ -747,7 +755,7 @@ const RegulacaoLeitos = () => {
             }}
             paciente={pacienteParaRegular}
             origem={{ setor: pacienteParaRegular.setorOrigem, leito: pacienteParaRegular.leitoCodigo }}
-            onConfirmRegulacao={handleConfirmarAcaoModal}
+            onConfirmRegulacao={modoRegulacao === 'remanejamento' ? handleConfirmarRemanejamento : handleConfirmarRegulacao}
             isAlteracao={isAlteracaoMode}
             modo={modoRegulacao}
           />
