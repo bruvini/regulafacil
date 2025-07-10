@@ -1,38 +1,64 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import LeitoCard from '@/components/LeitoCard';
+import { useMemo } from 'react';
 import { Leito } from '@/types/hospital';
+import LeitoCard from './LeitoCard';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import { AlertTriangle } from 'lucide-react';
 
 interface QuartoCardProps {
   nomeQuarto: string;
   leitos: Leito[];
   setorId: string;
-  onMoverPaciente?: (leito: Leito) => void;
+  todosLeitosDoSetor: Leito[];
+  onMoverPaciente: (leito: Leito) => void;
 }
 
-const QuartoCard = ({ nomeQuarto, leitos, setorId, onMoverPaciente }: QuartoCardProps) => {
-  const leitosSorteados = [...leitos].sort((a, b) => a.codigoLeito.localeCompare(b.codigoLeito));
+const QuartoCard = ({ nomeQuarto, leitos, setorId, todosLeitosDoSetor, onMoverPaciente }: QuartoCardProps) => {
+  const hasMixedGenders = useMemo(() => {
+    const genders = new Set(
+      leitos
+        .filter(l => l.statusLeito === 'Ocupado' && l.dadosPaciente)
+        .map(l => l.dadosPaciente?.sexoPaciente)
+        .filter(Boolean)
+    );
+    return genders.size > 1;
+  }, [leitos]);
 
   return (
-    <Card className="w-full min-h-64">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold flex items-center justify-between">
-          <span>{nomeQuarto}</span>
-          <Badge variant="outline" className="text-xs">{leitos.length}</Badge>
-        </CardTitle>
+    <Card className="bg-muted/30 border-2 border-dashed p-2">
+      <CardHeader className="py-2 px-2">
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-md font-semibold text-foreground">
+            Quarto {nomeQuarto}
+          </CardTitle>
+          {hasMixedGenders && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Alerta: Pacientes de sexos diferentes neste quarto.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
+      <CardContent className="p-2 pt-0">
         <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
-          {leitosSorteados.map((leito) => (
-            <LeitoCard 
-              key={leito.id} 
-              leito={leito} 
-              setorId={setorId} 
-              todosLeitosDoSetor={leitos}
-              onMoverPaciente={onMoverPaciente}
-            />
-          ))}
+          {leitos
+            .sort((a, b) => a.codigoLeito.localeCompare(b.codigoLeito, undefined, { numeric: true, sensitivity: 'base' }))
+            .map((leito) => (
+              <LeitoCard
+                key={leito.id}
+                leito={leito}
+                setorId={setorId}
+                todosLeitosDoSetor={todosLeitosDoSetor}
+                onMoverPaciente={onMoverPaciente}
+              />
+            ))}
         </div>
       </CardContent>
     </Card>

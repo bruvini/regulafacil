@@ -188,7 +188,7 @@ const MapaLeitos = () => {
                                 const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
                                 return (
-                                  <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
+                                  <div className="space-y-4">
                                     {Object.entries(quartos)
                                       .sort(([nomeQuartoA], [nomeQuartoB]) => comparadorNatural(nomeQuartoA, nomeQuartoB))
                                       .map(([nomeQuarto, leitosDoQuarto]) => (
@@ -197,21 +197,26 @@ const MapaLeitos = () => {
                                           nomeQuarto={nomeQuarto}
                                           leitos={leitosDoQuarto}
                                           setorId={setor.id!}
-                                          onMoverPaciente={handleOpenMovimentacaoModal}
-                                        />
-                                      ))}
-
-                                    {leitosSoltos
-                                      .sort((a, b) => comparadorNatural(a.codigoLeito, b.codigoLeito))
-                                      .map((leito) => (
-                                        <LeitoCard
-                                          key={leito.id}
-                                          leito={leito}
-                                          setorId={setor.id!}
                                           todosLeitosDoSetor={setor.leitos}
                                           onMoverPaciente={handleOpenMovimentacaoModal}
                                         />
                                       ))}
+
+                                    {leitosSoltos.length > 0 && (
+                                      <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
+                                        {leitosSoltos
+                                          .sort((a, b) => comparadorNatural(a.codigoLeito, b.codigoLeito))
+                                          .map((leito) => (
+                                            <LeitoCard
+                                              key={leito.id}
+                                              leito={leito}
+                                              setorId={setor.id!}
+                                              todosLeitosDoSetor={setor.leitos}
+                                              onMoverPaciente={handleOpenMovimentacaoModal}
+                                            />
+                                          ))}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })()
