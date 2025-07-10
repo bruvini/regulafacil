@@ -31,9 +31,7 @@ const calcularIdade = (dataNascimento: string): string => {
   const nascimento = new Date(ano, mes - 1, dia);
   let idade = hoje.getFullYear() - nascimento.getFullYear();
   const m = hoje.getMonth() - nascimento.getMonth();
-  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
-    idade--;
-  }
+  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
   return idade.toString();
 };
 
@@ -53,6 +51,7 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
         return match ? match[1].trim() : codigoLeito;
     };
     const quartoId = getQuartoId(leito.codigoLeito);
+    if (!quartoId) return null;
     const companheiros = todosLeitosDoSetor.filter(l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado');
     if (companheiros.length > 0) {
         const isolamentosCompanheiros = companheiros[0].dadosPaciente?.isolamentosVigentes;
@@ -76,36 +75,33 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
 
   return (
     <>
-      <Card className={cn("p-3 shadow-card hover:shadow-medical transition-all duration-200 border flex flex-col h-full", paciente?.sexoPaciente === 'Feminino' && 'border-2 border-pink-500', paciente?.sexoPaciente === 'Masculino' && 'border-2 border-blue-500')}>
-        <div className="flex flex-col h-full space-y-2">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-2">
-              <h4 className="font-semibold text-sm text-foreground">{leito.codigoLeito}</h4>
-              {leito.leitoPCP && (
-                <Star className="h-3 w-3 text-yellow-500" fill="currentColor" />
-              )}
-              {paciente?.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
-                <ShieldAlert className="h-3 w-3 text-orange-500" />
-              )}
-            </div>
-            <StatusBadge status={leito.statusLeito} />
+      {/* A ESTRUTURA PRINCIPAL DO CARD */}
+      <Card className={cn(
+        "flex flex-col min-w-[260px] h-[220px] p-3 shadow-card hover:shadow-medical transition-all duration-200 border", // LARGURA MÍNIMA E ALTURA FIXA
+        paciente?.sexoPaciente === 'Feminino' && 'border-2 border-pink-500',
+        paciente?.sexoPaciente === 'Masculino' && 'border-2 border-blue-500'
+      )}>
+        {/* Header do Card */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-2">
+            <h4 className="font-semibold text-sm text-foreground">{leito.codigoLeito}</h4>
+            {leito.leitoPCP && (<div className="p-1 bg-medical-warning/10 rounded-full"><Star className="h-3 w-3 text-medical-warning" fill="currentColor" /></div>)}
+            {paciente?.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (<div className="p-1 bg-medical-danger/10 rounded-full"><ShieldAlert className="h-3 w-3 text-medical-danger" /></div>)}
           </div>
+          <StatusBadge status={leito.statusLeito} />
+        </div>
 
-          <div className="flex-grow space-y-2 py-2">
+        {/* Conteúdo Principal (flex-grow para ocupar o espaço disponível) */}
+        <div className="flex-grow flex flex-col justify-center py-2">
             {leito.statusLeito === 'Vago' && infoBloqueioIsolamento ? (
               <LeitoStatusIsolamento isolamentos={infoBloqueioIsolamento.isolamentos} sexo={infoBloqueioIsolamento.sexo} />
             ) : leito.statusLeito === 'Ocupado' && paciente ? (
-              <div className="space-y-1 text-center">
-                <p className="text-sm font-medium text-foreground truncate">{paciente.nomePaciente}</p>
-                <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
-                  <User className="h-3 w-3" />
-                  <span>{calcularIdade(paciente.dataNascimento)}a</span>
-                  <span className="text-xs">•</span>
-                  <span>{paciente.sexoPaciente?.charAt(0) || '?'}</span>
-                </div>
-                <p className="text-xs text-muted-foreground truncate">{paciente.especialidadePaciente}</p>
+              <div className="text-left space-y-1">
+                <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground flex-shrink-0" /><p className="font-medium text-sm leading-tight truncate">{paciente.nomePaciente}</p></div>
+                <p className="text-xs text-muted-foreground pl-6">{calcularIdade(paciente.dataNascimento)} anos • {paciente.sexoPaciente?.charAt(0) || '?'}</p>
+                <div className="flex items-center gap-2"><Stethoscope className="h-4 w-4 text-muted-foreground flex-shrink-0" /><p className="text-xs text-muted-foreground truncate">{paciente.especialidadePaciente}</p></div>
                 {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
-                  <div className="flex flex-wrap gap-1 justify-center">
+                  <div className="flex flex-wrap gap-1 pt-1">
                     {paciente.isolamentosVigentes.map((iso, idx) => (
                       <Badge key={idx} variant="outline" className="text-xs px-1 py-0 bg-orange-50 border-orange-200 text-orange-800">
                         {iso.sigla}
@@ -143,16 +139,14 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
             ) : (
               <div className="h-full w-full"></div>
             )}
-          </div>
+        </div>
 
-          <div className="mt-auto space-y-2">
-            <div className="pt-2 border-t border-border/30">
-              <DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} />
-            </div>
-
-            {/* BOTÕES DE AÇÃO - Restaurados e Corrigidos */}
+        {/* Footer do Card (com altura mínima para comportar os botões) */}
+        <div className="mt-auto pt-2 border-t border-border/30 space-y-2">
+          <div className="text-center"><DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} /></div>
+          <div className="h-10 flex items-center justify-center">
             {leito.statusLeito === 'Vago' && (
-              <div className="flex justify-center space-x-1">
+              <div className="flex justify-center flex-wrap gap-1">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -236,7 +230,7 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
             )}
             
             {leito.statusLeito === 'Reservado' && (
-              <div className="flex justify-center space-x-1">
+              <div className="flex justify-center flex-wrap gap-1">
                 <AlertDialog>
                   <TooltipProvider>
                     <Tooltip>
