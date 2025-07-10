@@ -37,6 +37,7 @@ const SetorCard = ({ setor }: SetorCardProps) => {
                 leito={leito} 
                 setorId={setor.id!} 
                 todosLeitosDoSetor={setor.leitos}
+                onMoverPaciente={() => {}}
               />
             ))}
           </div>
