@@ -11,8 +11,7 @@ import {
   UserMinus, Move, BedDouble, AlertTriangle, ArrowRightLeft, Ambulance
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatarDuracao } from '@/lib/utils';
 import { Leito } from '@/types/hospital';
 import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
 import { useSetores } from '@/hooks/useSetores';
@@ -198,10 +197,7 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
                 <div className="flex items-center space-x-2">
                   <Calendar className="h-3 w-3 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(paciente.dataInternacao), {
-                      locale: ptBR,
-                      addSuffix: true,
-                    })}
+                    {formatarDuracao(paciente.dataInternacao)}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -224,10 +220,7 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
                 Leito em higienização
                 <br />
                 <Clock className="mx-auto h-4 w-4" />
-                {formatDistanceToNow(new Date(leito.dataAtualizacaoStatus), {
-                  locale: ptBR,
-                  addSuffix: true,
-                })}
+                {formatarDuracao(leito.dataAtualizacaoStatus)}
               </div>
             ) : leito.statusLeito === 'Reservado' ? (
               <div className="text-center text-sm text-green-600 italic">
