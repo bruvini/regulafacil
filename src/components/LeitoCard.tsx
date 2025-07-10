@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,11 +13,13 @@ import { RemanejamentoModal } from './modals/RemanejamentoModal';
 import { TransferenciaModal } from './modals/TransferenciaModal';
 import { useSetores } from '@/hooks/useSetores';
 import { useIsolamentos } from '@/hooks/useIsolamentos';
+import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
 import { cn } from '@/lib/utils';
 
 interface LeitoCardProps {
   leito: Leito;
   setorId: string;
+  todosLeitosDoSetor?: Leito[];
 }
 
 const calcularIdade = (dataNascimento: string): string => {
@@ -37,7 +39,7 @@ const calcularIdade = (dataNascimento: string): string => {
   return idade.toString();
 };
 
-const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
+const LeitoCard = ({ leito, setorId, todosLeitosDoSetor = [] }: LeitoCardProps) => {
   const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente, cancelarReserva, concluirTransferencia } = useSetores();
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
@@ -46,6 +48,32 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
 
   // A variável 'paciente' agora vem diretamente do leito
   const paciente = leito.dadosPaciente;
+
+  const getQuartoId = (codigoLeito: string): string => {
+    const match = codigoLeito.match(/^(\d+[\s-]?\w*|\w+[\s-]?\d+)\s/);
+    return match ? match[1].trim() : codigoLeito;
+  };
+
+  const infoBloqueioIsolamento = useMemo(() => {
+    if (leito.statusLeito !== 'Vago') return null;
+
+    const quartoId = getQuartoId(leito.codigoLeito);
+
+    const companheiros = todosLeitosDoSetor.filter(l => 
+        getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado'
+    );
+
+    if (companheiros.length > 0) {
+        const isolamentosCompanheiros = companheiros[0].dadosPaciente?.isolamentosVigentes;
+        if (isolamentosCompanheiros && isolamentosCompanheiros.length > 0) {
+            return {
+                isolamentos: isolamentosCompanheiros.map(i => i.sigla),
+                sexo: companheiros[0].dadosPaciente?.sexoPaciente
+            };
+        }
+    }
+    return null;
+  }, [leito, todosLeitosDoSetor]);
 
   const handleBloquear = (motivo: string) => {
     console.log('Tentando bloquear leito:', { setorId, leitoId: leito.id, motivo });
@@ -126,7 +154,12 @@ const LeitoCard = ({ leito, setorId }: LeitoCardProps) => {
           )}
 
           <div className="flex-grow space-y-2 py-2">
-            {leito.statusLeito === 'Ocupado' && paciente ? (
+            {leito.statusLeito === 'Vago' && infoBloqueioIsolamento ? (
+              <LeitoStatusIsolamento 
+                isolamentos={infoBloqueioIsolamento.isolamentos}
+                sexo={infoBloqueioIsolamento.sexo}
+              />
+            ) : leito.statusLeito === 'Ocupado' && paciente ? (
               <div className="text-left space-y-2">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />

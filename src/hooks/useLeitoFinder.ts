@@ -16,79 +16,87 @@ const calcularIdade = (dataNascimento: string): number => {
   return idade;
 };
 
+const getQuartoId = (codigoLeito: string): string => {
+    const match = codigoLeito.match(/^(\d+[\s-]?\w*|\w+[\s-]?\d+)\s/);
+    return match ? match[1].trim() : codigoLeito; // Retorna o prefixo do quarto ou o código do leito se não houver
+};
+
 export const useLeitoFinder = () => {
-  const { setores } = useSetores();
+    const { setores } = useSetores();
 
-  const findAvailableLeitos = useCallback((paciente: DadosPaciente, modo: 'normal' | 'uti' = 'normal') => {
-    if (!paciente || !setores) return [];
+    const findAvailableLeitos = useCallback((paciente: DadosPaciente, modo: 'normal' | 'uti' = 'normal') => {
+        if (!paciente || !setores) return [];
 
-    const todosLeitosComSetor = setores.flatMap(setor => 
-        setor.leitos.map(leito => ({ ...leito, setorNome: setor.nomeSetor, setorId: setor.id }))
-    );
+        const todosLeitosComSetor = setores.flatMap(setor => 
+            setor.leitos.map(leito => ({ ...leito, setorNome: setor.nomeSetor, setorId: setor.id! }))
+        );
 
-    // Se o modo for 'uti', filtre apenas leitos da UTI
-    if (modo === 'uti') {
-      return todosLeitosComSetor.filter(leito => {
-        return leito.setorNome === 'UTI' && ['Vago', 'Higienizacao'].includes(leito.statusLeito);
-      });
-    }
-
-    const setoresExcluidos = [
-      "UTI", "CC - PRE OPERATORIO", "CC - RECUPERAÇÃO", "CC - SALAS CIRURGICAS",
-      "PS DECISÃO CIRURGICA", "PS DECISÃO CLINICA", "SALA LARANJA", 
-      "UNID. AVC AGUDO", "UNID. DE AVC - INTEGRAL"
-    ];
-
-    const leitosDisponiveis = todosLeitosComSetor.filter(leito => {
-      // 1. Filtro Básico: Só leitos vagos ou em higienização
-      if (!['Vago', 'Higienizacao'].includes(leito.statusLeito)) return false;
-      
-      // 2. Filtro de Setor Excluído
-      if (setoresExcluidos.includes(leito.setorNome)) return false;
-
-      const isolamentosPaciente = paciente.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
-
-      // 3. Filtro de Isolamento
-      if (isolamentosPaciente) {
-        if (!leito.leitoIsolamento) {
-          // Se o leito não é de isolamento, checa se é um quarto compatível
-          const quarto = leito.codigoLeito.split(' ')[0];
-          const companheiros = todosLeitosComSetor.filter(
-            l => l.codigoLeito.startsWith(quarto) && l.id !== leito.id && l.statusLeito === 'Ocupado'
-          );
-          if (companheiros.length > 0) {
-            const todosCompativeis = companheiros.every(c => {
-              const isoCompanheiro = c.dadosPaciente?.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
-              return isoCompanheiro === isolamentosPaciente;
+        // Se o modo for 'uti', filtre apenas leitos da UTI
+        if (modo === 'uti') {
+            return todosLeitosComSetor.filter(leito => {
+                return leito.setorNome === 'UTI' && ['Vago', 'Higienizacao'].includes(leito.statusLeito);
             });
-            if (!todosCompativeis) return false;
-          }
         }
-      }
 
-      // 4. Filtro de Sexo em Quartos Ocupados
-      const quarto = leito.codigoLeito.split(' ')[0];
-      const companheiros = todosLeitosComSetor.filter(
-        l => l.codigoLeito.startsWith(quarto) && l.id !== leito.id && l.statusLeito === 'Ocupado'
-      );
-      if (companheiros.length > 0) {
-        const todosMesmoSexo = companheiros.every(c => c.dadosPaciente?.sexoPaciente === paciente.sexoPaciente);
-        if (!todosMesmoSexo) return false;
-      }
+        const setoresExcluidos = [
+            "UTI", "CC - PRE OPERATORIO", "CC - RECUPERAÇÃO", "CC - SALAS CIRURGICAS",
+            "PS DECISÃO CIRURGICA", "PS DECISÃO CLINICA", "SALA LARANJA", 
+            "UNID. AVC AGUDO", "UNID. DE AVC - INTEGRAL"
+        ];
 
-      // 5. Filtro de Leito PCP
-      if (leito.leitoPCP) {
-          const idade = calcularIdade(paciente.dataNascimento);
-          if (idade < 18 || idade > 60 || isolamentosPaciente) {
-              return false;
-          }
-      }
+        const isolamentosPacienteStr = paciente.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
 
-      return true; // Se passou por todas as regras, o leito está disponível
-    });
+        const leitosDisponiveis = todosLeitosComSetor.filter(leito => {
+            // 1. Filtro Básico: Apenas leitos vagos
+            if (leito.statusLeito !== 'Vago') return false;
+            
+            // 2. Filtro de Setor Excluído
+            if (setoresExcluidos.includes(leito.setorNome)) return false;
 
-    return leitosDisponiveis;
-  }, [setores]);
+            const quartoId = getQuartoId(leito.codigoLeito);
+            const companheirosDeQuarto = todosLeitosComSetor.filter(
+                l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado'
+            );
 
-  return { findAvailableLeitos };
+            // 3. Lógica de Isolamento
+            const isolamentosCompanheirosStr = companheirosDeQuarto.length > 0
+                ? companheirosDeQuarto[0].dadosPaciente?.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || ''
+                : '';
+
+            if (isolamentosPacienteStr) { // Se o paciente que precisa de leito TEM isolamento
+                if (companheirosDeQuarto.length > 0) {
+                    // O quarto já tem gente. Os isolamentos precisam ser idênticos.
+                    if (isolamentosCompanheirosStr !== isolamentosPacienteStr) return false;
+                }
+                // Se o quarto está vazio, ele pode entrar.
+            } else { // Se o paciente que precisa de leito NÃO TEM isolamento
+                if (isolamentosCompanheirosStr) {
+                    // Não pode entrar em um quarto que já tem isolamento
+                    return false;
+                }
+            }
+
+            // 4. Lógica de Sexo (SÓ se o quarto já tiver ocupantes)
+            if (companheirosDeQuarto.length > 0) {
+                const sexoCompanheiros = companheirosDeQuarto[0].dadosPaciente?.sexoPaciente;
+                if (sexoCompanheiros && sexoCompanheiros !== paciente.sexoPaciente) {
+                    return false; // Sexos incompatíveis
+                }
+            }
+
+            // 5. Filtro de Leito PCP
+            if (leito.leitoPCP) {
+                const idade = calcularIdade(paciente.dataNascimento);
+                if (idade < 18 || idade > 60 || isolamentosPacienteStr) {
+                    return false;
+                }
+            }
+
+            return true; // Se passou por todas as regras, o leito está disponível
+        });
+
+        return leitosDisponiveis;
+    }, [setores]);
+
+    return { findAvailableLeitos };
 };

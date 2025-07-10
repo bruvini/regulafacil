@@ -182,7 +182,7 @@ const MapaLeitos = () => {
                                     {leitosSoltos
                                       .sort((a, b) => comparadorNatural(a.codigoLeito, b.codigoLeito))
                                       .map((leito) => (
-                                        <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} />
+                                        <LeitoCard key={leito.id} leito={leito} setorId={setor.id!} todosLeitosDoSetor={setor.leitos} />
                                       ))}
                                   </div>
                                 );

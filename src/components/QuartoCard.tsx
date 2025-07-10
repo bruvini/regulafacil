@@ -51,7 +51,7 @@ const QuartoCard = ({ nomeQuarto, leitos, setorId }: QuartoCardProps) => {
           {leitos
             .sort((a, b) => a.codigoLeito.localeCompare(b.codigoLeito, undefined, { numeric: true, sensitivity: 'base' }))
             .map((leito) => (
-              <LeitoCard key={leito.id} leito={leito} setorId={setorId} />
+              <LeitoCard key={leito.id} leito={leito} setorId={setorId} todosLeitosDoSetor={leitos} />
             ))}
         </div>
       </CardContent>
