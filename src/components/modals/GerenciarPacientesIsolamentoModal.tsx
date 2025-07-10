@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { useSetores } from '@/hooks/useSetores';
 import { useIsolamentos } from '@/hooks/useIsolamentos';
-import { UserPlus, ArrowRight } from 'lucide-react';
+import { UserPlus, ArrowRight, Search } from 'lucide-react';
 
 interface GerenciarPacientesIsolamentoModalProps {
   open: boolean;
@@ -24,7 +24,8 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
   const [etapa, setEtapa] = useState<'lista' | 'isolamentos'>('lista');
   const [pacienteSelecionado, setPacienteSelecionado] = useState<any>(null);
   const [isolamentosSelecionados, setIsolamentosSelecionados] = useState<string[]>([]);
-  const [dataInicio, setDataInicio] = useState('');
+  const [datasIsolamentos, setDatasIsolamentos] = useState<Record<string, string>>({});
+  const [buscaIsolamento, setBuscaIsolamento] = useState('');
 
   const { setores, adicionarIsolamentoPaciente } = useSetores();
   const { isolamentos } = useIsolamentos();
@@ -52,13 +53,26 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
       return matchBusca && matchSetor;
     });
 
+  // Filtrar isolamentos com base na busca
+  const isolamentosFiltrados = isolamentos.filter(iso => 
+    iso.nomeMicroorganismo.toLowerCase().includes(buscaIsolamento.toLowerCase()) ||
+    iso.sigla.toLowerCase().includes(buscaIsolamento.toLowerCase())
+  );
+
   const handleAdicionarVigilancia = (paciente: any) => {
     setPacienteSelecionado(paciente);
     setEtapa('isolamentos');
   };
 
   const handleConfirmarIsolamentos = async () => {
-    if (!pacienteSelecionado || isolamentosSelecionados.length === 0 || !dataInicio) return;
+    if (!pacienteSelecionado || isolamentosSelecionados.length === 0) return;
+
+    // Verificar se todos os isolamentos selecionados têm data preenchida
+    const temDatasCompletas = isolamentosSelecionados.every(isolamentoId => 
+      datasIsolamentos[isolamentoId] && datasIsolamentos[isolamentoId].trim() !== ''
+    );
+
+    if (!temDatasCompletas) return;
 
     for (const isolamentoId of isolamentosSelecionados) {
       const tipoIsolamento = isolamentos.find(t => t.id === isolamentoId);
@@ -66,7 +80,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
         const novoIsolamento = {
           isolamentoId,
           sigla: tipoIsolamento.sigla,
-          dataInicioVigilancia: dataInicio,
+          dataInicioVigilancia: datasIsolamentos[isolamentoId],
           regrasCumpridas: []
         };
         
@@ -78,7 +92,8 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
     setEtapa('lista');
     setPacienteSelecionado(null);
     setIsolamentosSelecionados([]);
-    setDataInicio('');
+    setDatasIsolamentos({});
+    setBuscaIsolamento('');
     onOpenChange(false);
   };
 
@@ -86,8 +101,34 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
     setEtapa('lista');
     setPacienteSelecionado(null);
     setIsolamentosSelecionados([]);
-    setDataInicio('');
+    setDatasIsolamentos({});
+    setBuscaIsolamento('');
   };
+
+  const handleIsolamentoToggle = (isolamentoId: string, checked: boolean) => {
+    if (checked) {
+      setIsolamentosSelecionados([...isolamentosSelecionados, isolamentoId]);
+    } else {
+      setIsolamentosSelecionados(isolamentosSelecionados.filter(id => id !== isolamentoId));
+      // Remove a data quando desmarca o isolamento
+      const novasDatas = { ...datasIsolamentos };
+      delete novasDatas[isolamentoId];
+      setDatasIsolamentos(novasDatas);
+    }
+  };
+
+  const handleDataChange = (isolamentoId: string, data: string) => {
+    setDatasIsolamentos(prev => ({
+      ...prev,
+      [isolamentoId]: data
+    }));
+  };
+
+  // Verificar se todos os isolamentos selecionados têm data preenchida
+  const todasDatasPreenchidas = isolamentosSelecionados.length > 0 && 
+    isolamentosSelecionados.every(isolamentoId => 
+      datasIsolamentos[isolamentoId] && datasIsolamentos[isolamentoId].trim() !== ''
+    );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,7 +141,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
           <DialogDescription>
             {etapa === 'lista' 
               ? 'Selecione pacientes para iniciar vigilância de isolamento'
-              : 'Selecione os tipos de isolamento e defina a data de início'
+              : 'Selecione os tipos de isolamento e defina a data de início para cada um'
             }
           </DialogDescription>
         </DialogHeader>
@@ -161,45 +202,61 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
           </div>
         ) : (
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="data-inicio">Data de Início da Vigilância</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                id="data-inicio"
-                type="date"
-                value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
+                placeholder="Buscar isolamento por nome ou sigla..."
+                value={buscaIsolamento}
+                onChange={(e) => setBuscaIsolamento(e.target.value)}
+                className="pl-10"
               />
             </div>
 
             <div>
               <Label>Tipos de Isolamento</Label>
               <ScrollArea className="h-48 border rounded-md p-4 mt-2">
-                <div className="space-y-3">
-                  {isolamentos.map(tipo => (
-                    <div key={tipo.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={tipo.id}
-                        checked={isolamentosSelecionados.includes(tipo.id!)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setIsolamentosSelecionados([...isolamentosSelecionados, tipo.id!]);
-                          } else {
-                            setIsolamentosSelecionados(isolamentosSelecionados.filter(id => id !== tipo.id));
-                          }
-                        }}
-                      />
-                      <Label htmlFor={tipo.id} className="flex items-center gap-2">
-                        <div 
-                          className="w-4 h-4 rounded-full" 
-                          style={{ backgroundColor: tipo.cor }}
+                <div className="space-y-4">
+                  {isolamentosFiltrados.map(tipo => (
+                    <div key={tipo.id} className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={tipo.id}
+                          checked={isolamentosSelecionados.includes(tipo.id!)}
+                          onCheckedChange={(checked) => handleIsolamentoToggle(tipo.id!, !!checked)}
                         />
-                        <span className="font-medium">{tipo.sigla}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {tipo.nomeMicroorganismo}
-                        </span>
-                      </Label>
+                        <Label htmlFor={tipo.id} className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded-full" 
+                            style={{ backgroundColor: tipo.cor }}
+                          />
+                          <span className="font-medium">{tipo.sigla}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {tipo.nomeMicroorganismo}
+                          </span>
+                        </Label>
+                      </div>
+                      
+                      {isolamentosSelecionados.includes(tipo.id!) && (
+                        <div className="ml-6 mt-2">
+                          <Label htmlFor={`data-${tipo.id}`} className="text-sm">
+                            Data de Início da Vigilância
+                          </Label>
+                          <Input
+                            id={`data-${tipo.id}`}
+                            type="date"
+                            value={datasIsolamentos[tipo.id!] || ''}
+                            onChange={(e) => handleDataChange(tipo.id!, e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
+                  {isolamentosFiltrados.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">
+                      Nenhum isolamento encontrado para a busca.
+                    </p>
+                  )}
                 </div>
               </ScrollArea>
             </div>
@@ -210,7 +267,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
               </Button>
               <Button 
                 onClick={handleConfirmarIsolamentos}
-                disabled={isolamentosSelecionados.length === 0 || !dataInicio}
+                disabled={!todasDatasPreenchidas}
               >
                 Confirmar Vigilância
               </Button>
