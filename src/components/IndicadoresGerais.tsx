@@ -2,6 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { Clock } from 'lucide-react';
 
 interface IndicadoresGeraisProps {
   contagem: Record<string, number>;
@@ -12,7 +13,7 @@ interface IndicadoresGeraisProps {
 
 export const IndicadoresGerais = ({ contagem, taxa, tempos, nivelPCP }: IndicadoresGeraisProps) => {
   const getProgressColor = (value: number) => {
-    const hue = Math.max(0, 120 * (1 - value / 100)); // Garante que a cor não passe de vermelho (hue 0)
+    const hue = Math.max(0, 120 * (1 - value / 100));
     return `hsl(${hue}, 80%, 45%)`;
   };
 
@@ -38,8 +39,8 @@ export const IndicadoresGerais = ({ contagem, taxa, tempos, nivelPCP }: Indicado
         </div>
 
         <div className={cn("p-4 rounded-lg text-white text-center transition-colors", nivelPCP.cor)}>
-          <p className="font-bold text-lg">{nivelPCP.nivel}</p>
-          <p className="text-sm opacity-90">{nivelPCP.count} pacientes em leitos de decisão</p>
+          <p className="font-bold text-lg">PCP {nivelPCP.nivel}</p>
+          <p className="text-sm opacity-90">{nivelPCP.count} pacientes internados no Pronto Socorro (DCX + DCL)</p>
         </div>
 
         <div>
@@ -52,7 +53,10 @@ export const IndicadoresGerais = ({ contagem, taxa, tempos, nivelPCP }: Indicado
                   <p className="text-sm font-semibold text-foreground">{status}</p>
                 </div>
                 {(tempos[status] && status !== 'Regulado' && status !== 'Reservado') && (
-                   <p className="text-xs text-muted-foreground mt-2">{tempos[status]}</p>
+                   <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mt-2">
+                     <Clock className="h-3 w-3" />
+                     <span>{tempos[status]}</span>
+                   </div>
                 )}
               </Card>
             ))}
