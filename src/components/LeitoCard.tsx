@@ -191,10 +191,13 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
               <div className="flex items-center space-x-2">
                 <Calendar className="h-3 w-3 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(paciente.dataInternacao), {
-                    locale: ptBR,
-                    addSuffix: true,
-                  })}
+                  {paciente.dataInternacao && !isNaN(new Date(paciente.dataInternacao).getTime()) 
+                    ? formatDistanceToNow(new Date(paciente.dataInternacao), {
+                        locale: ptBR,
+                        addSuffix: true,
+                      })
+                    : 'Data inválida'
+                  }
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -217,10 +220,13 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
               Leito em higienização
               <br />
               <Clock className="mx-auto h-4 w-4" />
-              {formatDistanceToNow(new Date(leito.dataAtualizacaoStatus), {
-                locale: ptBR,
-                addSuffix: true,
-              })}
+              {leito.dataAtualizacaoStatus && !isNaN(new Date(leito.dataAtualizacaoStatus).getTime())
+                ? formatDistanceToNow(new Date(leito.dataAtualizacaoStatus), {
+                    locale: ptBR,
+                    addSuffix: true,
+                  })
+                : 'Tempo indisponível'
+              }
             </div>
           ) : leito.statusLeito === 'Reservado' ? (
             <div className="text-center text-sm text-green-600 italic">
