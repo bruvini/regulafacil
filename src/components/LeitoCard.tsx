@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,19 +83,30 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
     setShowActions(false);
   };
 
+  const getQuartoId = (codigoLeito: string) => {
+    const match = codigoLeito.match(/^(\d+[\s-]?\w*|\w+[\s-]?\d+)\s/);
+    return match ? match[1].trim() : codigoLeito;
+  };
+
   const infoBloqueioIsolamento = useMemo(() => {
-    if (leito.leitoIsolamento) {
-      const isolamentos = todosLeitosDoSetor.filter(l => l.leitoIsolamento).map(l => ({
-        sigla: 'ISO',
-        nome: 'Isolamento'
-      }));
-      return {
-        isolamentos,
-        sexo: 'Todos'
-      };
+    if (leito.statusLeito !== 'Vago') return null;
+
+    const quartoId = getQuartoId(leito.codigoLeito);
+    const companheiros = todosLeitosDoSetor.filter(l => 
+      getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado'
+    );
+
+    if (companheiros.length > 0) {
+      const isolamentosCompanheiros = companheiros[0].dadosPaciente?.isolamentosVigentes;
+      if (isolamentosCompanheiros && isolamentosCompanheiros.length > 0) {
+        return {
+          isolamentos: isolamentosCompanheiros.map(i => i.sigla),
+          sexo: companheiros[0].dadosPaciente?.sexoPaciente
+        };
+      }
     }
     return null;
-  }, [leito.leitoIsolamento, todosLeitosDoSetor]);
+  }, [leito, todosLeitosDoSetor]);
 
   const cardClasses = useMemo(() => {
     let classes = 'border shadow-md';
@@ -157,7 +169,7 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
                   <TooltipContent>
                     <p>Leito prioritário para paciente crônico</p>
                   </TooltipContent>
-                </TooltipProvider>
+                </Tooltip>
               </TooltipProvider>
             )}
           </div>
@@ -267,7 +279,9 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
                         <Move className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent><p>Mover Paciente</p></TooltipContent>
+                    <TooltipContent>
+                      <p>Mover Paciente</p>
+                    </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               )}
