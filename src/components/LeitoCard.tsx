@@ -9,7 +9,7 @@ import {
   ShieldBan, Shield, Trash2, RotateCcw, Lightbulb, 
   UserMinus, Move
 } from 'lucide-react';
-import StatusBadge from './StatusBadge';
+import { StatusBadge } from './StatusBadge';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Leito } from '@/types/hospital';
