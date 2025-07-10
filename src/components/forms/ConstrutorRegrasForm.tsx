@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -257,7 +256,7 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
         const condicaoParam = regra.parametros.find(p => p.tipo === 'condicao_especifica');
         return (
           <Select
-            value={condicaoParam?.valor as string || 'alta_hospitalar'}
+            value={condicaoParam?.valor as string || ''}
             onValueChange={(value) => {
               const indiceParam = regra.parametros.findIndex(p => p.tipo === 'condicao_especifica');
               if (indiceParam >= 0) {
@@ -266,7 +265,7 @@ const ConstrutorRegrasForm = ({ regras, onChange }: ConstrutorRegrasFormProps) =
             }}
           >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Selecione uma condição" />
             </SelectTrigger>
             <SelectContent>
               {condicoesEspecificas.map((condicao) => (
