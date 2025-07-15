@@ -7,11 +7,16 @@ import { SlidersHorizontal, X } from 'lucide-react';
 
 // Lista de especialidades (pode ser movida para um arquivo de constantes)
 const especialidades = [
-  "CIRURGIA CABECA E PESCOCO", "CIRURGIA GERAL", "CIRURGIA TORACICA",
-  "CIRURGIA VASCULAR", "CLINICA GERAL", "HEMATOLOGIA", "INTENSIVISTA",
-  "NEFROLOGIA", "NEUROCIRURGIA", "NEUROLOGIA", "ODONTOLOGIA C.TRAUM.B.M.F.",
-  "ONCOLOGIA CIRURGICA", "ONCOLOGIA CLINICA/CANCEROLOGIA",
-  "ORTOPEDIA/TRAUMATOLOGIA", "PROCTOLOGIA", "UROLOGIA"
+    "CIRURGIA GERAL", 
+    "CLINICA GERAL", 
+    "NEUROLOGIA", 
+    "PROCTOLOGIA", 
+    "INTENSIVISTA",
+    "CARDIOLOGIA",
+    "ORTOPEDIA",
+    "UROLOGIA",
+    "GASTROENTEROLOGIA",
+    "PNEUMOLOGIA"
 ];
 
 interface FiltrosRegulacaoProps {
