@@ -14,17 +14,25 @@ interface Props {
 
 export const RemanejamentoPendenteItem = ({ paciente, onRemanejar, onCancelar }: Props) => {
     const tempoAguardando = formatarDuracao(paciente.dataPedidoRemanejamento);
+    
+    // Add console log to debug the data structure
+    console.log('RemanejamentoPendenteItem paciente:', paciente);
+    
     return (
         <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
             <div>
                 <p className="font-bold text-sm">
-                    {paciente.nomePaciente} 
+                    {paciente.nomePaciente || paciente.dadosPaciente?.nomePaciente || 'N/A'} 
                     <Badge variant="outline">
-                        {paciente.sexoPaciente?.charAt(0) || 'N/A'}
+                        {paciente.sexoPaciente?.charAt(0) || paciente.dadosPaciente?.sexoPaciente?.charAt(0) || 'N/A'}
                     </Badge>
                 </p>
-                <p className="text-xs text-muted-foreground">{paciente.siglaSetorOrigem || paciente.setorOrigem} - {paciente.leitoCodigo}</p>
-                <p className="text-xs text-amber-600 mt-1">Motivo: {paciente.motivoRemanejamento}</p>
+                <p className="text-xs text-muted-foreground">
+                    {paciente.siglaSetorOrigem || paciente.setorOrigem || paciente.siglaSetor || 'N/A'} - {paciente.leitoCodigo || paciente.codigoLeito || 'N/A'}
+                </p>
+                <p className="text-xs text-amber-600 mt-1">
+                    Motivo: {paciente.motivoRemanejamento || paciente.dadosPaciente?.motivoRemanejamento || 'N/A'}
+                </p>
             </div>
             <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1 text-xs font-mono text-amber-600">
