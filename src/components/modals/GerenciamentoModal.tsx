@@ -186,39 +186,37 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                   
                   {selectedSetor && (
                     <div className="space-y-3 max-h-80 overflow-y-auto">
-                      {selectedSetor.leitos
-                        .sort((a, b) => a.codigoLeito.localeCompare(b.codigoLeito, undefined, { numeric: true, sensitivity: 'base' }))
-                        .map((leito, index) => (
-                          <Card key={index}>
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-medium">{leito.codigoLeito}</h4>
-                                  <div className="flex space-x-2 text-xs text-muted-foreground">
-                                    {leito.leitoPCP && <span>PCP</span>}
-                                    {leito.leitoIsolamento && <span>Isolamento</span>}
-                                  </div>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEditLeito(selectedSetor.id!, index, leito)}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => excluirLeito(selectedSetor.id!, index.toString())}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                      {selectedSetor.leitos.map((leito, index) => (
+                        <Card key={index}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium">{leito.codigoLeito}</h4>
+                                <div className="flex space-x-2 text-xs text-muted-foreground">
+                                  {leito.leitoPCP && <span>PCP</span>}
+                                  {leito.leitoIsolamento && <span>Isolamento</span>}
                                 </div>
                               </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                              <div className="flex space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditLeito(selectedSetor.id!, index, leito)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => excluirLeito(selectedSetor.id!, index.toString())}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                       {selectedSetor.leitos.length === 0 && (
                         <p className="text-center text-muted-foreground py-4">
                           Nenhum leito cadastrado neste setor
