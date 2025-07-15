@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,11 @@ interface Props {
 export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Props) => {
   const { adicionarRegistroTransferencia, concluirTransferenciaExterna, cancelarTransferencia } = useSetores();
   const [novaEtapa, setNovaEtapa] = useState('');
+
+  useEffect(() => {
+    // Esta dependência [paciente] garante que o componente re-renderize
+    // sempre que o objeto do paciente (incluindo seu histórico) for atualizado na página pai.
+  }, [paciente]);
 
   if (!paciente) return null;
 

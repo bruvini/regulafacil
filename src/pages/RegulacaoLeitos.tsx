@@ -51,7 +51,7 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, cancelarPedidoRemanejamento, iniciarTransferenciaExterna, solicitarRemanejamento, cancelarRemanejamentoPendente } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, cancelarPedidoRemanejamento, iniciarTransferenciaExterna, solicitarRemanejamento } = useSetores();
   const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
   const { reservarLeitoParaCirurgia } = useCirurgias();
   const { alertas } = useAlertasIsolamento();
@@ -212,11 +212,11 @@ const RegulacaoLeitos = () => {
       if (paciente.motivoRemanejamento?.startsWith('Risco de contaminação')) {
         const aindaEmAlerta = alertas.some(a => a.nomePaciente === paciente.nomePaciente);
         if (!aindaEmAlerta) {
-          cancelarRemanejamentoPendente(paciente.setorId, paciente.leitoId);
+          cancelarPedidoRemanejamento(paciente.setorId, paciente.leitoId);
         }
       }
     });
-  }, [alertas, todosPacientesPendentes, solicitarRemanejamento, cancelarRemanejamentoPendente]);
+  }, [alertas, todosPacientesPendentes, solicitarRemanejamento, cancelarPedidoRemanejamento]);
 
   const renderListaComAgrupamento = (titulo: string, pacientes: any[], onRegularClick?: (paciente: any) => void, onAlta?: (setorId: string, leitoId: string) => void) => {
     const pacientesAgrupados = agruparPorEspecialidade(pacientes);
