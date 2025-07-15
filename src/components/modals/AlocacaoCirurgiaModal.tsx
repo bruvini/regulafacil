@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { BedDouble, Calendar, Stethoscope, User } from 'lucide-react';
 import { SolicitacaoCirurgica } from '@/types/hospital';
 import { useLeitoFinderCirurgico } from '@/hooks/useLeitoFinderCirurgico';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 interface AlocacaoCirurgiaModalProps {
   open: boolean;
@@ -64,7 +64,10 @@ export const AlocacaoCirurgiaModal = ({ open, onOpenChange, cirurgia, onAlocarLe
   if (!cirurgia) return null;
 
   const idade = calcularIdade(cirurgia.dataNascimento);
-  const dataInternacaoFormatada = cirurgia.dataPrevistaInternacao ? 
+  
+  // Proper date validation before formatting
+  const dataInternacaoFormatada = cirurgia.dataPrevistaInternacao && 
+    isValid(cirurgia.dataPrevistaInternacao) ? 
     format(cirurgia.dataPrevistaInternacao, 'dd/MM/yyyy') : 
     'Data inválida';
 
