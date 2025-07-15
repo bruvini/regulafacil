@@ -25,8 +25,8 @@ interface Props {
 
 export const CirurgiaEletivaItem = ({ cirurgia, onAlocarLeito }: Props) => {
   const idade = calcularIdade(cirurgia.dataNascimento);
-  const dataInternacaoFormatada = cirurgia.dataPrevistaInternacao?.toDate ? 
-    format(cirurgia.dataPrevistaInternacao.toDate(), 'dd/MM/yyyy') : 
+  const dataInternacaoFormatada = cirurgia.dataPrevistaInternacao ? 
+    format(cirurgia.dataPrevistaInternacao, 'dd/MM/yyyy') : 
     'Data inválida';
 
   return (

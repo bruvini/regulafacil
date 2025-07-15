@@ -1,5 +1,6 @@
+
 import { useState, useEffect, useCallback } from 'react';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Setor, Leito, DadosPaciente } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
@@ -68,9 +69,9 @@ export const useSetores = () => {
   const updateLeitoInSetor = async (setorId: string, leitoId: string, leitoAtualizacoes: Partial<Leito>) => {
     try {
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      const setorDoc = await db.collection('setoresRegulaFacil').doc(setorId).get();
+      const setorDoc = await getDoc(setorRef);
 
-      if (!setorDoc.exists) {
+      if (!setorDoc.exists()) {
         console.error("Setor não encontrado");
         return;
       }
@@ -93,7 +94,29 @@ export const useSetores = () => {
 
   const cancelarPedidoUTI = async (setorId: string, leitoId: string) => {
     try {
-      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: { aguardaUTI: false } });
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      const setorDoc = await getDoc(setorRef);
+
+      if (!setorDoc.exists()) {
+        console.error("Setor não encontrado");
+        return;
+      }
+
+      const setorData = setorDoc.data() as Setor;
+      const leitosAtualizados = setorData.leitos.map(leito => {
+        if (leito.id === leitoId && leito.dadosPaciente) {
+          return { 
+            ...leito, 
+            dadosPaciente: { 
+              ...leito.dadosPaciente, 
+              aguardaUTI: false 
+            } 
+          };
+        }
+        return leito;
+      });
+
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
       toast({ title: "Pedido de UTI cancelado", description: "Paciente removido da fila de espera da UTI." });
     } catch (error) {
       console.error("Erro ao cancelar pedido de UTI:", error);
@@ -103,7 +126,29 @@ export const useSetores = () => {
 
   const cancelarTransferencia = async (setorId: string, leitoId: string) => {
     try {
-      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: { transferirPaciente: false } });
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      const setorDoc = await getDoc(setorRef);
+
+      if (!setorDoc.exists()) {
+        console.error("Setor não encontrado");
+        return;
+      }
+
+      const setorData = setorDoc.data() as Setor;
+      const leitosAtualizados = setorData.leitos.map(leito => {
+        if (leito.id === leitoId && leito.dadosPaciente) {
+          return { 
+            ...leito, 
+            dadosPaciente: { 
+              ...leito.dadosPaciente, 
+              transferirPaciente: false 
+            } 
+          };
+        }
+        return leito;
+      });
+
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
       toast({ title: "Transferência cancelada", description: "Pedido de transferência cancelado." });
     } catch (error) {
       console.error("Erro ao cancelar transferência:", error);
@@ -113,7 +158,29 @@ export const useSetores = () => {
 
   const cancelarPedidoRemanejamento = async (setorId: string, leitoId: string) => {
     try {
-      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: { remanejarPaciente: false } });
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      const setorDoc = await getDoc(setorRef);
+
+      if (!setorDoc.exists()) {
+        console.error("Setor não encontrado");
+        return;
+      }
+
+      const setorData = setorDoc.data() as Setor;
+      const leitosAtualizados = setorData.leitos.map(leito => {
+        if (leito.id === leitoId && leito.dadosPaciente) {
+          return { 
+            ...leito, 
+            dadosPaciente: { 
+              ...leito.dadosPaciente, 
+              remanejarPaciente: false 
+            } 
+          };
+        }
+        return leito;
+      });
+
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
       toast({ title: "Remanejamento cancelado", description: "Pedido de remanejamento cancelado." });
     } catch (error) {
       console.error("Erro ao cancelar remanejamento:", error);
@@ -134,9 +201,9 @@ export const useSetores = () => {
   const cancelarRegulacao = async (paciente: any, motivo: string) => {
     try {
       const setorRef = doc(db, 'setoresRegulaFacil', paciente.setorId);
-      const setorDoc = await db.collection('setoresRegulaFacil').doc(paciente.setorId).get();
+      const setorDoc = await getDoc(setorRef);
 
-      if (!setorDoc.exists) {
+      if (!setorDoc.exists()) {
         console.error("Setor não encontrado");
         return;
       }
@@ -166,9 +233,9 @@ export const useSetores = () => {
   const concluirRegulacao = async (paciente: any) => {
     try {
       const setorRef = doc(db, 'setoresRegulaFacil', paciente.setorId);
-      const setorDoc = await db.collection('setoresRegulaFacil').doc(paciente.setorId).get();
+      const setorDoc = await getDoc(setorRef);
 
-      if (!setorDoc.exists) {
+      if (!setorDoc.exists()) {
         console.error("Setor não encontrado");
         return;
       }
@@ -201,10 +268,10 @@ export const useSetores = () => {
       const setorOrigemRef = doc(db, 'setoresRegulaFacil', paciente.setorId);
       const setorDestinoRef = doc(db, 'setoresRegulaFacil', leitoDestino.setorId);
 
-      const setorOrigemDoc = await db.collection('setoresRegulaFacil').doc(paciente.setorId).get();
-      const setorDestinoDoc = await db.collection('setoresRegulaFacil').doc(leitoDestino.setorId).get();
+      const setorOrigemDoc = await getDoc(setorOrigemRef);
+      const setorDestinoDoc = await getDoc(setorDestinoRef);
 
-      if (!setorOrigemDoc.exists || !setorDestinoDoc.exists) {
+      if (!setorOrigemDoc.exists() || !setorDestinoDoc.exists()) {
         console.error("Setor não encontrado");
         return;
       }
@@ -221,7 +288,7 @@ export const useSetores = () => {
             regulacao: {
               paraSetor: leitoDestino.setorNome,
               paraLeito: leitoDestino.codigoLeito,
-              dataRegulacao: new Date().toISOString(),
+              data: new Date().toISOString(),
               observacoes: observacoes
             },
             dataAtualizacaoStatus: new Date().toISOString(),

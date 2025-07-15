@@ -64,8 +64,8 @@ export const AlocacaoCirurgiaModal = ({ open, onOpenChange, cirurgia, onAlocarLe
   if (!cirurgia) return null;
 
   const idade = calcularIdade(cirurgia.dataNascimento);
-  const dataInternacaoFormatada = cirurgia.dataPrevistaInternacao?.toDate ? 
-    format(cirurgia.dataPrevistaInternacao.toDate(), 'dd/MM/yyyy') : 
+  const dataInternacaoFormatada = cirurgia.dataPrevistaInternacao ? 
+    format(cirurgia.dataPrevistaInternacao, 'dd/MM/yyyy') : 
     'Data inválida';
 
   return (
@@ -107,41 +107,45 @@ export const AlocacaoCirurgiaModal = ({ open, onOpenChange, cirurgia, onAlocarLe
               <h4 className="font-medium mb-2">Leitos Disponíveis</h4>
               <ScrollArea className="h-80">
                 <Accordion type="multiple" className="w-full">
-                  {Object.entries(leitosAgrupadosPorSetor).map(([setorNome, leitos]) => (
-                    <AccordionItem key={setorNome} value={setorNome}>
-                      <AccordionTrigger className="hover:no-underline">
-                        <div className="flex justify-between items-center w-full pr-4">
-                          <span className="font-semibold">{setorNome}</span>
-                          <Badge variant="secondary">{leitos.length}</Badge>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-2">
-                        {leitos.map(leito => (
-                          <Card 
-                            key={leito.id} 
-                            className={`cursor-pointer transition-colors ${
-                              leitoSelecionado?.id === leito.id ? 'bg-blue-100 border-blue-300' : 'hover:bg-muted/50'
-                            }`}
-                            onClick={() => handleSelectLeito(leito)}
-                          >
-                            <CardContent className="p-3">
-                              <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                  <BedDouble className="h-4 w-4" />
-                                  <span className="font-medium">{leito.codigoLeito}</span>
-                                  {leito.leitoPCP && <Badge variant="outline">PCP</Badge>}
-                                  {leito.leitoIsolamento && <Badge variant="destructive">Isolamento</Badge>}
+                  {Object.entries(leitosAgrupadosPorSetor).length > 0 ? (
+                    Object.entries(leitosAgrupadosPorSetor).map(([setorNome, leitos]) => (
+                      <AccordionItem key={setorNome} value={setorNome}>
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex justify-between items-center w-full pr-4">
+                            <span className="font-semibold">{setorNome}</span>
+                            <Badge variant="secondary">{leitos.length}</Badge>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-2">
+                          {leitos.map(leito => (
+                            <Card 
+                              key={leito.id} 
+                              className={`cursor-pointer transition-colors ${
+                                leitoSelecionado?.id === leito.id ? 'bg-blue-100 border-blue-300' : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => handleSelectLeito(leito)}
+                            >
+                              <CardContent className="p-3">
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-2">
+                                    <BedDouble className="h-4 w-4" />
+                                    <span className="font-medium">{leito.codigoLeito}</span>
+                                    {leito.leitoPCP && <Badge variant="outline">PCP</Badge>}
+                                    {leito.leitoIsolamento && <Badge variant="destructive">Isolamento</Badge>}
+                                  </div>
+                                  <Badge variant={leito.statusLeito === 'Vago' ? 'default' : 'secondary'}>
+                                    {leito.statusLeito}
+                                  </Badge>
                                 </div>
-                                <Badge variant={leito.statusLeito === 'Vago' ? 'default' : 'secondary'}>
-                                  {leito.statusLeito}
-                                </Badge>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">Nenhum leito disponível encontrado.</p>
+                  )}
                 </Accordion>
               </ScrollArea>
             </div>
