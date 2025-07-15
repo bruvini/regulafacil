@@ -14,6 +14,7 @@ export interface Usuario {
   tipoAcesso: 'Comum' | 'Administrador';
   permissoes?: string[];
   uid?: string; // Para armazenar o ID do Firebase Auth
+  historicoAcessos?: any[]; // Array para armazenar timestamps de acesso
 }
 
 export const useUsuarios = () => {
