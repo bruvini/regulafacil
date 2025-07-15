@@ -7,22 +7,32 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const formatarDuracao = (dataISOouString: string | undefined | null): string => {
+export const formatarDuracao = (dataISOouString: string | Date | undefined | null): string => {
   if (!dataISOouString) return 'N/A';
 
   let dataEntrada: Date;
 
-  // Tenta o formato brasileiro primeiro, que é o mais comum no sistema
-  const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
-  if (isValid(dataParseada)) {
-    dataEntrada = dataParseada;
-  } else {
-    // Tenta como ISO (formato padrão do JS) como fallback
-    const dataPotencial = new Date(dataISOouString);
-    if (isValid(dataPotencial)) {
-      dataEntrada = dataPotencial;
+  // Se já é um objeto Date, usa diretamente
+  if (dataISOouString instanceof Date) {
+    if (isValid(dataISOouString)) {
+      dataEntrada = dataISOouString;
     } else {
       return 'Data Inválida';
+    }
+  } else {
+    // Se é string, tenta fazer o parse
+    // Tenta o formato brasileiro primeiro, que é o mais comum no sistema
+    const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
+    if (isValid(dataParseada)) {
+      dataEntrada = dataParseada;
+    } else {
+      // Tenta como ISO (formato padrão do JS) como fallback
+      const dataPotencial = new Date(dataISOouString);
+      if (isValid(dataPotencial)) {
+        dataEntrada = dataPotencial;
+      } else {
+        return 'Data Inválida';
+      }
     }
   }
 
