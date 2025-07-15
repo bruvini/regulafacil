@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { collection, doc, onSnapshot, updateDoc, writeBatch, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -507,12 +506,7 @@ export const useSetores = () => {
               ...l, 
               dadosPaciente: { 
                 ...l.dadosPaciente, 
-                observacoes: [...(l.dadosPaciente.observacoes || []), {
-                  id: Date.now().toString(),
-                  texto: observacao,
-                  dataHora: new Date().toISOString(),
-                  autor: 'Sistema'
-                }]
+                obsPaciente: [...(l.dadosPaciente.obsPaciente || []), observacao]
               }
             }
           : l
