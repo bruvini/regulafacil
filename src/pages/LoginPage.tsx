@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, updateDoc, arrayUnion, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,27 +28,38 @@ const LoginPage = () => {
       const userCredential = await signInWithEmailAndPassword(auth, emailCompleto, password);
       const user = userCredential.user;
 
-      // Busca o documento do usuário no Firestore para atualizar o histórico
-      const q = query(collection(db, 'usuariosRegulaFacil'), where('uid', '==', user.uid));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        await updateDoc(doc(db, 'usuariosRegulaFacil', userDoc.id), {
-          historicoAcessos: arrayUnion(serverTimestamp())
+      // Após o login bem-sucedido, vamos buscar o documento do usuário para
+      // verificar se é o primeiro login ANTES de registrar o acesso.
+      const userDocRef = doc(db, 'usuariosRegulaFacil', user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const ePrimeiroLogin = !userData.historicoAcessos || userData.historicoAcessos.length === 0;
+
+        // Registra o novo acesso no Firestore
+        // CORREÇÃO: Substituímos serverTimestamp() por new Date()
+        await updateDoc(userDocRef, {
+          historicoAcessos: arrayUnion(new Date()) 
         });
+
+        // A lógica de forçar a troca de senha será tratada pelo AuthProvider/Layout
+        // que detectará o estado de primeiro login.
+        // Apenas navegamos para a página inicial.
+        navigate('/inicio');
+        toast({ title: "Login realizado com sucesso!", description: "Bem-vindo ao RegulaFacil" });
+      } else {
+        throw new Error("Documento do usuário não encontrado no Firestore.");
       }
 
-      navigate('/inicio'); // Redireciona para a página inicial
-      toast({ title: "Login realizado com sucesso!", description: "Bem-vindo ao RegulaFacil" });
     } catch (error: any) {
-      console.error('Erro no login:', error);
+      console.error("Erro no login:", error);
       if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
         toast({ title: "Erro de Login", description: "E-mail não encontrado. Verifique o usuário ou contate o administrador.", variant: "destructive" });
       } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         toast({ title: "Erro de Login", description: "Senha incorreta. Tente novamente.", variant: "destructive" });
       } else {
-        toast({ title: "Erro Desconhecido", description: "Ocorreu um erro ao tentar fazer login.", variant: "destructive" });
+        toast({ title: "Erro Desconhecido", description: error.message, variant: "destructive" });
       }
     } finally {
       setLoading(false);
