@@ -25,7 +25,7 @@ import { AguardandoTransferenciaItem } from '@/components/AguardandoTransferenci
 import { PacientePendenteItem } from '@/components/PacientePendenteItem';
 import { RemanejamentoPendenteItem } from '@/components/RemanejamentoPendenteItem';
 import { CirurgiaEletivaItem } from '@/components/CirurgiaEletivaItem';
-import { DadosPaciente } from '@/types/hospital';
+import { DadosPaciente, Setor } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -419,125 +419,85 @@ const RegulacaoLeitos = () => {
 
     const agora = new Date().toISOString();
     const batch = writeBatch(db);
+
+    // Criamos um mapa de busca para encontrar rapidamente os dados de um paciente existente
+    const mapaPacientesAtuais: Map<string, any> = new Map();
+    setores.flatMap(s => s.leitos)
+      .filter(l => l.statusLeito === 'Ocupado' && l.dadosPaciente)
+      .forEach(l => {
+        mapaPacientesAtuais.set(l.dadosPaciente!.nomePaciente, l.dadosPaciente);
+      });
+
     const setoresAtualizados = JSON.parse(JSON.stringify(setores));
 
     try {
-      // FASE 1: PRÉ-PROCESSAMENTO - Limpar leitos com status específicos
-      console.log('Fase 1: Pré-processamento - limpando leitos...');
+      // 1. Limpa todos os leitos ocupados para recomeçar
       for (const setor of setoresAtualizados) {
         for (const leito of setor.leitos) {
-          if (['Reservado', 'Regulado', 'Higienizacao'].includes(leito.statusLeito)) {
-            leito.dadosPaciente = null;
-            leito.regulacao = null;
+          if (leito.statusLeito === 'Ocupado') {
             leito.statusLeito = 'Vago';
+            leito.dadosPaciente = null;
             leito.dataAtualizacaoStatus = agora;
           }
         }
       }
 
-      // FASE 2: PROCESSAR ALTAS - Pacientes que saíram (estão no sistema mas não na planilha)
-      console.log('Fase 2: Processando altas...');
-      const leitosOcupados = setoresAtualizados.flatMap(s => 
-        s.leitos.filter(l => l.statusLeito === 'Ocupado' && l.dadosPaciente)
-      );
+      // 2. Repovoa os leitos com base na planilha, preservando dados existentes
+      dadosPlanilhaProcessados.forEach((pacientePlanilha: PacienteDaPlanilha) => {
+        const setorTarget = setoresAtualizados.find((s: Setor) => s.nomeSetor === pacientePlanilha.setorNome);
+        if (setorTarget) {
+          const leitoTarget = setorTarget.leitos.find((l: any) => l.codigoLeito === pacientePlanilha.leitoCodigo);
+          if (leitoTarget) {
+            leitoTarget.statusLeito = 'Ocupado';
+            leitoTarget.dataAtualizacaoStatus = agora;
 
-      for (const leitoOcupado of leitosOcupados) {
-        const pacienteAindaInternado = dadosPlanilhaProcessados.some(p => 
-          p.nomeCompleto === leitoOcupado.dadosPaciente?.nomePaciente
-        );
-        
-        if (!pacienteAindaInternado) {
-          // Alta do paciente
-          leitoOcupado.dadosPaciente = null;
-          leitoOcupado.regulacao = null;
-          leitoOcupado.statusLeito = 'Vago';
-          leitoOcupado.dataAtualizacaoStatus = agora;
-        }
-      }
+            // CORREÇÃO PRINCIPAL AQUI:
+            const dadosAntigos = mapaPacientesAtuais.get(pacientePlanilha.nomeCompleto);
 
-      // FASE 3: PROCESSAR TRANSFERÊNCIAS E MOVIMENTAÇÕES
-      console.log('Fase 3: Processando transferências e movimentações...');
-      const todosLeitosAtualizados = setoresAtualizados.flatMap(s => 
-        s.leitos.map(l => ({ ...l, setorNome: s.nomeSetor }))
-      );
-
-      for (const pacientePlanilha of dadosPlanilhaProcessados) {
-        // Verificar se o paciente já existe no sistema
-        const leitoAtualPaciente = todosLeitosAtualizados.find(l => 
-          l.dadosPaciente?.nomePaciente === pacientePlanilha.nomeCompleto
-        );
-        
-        const leitoDestinoPlanilha = todosLeitosAtualizados.find(l => 
-          l.codigoLeito === pacientePlanilha.leitoCodigo
-        );
-
-        if (!leitoDestinoPlanilha) continue;
-
-        if (leitoAtualPaciente && leitoAtualPaciente.id !== leitoDestinoPlanilha.id) {
-          // É uma transferência - limpar leito origem
-          const setorOrigem = setoresAtualizados.find(s => 
-            s.leitos.some(l => l.id === leitoAtualPaciente.id)
-          );
-          if (setorOrigem) {
-            const leitoOrigem = setorOrigem.leitos.find(l => l.id === leitoAtualPaciente.id);
-            if (leitoOrigem) {
-              leitoOrigem.dadosPaciente = null;
-              leitoOrigem.regulacao = null;
-              leitoOrigem.statusLeito = 'Vago';
-              leitoOrigem.dataAtualizacaoStatus = agora;
+            if (dadosAntigos) {
+              // Se o paciente já existia, preservamos seus dados clínicos (isolamentos, etc.)
+              // e apenas atualizamos as informações da internação que vêm da planilha.
+              leitoTarget.dadosPaciente = {
+                ...dadosAntigos, // <-- Preserva dados como `isolamentosVigentes`, `provavelAlta`, etc.
+                nomePaciente: pacientePlanilha.nomeCompleto,
+                dataNascimento: pacientePlanilha.dataNascimento,
+                sexoPaciente: pacientePlanilha.sexo,
+                dataInternacao: pacientePlanilha.dataInternacao,
+                especialidadePaciente: pacientePlanilha.especialidade
+              };
+            } else {
+              // Se for um paciente novo, criamos um objeto limpo
+              leitoTarget.dadosPaciente = {
+                nomePaciente: pacientePlanilha.nomeCompleto,
+                dataNascimento: pacientePlanilha.dataNascimento,
+                sexoPaciente: pacientePlanilha.sexo,
+                dataInternacao: pacientePlanilha.dataInternacao,
+                especialidadePaciente: pacientePlanilha.especialidade,
+                isolamentosVigentes: [], // Inicializa como array vazio
+              };
             }
           }
         }
-      }
+      });
 
-      // FASE 4: PROCESSAR NOVAS INTERNAÇÕES E ATUALIZAÇÕES DE DESTINO
-      console.log('Fase 4: Processando novas internações e atualizações...');
-      for (const pacientePlanilha of dadosPlanilhaProcessados) {
-        const setorDestino = setoresAtualizados.find(s => s.nomeSetor === pacientePlanilha.setorNome);
-        if (!setorDestino) continue;
-
-        const leitoDestino = setorDestino.leitos.find(l => l.codigoLeito === pacientePlanilha.leitoCodigo);
-        if (!leitoDestino) continue;
-
-        // Atualizar o leito de destino com os dados do paciente
-        leitoDestino.statusLeito = 'Ocupado';
-        leitoDestino.dataAtualizacaoStatus = agora;
-        leitoDestino.dadosPaciente = {
-          nomePaciente: pacientePlanilha.nomeCompleto,
-          dataNascimento: pacientePlanilha.dataNascimento,
-          sexoPaciente: pacientePlanilha.sexo,
-          dataInternacao: pacientePlanilha.dataInternacao,
-          especialidadePaciente: pacientePlanilha.especialidade
-        };
-      }
-
-      // FASE 5: EXECUÇÃO EM BATCH NO FIRESTORE
-      console.log('Fase 5: Salvando alterações no Firestore...');
-      setoresAtualizados.forEach(setor => {
-        const setorRef = doc(db, 'setoresRegulaFacil', setor.id);
+      // 3. Persiste as alterações no banco de dados
+      setoresAtualizados.forEach((setor: Setor) => {
+        const setorRef = doc(db, 'setoresRegulaFacil', setor.id!);
         batch.update(setorRef, { leitos: setor.leitos });
       });
 
-      // Simular delay para feedback visual
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Commit das alterações
       await batch.commit();
-      
+
       toast({ 
         title: 'Sucesso!', 
-        description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} operações realizadas com sucesso.`,
+        description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} pacientes atualizados.`,
       });
-      
+
       setImportModalOpen(false);
-      
+
     } catch (error) {
       console.error("Erro ao sincronizar:", error);
-      toast({ 
-        title: 'Erro na Sincronização!', 
-        description: 'Não foi possível sincronizar os dados. Tente novamente.', 
-        variant: 'destructive' 
-      });
+      toast({ title: 'Erro!', description: 'Não foi possível sincronizar os dados.', variant: 'destructive' });
     } finally {
       setIsSyncing(false);
       setSyncSummary(null);
