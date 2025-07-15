@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FiltrosRegulacao } from '@/components/FiltrosRegulacao';
 import { useSetores } from '@/hooks/useSetores';
+import { useFiltrosRegulacao } from '@/hooks/useFiltrosRegulacao';
 import { Leito } from '@/types/hospital';
 import { RemanejamentoPendenteItem } from '@/components/RemanejamentoPendenteItem';
 import { TransferenciaPendenteItem } from '@/components/TransferenciaPendenteItem';
@@ -22,15 +22,6 @@ const RegulacaoLeitos = () => {
     confirmarRegulacao,
     cancelarPedidoRemanejamento 
   } = useSetores();
-  const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filtros, setFiltros] = useState({
-    especialidade: '',
-    aguardandoUTI: false,
-    remanejarPaciente: false,
-    transferirPaciente: false,
-    provavelAlta: false,
-  });
 
   const handleCancelarRegulacao = (paciente: any, motivo: string) => {
     cancelarRegulacao(paciente, motivo);
@@ -46,6 +37,11 @@ const RegulacaoLeitos = () => {
 
   const handleCancelarRemanejamento = (paciente: any) => {
     cancelarPedidoRemanejamento(paciente.setorId, paciente.leitoId);
+  };
+
+  const handleRemanejarPaciente = (paciente: any) => {
+    // Implementar lógica de remanejamento
+    console.log('Remanejar paciente:', paciente);
   };
 
   const leitosAguardandoRemanejamento = setores.flatMap(setor =>
@@ -75,8 +71,28 @@ const RegulacaoLeitos = () => {
     }))
   );
 
+  // Use the new filter hook for regulation patients
+  const { 
+    searchTerm, 
+    setSearchTerm, 
+    filtrosAvancados, 
+    setFiltrosAvancados, 
+    filteredPacientes: filteredLeitosAguardandoRegulacao, 
+    resetFiltros 
+  } = useFiltrosRegulacao(leitosAguardandoRegulacao.map(leito => leito.dadosPaciente).filter(Boolean));
+
+  // Keep the old filter logic for other sections
+  const [oldSearchTerm, setOldSearchTerm] = useState('');
+  const [oldFiltros, setOldFiltros] = useState({
+    especialidade: '',
+    aguardandoUTI: false,
+    remanejarPaciente: false,
+    transferirPaciente: false,
+    provavelAlta: false,
+  });
+
   const filteredLeitosAguardandoRemanejamento = leitosAguardandoRemanejamento.filter(leito => {
-    const searchTermLower = searchTerm.toLowerCase();
+    const searchTermLower = oldSearchTerm.toLowerCase();
     const nomePaciente = leito.dadosPaciente?.nomePaciente?.toLowerCase() || '';
     const especialidadePaciente = leito.dadosPaciente?.especialidadePaciente?.toLowerCase() || '';
 
@@ -86,18 +102,18 @@ const RegulacaoLeitos = () => {
       leito.setorNome?.toLowerCase().includes(searchTermLower);
 
     const matchesFilters = (
-      (!filtros.especialidade || leito.dadosPaciente?.especialidadePaciente === filtros.especialidade) &&
-      (!filtros.aguardandoUTI || leito.dadosPaciente?.aguardaUTI === filtros.aguardandoUTI) &&
-      (!filtros.remanejarPaciente || leito.dadosPaciente?.remanejarPaciente === filtros.remanejarPaciente) &&
-      (!filtros.transferirPaciente || leito.dadosPaciente?.transferirPaciente === filtros.transferirPaciente) &&
-      (!filtros.provavelAlta || leito.dadosPaciente?.provavelAlta === filtros.provavelAlta)
+      (!oldFiltros.especialidade || leito.dadosPaciente?.especialidadePaciente === oldFiltros.especialidade) &&
+      (!oldFiltros.aguardandoUTI || leito.dadosPaciente?.aguardaUTI === oldFiltros.aguardandoUTI) &&
+      (!oldFiltros.remanejarPaciente || leito.dadosPaciente?.remanejarPaciente === oldFiltros.remanejarPaciente) &&
+      (!oldFiltros.transferirPaciente || leito.dadosPaciente?.transferirPaciente === oldFiltros.transferirPaciente) &&
+      (!oldFiltros.provavelAlta || leito.dadosPaciente?.provavelAlta === oldFiltros.provavelAlta)
     );
 
     return matchesSearchTerm && matchesFilters;
   });
 
   const filteredLeitosAguardandoTransferencia = leitosAguardandoTransferencia.filter(leito => {
-    const searchTermLower = searchTerm.toLowerCase();
+    const searchTermLower = oldSearchTerm.toLowerCase();
     const nomePaciente = leito.dadosPaciente?.nomePaciente?.toLowerCase() || '';
     const especialidadePaciente = leito.dadosPaciente?.especialidadePaciente?.toLowerCase() || '';
 
@@ -107,36 +123,25 @@ const RegulacaoLeitos = () => {
       leito.setorNome?.toLowerCase().includes(searchTermLower);
 
     const matchesFilters = (
-      (!filtros.especialidade || leito.dadosPaciente?.especialidadePaciente === filtros.especialidade) &&
-      (!filtros.aguardandoUTI || leito.dadosPaciente?.aguardaUTI === filtros.aguardandoUTI) &&
-      (!filtros.remanejarPaciente || leito.dadosPaciente?.remanejarPaciente === filtros.remanejarPaciente) &&
-      (!filtros.transferirPaciente || leito.dadosPaciente?.transferirPaciente === filtros.transferirPaciente) &&
-      (!filtros.provavelAlta || leito.dadosPaciente?.provavelAlta === filtros.provavelAlta)
+      (!oldFiltros.especialidade || leito.dadosPaciente?.especialidadePaciente === oldFiltros.especialidade) &&
+      (!oldFiltros.aguardandoUTI || leito.dadosPaciente?.aguardaUTI === oldFiltros.aguardandoUTI) &&
+      (!oldFiltros.remanejarPaciente || leito.dadosPaciente?.remanejarPaciente === oldFiltros.remanejarPaciente) &&
+      (!oldFiltros.transferirPaciente || leito.dadosPaciente?.transferirPaciente === oldFiltros.transferirPaciente) &&
+      (!oldFiltros.provavelAlta || leito.dadosPaciente?.provavelAlta === oldFiltros.provavelAlta)
     );
 
     return matchesSearchTerm && matchesFilters;
   });
 
-  const filteredLeitosAguardandoRegulacao = leitosAguardandoRegulacao.filter(leito => {
-    const searchTermLower = searchTerm.toLowerCase();
-    const nomePaciente = leito.dadosPaciente?.nomePaciente?.toLowerCase() || '';
-
-    const matchesSearchTerm = nomePaciente.includes(searchTermLower) ||
-      leito.codigoLeito?.toLowerCase().includes(searchTermLower) ||
-      leito.setorNome?.toLowerCase().includes(searchTermLower);
-
-    return matchesSearchTerm;
-  });
-
-  const resetFiltros = () => {
-    setFiltros({
+  const resetOldFiltros = () => {
+    setOldFiltros({
       especialidade: '',
       aguardandoUTI: false,
       remanejarPaciente: false,
       transferirPaciente: false,
       provavelAlta: false,
     });
-    setSearchTerm('');
+    setOldSearchTerm('');
   };
 
   return (
@@ -147,10 +152,10 @@ const RegulacaoLeitos = () => {
         <Input
           type="text"
           placeholder="Buscar por nome, especialidade, leito ou setor..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          value={oldSearchTerm}
+          onChange={(e) => setOldSearchTerm(e.target.value)}
         />
-        <FiltrosRegulacao filtros={filtros} setFiltros={setFiltros} searchTerm={searchTerm} setSearchTerm={setSearchTerm} resetFiltros={resetFiltros} />
+        <Button onClick={resetOldFiltros}>Limpar Filtros</Button>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -165,7 +170,12 @@ const RegulacaoLeitos = () => {
               </div>
             ) : filteredLeitosAguardandoRemanejamento.length > 0 ? (
               filteredLeitosAguardandoRemanejamento.map((paciente: any) => (
-                <RemanejamentoPendenteItem key={`${paciente.setorId}-${paciente.leitoId}`} paciente={paciente} onCancelar={handleCancelarRemanejamento} />
+                <RemanejamentoPendenteItem 
+                  key={`${paciente.setorId}-${paciente.leitoId}`} 
+                  paciente={paciente} 
+                  onRemanejar={handleRemanejarPaciente}
+                  onCancelar={handleCancelarRemanejamento} 
+                />
               ))
             ) : (
               <p className="text-muted-foreground">Nenhum remanejamento pendente.</p>
@@ -195,6 +205,15 @@ const RegulacaoLeitos = () => {
         <Card>
           <CardContent className="space-y-4">
             <h2 className="text-xl font-semibold">Leitos Regulados Aguardando Liberação</h2>
+            
+            <FiltrosRegulacao
+              filtros={filtrosAvancados}
+              setFiltros={setFiltrosAvancados}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              resetFiltros={resetFiltros}
+            />
+
             {loading ? (
               <div className="flex flex-col gap-2">
                 <Skeleton className="h-10 w-full" />
@@ -202,15 +221,17 @@ const RegulacaoLeitos = () => {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : filteredLeitosAguardandoRegulacao.length > 0 ? (
-              filteredLeitosAguardandoRegulacao.map((paciente: any) => (
-                <RegulacaoPendenteItem
-                  key={`${paciente.setorId}-${paciente.leitoId}`}
-                  paciente={paciente}
-                  onCancelar={handleCancelarRegulacao}
-                  onConcluir={handleConcluirRegulacao}
-                  onConfirmar={handleConfirmarRegulacao}
-                />
-              ))
+              leitosAguardandoRegulacao
+                .filter(leito => filteredLeitosAguardandoRegulacao.includes(leito.dadosPaciente))
+                .map((paciente: any) => (
+                  <RegulacaoPendenteItem
+                    key={`${paciente.setorId}-${paciente.leitoId}`}
+                    paciente={paciente}
+                    onCancelar={handleCancelarRegulacao}
+                    onConcluir={handleConcluirRegulacao}
+                    onConfirmar={handleConfirmarRegulacao}
+                  />
+                ))
             ) : (
               <p className="text-muted-foreground">Nenhum leito regulado aguardando liberação.</p>
             )}
