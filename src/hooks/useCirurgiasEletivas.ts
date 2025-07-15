@@ -16,7 +16,8 @@ export const useCirurgiasEletivas = () => {
     const q = query(
       collection(db, 'cirurgiasRegulaFacil'),
       where('dataPrevistaInternacao', '>=', hoje),
-      where('dataPrevistaInternacao', '<=', fimAmanha)
+      where('dataPrevistaInternacao', '<=', fimAmanha),
+      where('leitoReservado', '==', null) // <-- Filtro adicionado
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {

@@ -10,9 +10,10 @@ import { formatarDuracao } from '@/lib/utils';
 interface Props {
   paciente: any;
   onCancel: () => void;
+  onGerenciar?: () => void;
 }
 
-export const AguardandoTransferenciaItem = ({ paciente, onCancel }: Props) => {
+export const AguardandoTransferenciaItem = ({ paciente, onCancel, onGerenciar }: Props) => {
   const tempoAguardando = formatarDuracao(paciente.dataTransferencia);
   
   return (
@@ -32,7 +33,7 @@ export const AguardandoTransferenciaItem = ({ paciente, onCancel }: Props) => {
         <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onGerenciar}>
                   <ClipboardList className="h-4 w-4"/>
                 </Button>
               </TooltipTrigger>

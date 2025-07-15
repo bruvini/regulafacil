@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -14,6 +15,7 @@ import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
 import { TransferenciaModal } from '@/components/modals/TransferenciaModal';
 import { AlocacaoCirurgiaModal } from '@/components/modals/AlocacaoCirurgiaModal';
+import { GerenciarTransferenciaModal } from '@/components/modals/GerenciarTransferenciaModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
 import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
@@ -55,6 +57,7 @@ const RegulacaoLeitos = () => {
   const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
   const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
   const [alocacaoCirurgiaModalOpen, setAlocacaoCirurgiaModalOpen] = useState(false);
+  const [gerenciarTransferenciaOpen, setGerenciarTransferenciaOpen] = useState(false);
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
   const [pacienteParaAcao, setPacienteParaAcao] = useState<any | null>(null);
   const [cirurgiaParaAlocar, setCirurgiaParaAlocar] = useState<any | null>(null);
@@ -141,6 +144,11 @@ const RegulacaoLeitos = () => {
   const handleIniciarTransferenciaExterna = (paciente: any) => {
     setPacienteParaAcao(paciente);
     setTransferenciaModalOpen(true);
+  };
+
+  const handleGerenciarTransferencia = (paciente: any) => {
+    setPacienteParaAcao(paciente);
+    setGerenciarTransferenciaOpen(true);
   };
 
   const handleConfirmarTransferenciaExterna = (destino: string, motivo: string) => {
@@ -609,6 +617,7 @@ const RegulacaoLeitos = () => {
                       key={p.leitoId}
                       paciente={p}
                       onCancel={() => cancelarTransferencia(p.setorId, p.leitoId)}
+                      onGerenciar={() => handleGerenciarTransferencia(p)}
                     />
                   ))}
                 </div>
@@ -815,6 +824,12 @@ const RegulacaoLeitos = () => {
           open={transferenciaModalOpen}
           onOpenChange={setTransferenciaModalOpen}
           onConfirm={handleConfirmarTransferenciaExterna}
+        />
+
+        <GerenciarTransferenciaModal 
+          open={gerenciarTransferenciaOpen} 
+          onOpenChange={setGerenciarTransferenciaOpen} 
+          paciente={pacienteParaAcao} 
         />
 
         <AlocacaoCirurgiaModal

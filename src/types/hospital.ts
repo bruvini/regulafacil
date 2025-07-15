@@ -1,5 +1,10 @@
-
 // Adicione esta nova interface no topo
+export interface HistoricoTransferenciaItem {
+  etapa: string;
+  data: string;
+  usuario?: string; // Opcional, para registrar quem fez a anotação
+}
+
 export interface IsolamentoVigente {
   isolamentoId: string; // ID do tipo de isolamento da coleção isolamentosRegulaFacil
   sigla: string;
@@ -27,6 +32,7 @@ export interface DadosPaciente {
   motivoTransferencia?: string;
   dataTransferencia?: string;
   statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
+  historicoTransferencia?: HistoricoTransferenciaItem[]; // <-- NOVO CAMPO ADICIONADO
   
   provavelAlta?: boolean; // Novo campo para provável alta
   

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Setor, Leito, DadosPaciente } from '@/types/hospital';
+import { Setor, Leito, DadosPaciente, HistoricoTransferenciaItem } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 
 export const useSetores = () => {
@@ -94,6 +94,56 @@ export const useSetores = () => {
       console.error("Erro ao atualizar leito:", error);
       toast({ title: "Erro", description: "Erro ao atualizar leito. Tente novamente.", variant: "destructive" });
     }
+  };
+
+  const adicionarRegistroTransferencia = async (setorId: string, leitoId: string, etapa: string) => {
+    try {
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      const setorDoc = await getDoc(setorRef);
+
+      if (!setorDoc.exists()) {
+        console.error("Setor não encontrado");
+        return;
+      }
+
+      const setorData = setorDoc.data() as Setor;
+      const leitosAtualizados = setorData.leitos.map(leito => {
+        if (leito.id === leitoId && leito.dadosPaciente) {
+          const novoRegistro: HistoricoTransferenciaItem = {
+            etapa,
+            data: new Date().toISOString(),
+            usuario: 'Sistema' // Pode ser expandido para incluir usuário logado
+          };
+          
+          const historicoAtual = leito.dadosPaciente.historicoTransferencia || [];
+          
+          return {
+            ...leito,
+            dadosPaciente: {
+              ...leito.dadosPaciente,
+              historicoTransferencia: [...historicoAtual, novoRegistro]
+            }
+          };
+        }
+        return leito;
+      });
+
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+      toast({ title: "Etapa registrada", description: "Nova etapa adicionada ao histórico." });
+    } catch (error) {
+      console.error("Erro ao adicionar registro:", error);
+      toast({ title: "Erro", description: "Erro ao registrar etapa. Tente novamente.", variant: "destructive" });
+    }
+  };
+
+  const concluirTransferenciaExterna = async (setorId: string, leitoId: string) => {
+    await updateLeitoInSetor(setorId, leitoId, {
+      statusLeito: 'Higienizacao',
+      dataAtualizacaoStatus: new Date().toISOString(),
+      dadosPaciente: null,
+      regulacao: null
+    });
+    toast({ title: "Transferência Concluída!", description: "O leito foi liberado para higienização." });
   };
 
   const atualizarStatusLeito = async (setorId: string, leitoId: string, novoStatus: string, motivo?: string) => {
@@ -292,12 +342,11 @@ export const useSetores = () => {
       const setorData = setorDoc.data() as Setor;
       const leitosAtualizados = setorData.leitos.map(leito => {
         if (leito.id === leitoId && leito.dadosPaciente) {
+          const { transferirPaciente, destinoTransferencia, motivoTransferencia, dataTransferencia, statusTransferencia, historicoTransferencia, ...restoDados } = leito.dadosPaciente;
+          
           return { 
             ...leito, 
-            dadosPaciente: { 
-              ...leito.dadosPaciente, 
-              transferirPaciente: false 
-            } 
+            dadosPaciente: restoDados 
           };
         }
         return leito;
@@ -560,6 +609,8 @@ export const useSetores = () => {
     moverPaciente,
     atualizarRegrasIsolamento,
     finalizarIsolamentoPaciente,
-    adicionarIsolamentoPaciente
+    adicionarIsolamentoPaciente,
+    adicionarRegistroTransferencia,
+    concluirTransferenciaExterna
   };
 };
