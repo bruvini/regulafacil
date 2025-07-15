@@ -1,4 +1,3 @@
-
 import { 
   BedDouble, 
   Shield, 
@@ -35,7 +34,7 @@ interface AppLayoutProps {
 const menuItems = [
   {
     title: 'Início',
-    url: '/',
+    url: '/inicio',
     icon: Home,
   },
   {

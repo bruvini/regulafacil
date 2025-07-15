@@ -14,6 +14,7 @@ import GestaoEstrategica from "./pages/GestaoEstrategica";
 import Auditoria from "./pages/Auditoria";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
 import NotFound from "./pages/NotFound";
+import LoginPage from "./pages/LoginPage";
 import AppLayout from "./components/AppLayout";
 import Footer from "./components/Footer";
 
@@ -26,20 +27,19 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/regulacao-leitos" element={<RegulacaoLeitos />} />
-              <Route path="/mapa-leitos" element={<MapaLeitos />} />
-              <Route path="/gestao-isolamentos" element={<GestaoIsolamentos />} />
-              <Route path="/marcacao-cirurgica" element={<MarcacaoCirurgica />} />
-              <Route path="/huddle" element={<Huddle />} />
-              <Route path="/gestao-estrategica" element={<GestaoEstrategica />} />
-              <Route path="/auditoria" element={<Auditoria />} />
-              <Route path="/gestao-usuarios" element={<GestaoUsuarios />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppLayout>
+          <Routes>
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/inicio" element={<AppLayout><HomePage /></AppLayout>} />
+            <Route path="/regulacao-leitos" element={<AppLayout><RegulacaoLeitos /></AppLayout>} />
+            <Route path="/mapa-leitos" element={<AppLayout><MapaLeitos /></AppLayout>} />
+            <Route path="/gestao-isolamentos" element={<AppLayout><GestaoIsolamentos /></AppLayout>} />
+            <Route path="/marcacao-cirurgica" element={<AppLayout><MarcacaoCirurgica /></AppLayout>} />
+            <Route path="/huddle" element={<AppLayout><Huddle /></AppLayout>} />
+            <Route path="/gestao-estrategica" element={<AppLayout><GestaoEstrategica /></AppLayout>} />
+            <Route path="/auditoria" element={<AppLayout><Auditoria /></AppLayout>} />
+            <Route path="/gestao-usuarios" element={<AppLayout><GestaoUsuarios /></AppLayout>} />
+            <Route path="*" element={<AppLayout><NotFound /></AppLayout>} />
+          </Routes>
         </BrowserRouter>
         <Footer />
       </div>

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +20,7 @@ export const useUsuarios = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const auth = getAuth();
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'usuariosRegulaFacil'), (snapshot) => {
@@ -32,11 +34,8 @@ export const useUsuarios = () => {
   const criarUsuario = async (data: Omit<Usuario, 'id' | 'uid'>) => {
     setLoading(true);
     try {
-      // Lógica para criar no Firebase Auth e depois no Firestore
-      // Esta parte exigiria a configuração do Firebase Admin SDK no backend para segurança.
-      // Por enquanto, simularemos a criação e focaremos no Firestore.
-
       const emailCompleto = `${data.email}@joinville.sc.gov.br`;
+      const senhaPadrao = 'hmsj@123';
 
       // Verificar duplicidade
       const emailExists = usuarios.some(u => u.email === emailCompleto);
@@ -45,14 +44,21 @@ export const useUsuarios = () => {
       if (emailExists) throw new Error("Este e-mail já está em uso.");
       if (matriculaExists) throw new Error("Esta matrícula já está em uso.");
 
-      // Adicionar ao Firestore
+      // Crie o usuário no Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, emailCompleto, senhaPadrao);
+      const newUser = userCredential.user;
+
+      // Salve no Firestore, agora incluindo o UID do Auth
       await addDoc(collection(db, 'usuariosRegulaFacil'), {
-        ...data,
-        email: emailCompleto,
+        uid: newUser.uid,
         nomeCompleto: data.nomeCompleto.toUpperCase(),
+        matricula: data.matricula,
+        email: emailCompleto,
+        tipoAcesso: data.tipoAcesso,
+        permissoes: data.tipoAcesso === 'Comum' ? data.permissoes : [],
       });
 
-      toast({ title: "Sucesso!", description: "Usuário criado com sucesso." });
+      toast({ title: "Sucesso!", description: "Usuário criado no sistema e na autenticação." });
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
       toast({ title: "Erro", description: error.message || "Não foi possível criar o usuário.", variant: "destructive" });

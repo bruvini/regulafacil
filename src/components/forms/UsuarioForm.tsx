@@ -27,9 +27,14 @@ const paginasSistema = [
 ];
 
 const formSchema = z.object({
-  nomeCompleto: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  matricula: z.string().min(1, 'Matrícula é obrigatória'),
-  email: z.string().min(1, 'E-mail é obrigatório'),
+  nomeCompleto: z.string()
+    .min(3, { message: "O nome deve ter no mínimo 3 caracteres." })
+    .regex(/^[a-zA-Z\s]+$/, { message: "O nome deve conter apenas letras e espaços." }),
+  matricula: z.string()
+    .regex(/^\d+$/, { message: "A matrícula deve conter apenas números." }),
+  email: z.string()
+    .min(1, { message: "O e-mail é obrigatório." })
+    .refine(email => !email.includes('@'), { message: "Não inclua o '@' no e-mail." }),
   tipoAcesso: z.enum(['Comum', 'Administrador']),
   permissoes: z.array(z.string()).optional(),
 });
@@ -43,12 +48,12 @@ interface UsuarioFormProps {
 export const UsuarioForm = ({ onSubmit, initialData, loading }: UsuarioFormProps) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      nomeCompleto: initialData?.nomeCompleto || '',
-      matricula: initialData?.matricula || '',
-      email: initialData?.email?.replace('@joinville.sc.gov.br', '') || '',
-      tipoAcesso: initialData?.tipoAcesso || 'Comum',
-      permissoes: initialData?.permissoes || [],
+    defaultValues: initialData || {
+      nomeCompleto: '',
+      matricula: '',
+      email: '',
+      tipoAcesso: 'Administrador',
+      permissoes: [],
     },
   });
 
