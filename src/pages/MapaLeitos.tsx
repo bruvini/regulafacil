@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,12 +14,16 @@ import { useSetores } from '@/hooks/useSetores';
 import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
-import { Settings } from 'lucide-react';
+import { Settings, ShieldQuestion, ClipboardList } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
+import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
+import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 
 const MapaLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [movimentacaoModalOpen, setMovimentacaoModalOpen] = useState(false);
+  const [relatorioIsolamentoOpen, setRelatorioIsolamentoOpen] = useState(false);
+  const [relatorioVagosOpen, setRelatorioVagosOpen] = useState(false);
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
   const { setores, loading, moverPaciente } = useSetores();
   
@@ -123,17 +128,34 @@ const MapaLeitos = () => {
                 </CardHeader>
                 <CardContent>
                   <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button onClick={() => setModalOpen(true)} variant="outline" className="w-full">
-                          <Settings className="mr-2 h-4 w-4" />
-                          Gerenciar Setores e Leitos
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Abrir painel de gerenciamento</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <div className="flex space-x-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => setModalOpen(true)}>
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Gerenciar Setores e Leitos</p></TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => setRelatorioIsolamentoOpen(true)}>
+                            <ShieldQuestion className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Relatório de Isolamentos</p></TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => setRelatorioVagosOpen(true)}>
+                            <ClipboardList className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Relatório de Leitos Vagos</p></TooltipContent>
+                      </Tooltip>
+                    </div>
                   </TooltipProvider>
                 </CardContent>
               </Card>
@@ -275,6 +297,16 @@ const MapaLeitos = () => {
         onOpenChange={setMovimentacaoModalOpen}
         pacienteNome={pacienteParaMover?.dados?.nomePaciente || ''}
         onConfirm={handleConfirmarMovimentacao}
+      />
+
+      <RelatorioIsolamentosModal 
+        open={relatorioIsolamentoOpen} 
+        onOpenChange={setRelatorioIsolamentoOpen}
+      />
+
+      <RelatorioVagosModal
+        open={relatorioVagosOpen}
+        onOpenChange={setRelatorioVagosOpen}
       />
     </div>
   );
