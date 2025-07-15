@@ -536,13 +536,13 @@ const RegulacaoLeitos = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="shadow-card border border-border/50">
-            <CardHeader className="flex-row items-center justify-between py-3 px-4">
-              <CardTitle className="text-base font-semibold">Aguardando UTI</CardTitle>
-              <Badge variant="secondary">{pacientesAguardandoUTI.length}</Badge>
-            </CardHeader>
-            <CardContent className="p-2">
-              {pacientesAguardandoUTI.length > 0 ? (
+          {pacientesAguardandoUTI.length > 0 && (
+            <Card className="shadow-card border border-border/50">
+              <CardHeader className="flex-row items-center justify-between py-3 px-4">
+                <CardTitle className="text-base font-semibold">Aguardando UTI</CardTitle>
+                <Badge variant="secondary">{pacientesAguardandoUTI.length}</Badge>
+              </CardHeader>
+              <CardContent className="p-2">
                 <div className="space-y-1 max-h-64 overflow-y-auto">
                   {pacientesAguardandoUTI.map(p => (
                     <AguardandoUTIItem 
@@ -554,19 +554,17 @@ const RegulacaoLeitos = () => {
                     />
                   ))}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic text-center py-8">Nenhum paciente aguardando UTI.</p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="shadow-card border border-border/50">
-            <CardHeader className="flex-row items-center justify-between py-3 px-4">
-              <CardTitle className="text-base font-semibold">Aguardando Transferência</CardTitle>
-              <Badge variant="secondary">{pacientesAguardandoTransferencia.length}</Badge>
-            </CardHeader>
-            <CardContent className="p-2">
-              {pacientesAguardandoTransferencia.length > 0 ? (
+          {pacientesAguardandoTransferencia.length > 0 && (
+            <Card className="shadow-card border border-border/50">
+              <CardHeader className="flex-row items-center justify-between py-3 px-4">
+                <CardTitle className="text-base font-semibold">Aguardando Transferência</CardTitle>
+                <Badge variant="secondary">{pacientesAguardandoTransferencia.length}</Badge>
+              </CardHeader>
+              <CardContent className="p-2">
                 <div className="space-y-1 max-h-64 overflow-y-auto">
                   {pacientesAguardandoTransferencia.map(p => (
                     <AguardandoTransferenciaItem 
@@ -576,15 +574,13 @@ const RegulacaoLeitos = () => {
                     />
                   ))}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic text-center py-8">Nenhuma transferência pendente.</p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="shadow-card border border-border/50">
             <CardHeader><CardTitle>Cirurgias Eletivas</CardTitle></CardHeader>
-            <CardContent><p className="text-sm text-muted-foreground italic">Aqui serão listados os pacientes que aguardam leito para cirurgia eletiva.</p></CardContent>
+            <CardContent><p className="text-sm text-muted-foreground italic">Funcionalidade em desenvolvimento.</p></CardContent>
           </Card>
         </div>
 
@@ -592,29 +588,98 @@ const RegulacaoLeitos = () => {
           <AccordionItem value="item-1" className="border rounded-lg bg-card shadow-card">
             <AccordionTrigger className="px-4 hover:no-underline">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground">REGULAÇÕES PENDENTES</h3>
+                <h3 className="font-semibold text-foreground">Pacientes Aguardando Regulação</h3>
                 <Badge>{totalPendentes}</Badge>
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 space-y-6">
-              {/* Bloco 1: Listas por especialidade */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {renderListaComAgrupamento(
-                  "Decisão Cirúrgica", 
-                  decisaoCirurgica,
-                  handleOpenRegulacaoModal
-                )}
-                {renderListaComAgrupamento(
-                  "Decisão Clínica", 
-                  decisaoClinica,
-                  handleOpenRegulacaoModal
-                )}
-                {renderListaComAgrupamento(
-                  "Recuperação Cirúrgica", 
-                  recuperacaoCirurgica,
-                  handleOpenRegulacaoModal,
-                  altaAposRecuperacao
-                )}
+                {/* Bloco Decisão Cirúrgica */}
+                <Card className="shadow-card border border-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      Decisão Cirúrgica 
+                      <Badge variant="secondary">{decisaoCirurgica.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <ScrollArea className="h-72 pr-4">
+                      <div className="space-y-1">
+                        {decisaoCirurgica
+                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
+                          .map(paciente => (
+                            <PacientePendenteItem 
+                              key={paciente.leitoId}
+                              paciente={paciente}
+                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                              onConcluir={handleConcluir}
+                              onAlterar={handleAlterar}
+                              onCancelar={handleCancelar}
+                            />
+                          ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Bloco Decisão Clínica */}
+                <Card className="shadow-card border border-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      Decisão Clínica 
+                      <Badge variant="secondary">{decisaoClinica.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <ScrollArea className="h-72 pr-4">
+                      <div className="space-y-1">
+                        {decisaoClinica
+                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
+                          .map(paciente => (
+                            <PacientePendenteItem 
+                              key={paciente.leitoId}
+                              paciente={paciente}
+                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                              onConcluir={handleConcluir}
+                              onAlterar={handleAlterar}
+                              onCancelar={handleCancelar}
+                            />
+                          ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Bloco Recuperação Cirúrgica */}
+                <Card className="shadow-card border border-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      Recuperação Cirúrgica 
+                      <Badge variant="secondary">{recuperacaoCirurgica.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <ScrollArea className="h-72 pr-4">
+                      <div className="space-y-1">
+                        {recuperacaoCirurgica
+                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
+                          .map(paciente => (
+                            <PacientePendenteItem 
+                              key={paciente.leitoId}
+                              paciente={paciente}
+                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                              onConcluir={handleConcluir}
+                              onAlterar={handleAlterar}
+                              onCancelar={handleCancelar}
+                            />
+                          ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Bloco 2: Pacientes já regulados */}

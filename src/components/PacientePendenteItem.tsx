@@ -127,7 +127,7 @@ export const PacientePendenteItem = ({
                   <LogOut className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent><p>Dar Alta da Recuperação</p></TooltipContent>
+              <TooltipContent><p>Informar Alta</p></TooltipContent>
             </Tooltip>
           </TooltipProvider>
         )}

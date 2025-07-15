@@ -8,27 +8,24 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export const formatarDuracao = (dataISOouString: string | undefined | null): string => {
-  // Retorna 'N/A' imediatamente se a entrada for nula, indefinida ou vazia
   if (!dataISOouString) return 'N/A';
 
   let dataEntrada: Date;
 
-  // Tenta interpretar a data, primeiro como ISO, depois como formato customizado
-  const dataPotencial = new Date(dataISOouString);
-  if (isValid(dataPotencial)) {
-    dataEntrada = dataPotencial;
+  // Tenta o formato brasileiro primeiro, que é o mais comum no sistema
+  const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
+  if (isValid(dataParseada)) {
+    dataEntrada = dataParseada;
   } else {
-    // Tenta o formato customizado como último recurso
-    const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
-    if (isValid(dataParseada)) {
-      dataEntrada = dataParseada;
+    // Tenta como ISO (formato padrão do JS) como fallback
+    const dataPotencial = new Date(dataISOouString);
+    if (isValid(dataPotencial)) {
+      dataEntrada = dataPotencial;
     } else {
-      // Se tudo falhar, retorna um erro amigável sem quebrar a aplicação
       return 'Data Inválida';
     }
   }
 
-  // Se a dataEntrada for válida, calcula a duração
   try {
     const duracao = intervalToDuration({ start: dataEntrada, end: new Date() });
     const partes = [];
@@ -36,12 +33,10 @@ export const formatarDuracao = (dataISOouString: string | undefined | null): str
     if (duracao.hours && duracao.hours > 0) partes.push(`${duracao.hours}h`);
     if (duracao.minutes && duracao.minutes >= 0) partes.push(`${duracao.minutes}m`);
 
-    // Se a duração for muito curta, mostra 'Recente'
     if (partes.length === 0) return 'Recente';
 
     return partes.join(' ');
   } catch (error) {
-    // Captura qualquer erro inesperado do intervalToDuration
     return 'Erro de Cálculo';
   }
 };
