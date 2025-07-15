@@ -3,11 +3,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AlertTriangle, Copy, CheckCircle, BedDouble, ClipboardCheck } from 'lucide-react';
+import { AlertTriangle, Copy, CheckCircle, BedDouble } from 'lucide-react';
 import { DadosPaciente } from '@/types/hospital';
 import { useLeitoFinder } from '@/hooks/useLeitoFinder';
 import { useToast } from '@/hooks/use-toast';
@@ -42,12 +41,28 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
   const [observacoes, setObservacoes] = useState('');
   const [motivoAlteracao, setMotivoAlteracao] = useState('');
 
+  const pcpChecklist = [
+    "Menor de 18 anos ou maior de 60 anos?",
+    "Qual a comorbidade/condição?",
+    "É obeso(a)?",
+    "Possui acompanhante?",
+    "Qual o grau de dependência?",
+    "Apresenta risco de queda elevado?",
+    "Possui alguma limitação para se locomover?",
+    "Realizou alguma cirurgia de grande porte nos últimos 30 dias?",
+    "Apresentou queda ou desmaio nas últimas 24 horas?",
+    "Houve 2 ou mais episódios de alterações de sinais vitais nas últimas 24 horas?",
+    "Necessita de monitoramento contínuo?",
+    "Alguma condição que afete seu intelecto (AVC, alzheimer, parkinson, convulsão etc)?",
+    "Em uso de algum dispositivo invasivo além de acesso venoso (O2, tubo orotraqueal, traqueostomia, acesso venoso central, sonda vesical de demora etc)?",
+    "Necessidade de isolamento por infecção?"
+  ];
+
   useEffect(() => {
     if (open && paciente) {
       setLeitosDisponiveis(findAvailableLeitos(paciente, modo));
     }
     if (!open) {
-      // Resetar tudo quando o modal fechar
       setEtapa(isAlteracao ? 0 : 1);
       setLeitoSelecionado(null);
       setObservacoes('');
@@ -111,7 +126,7 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
 
   const renderContent = () => {
     switch (etapa) {
-      case 0: // Nova Etapa: Motivo da Alteração (só para isAlteracao)
+      case 0:
         return (
           <>
             <DialogDescription>Informe o motivo da alteração da regulação.</DialogDescription>
@@ -133,7 +148,7 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
             </DialogFooter>
           </>
         );
-      case 1: // Seleção de Leito
+      case 1:
         return (
           <>
             <DialogDescription>Selecione um leito disponível compatível com o perfil do paciente.</DialogDescription>
@@ -176,16 +191,24 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
             </ScrollArea>
           </>
         );
-      case 2: // Confirmação Final (etapa original)
-      case 3: // Confirmação Final (para modo alteração)
+      case 2:
+      case 3:
         return (
           <>
             <DialogDescription>Revise os dados da regulação e adicione observações se necessário.</DialogDescription>
             <div className="space-y-4 mt-4">
               {leitoSelecionado?.leitoPCP && (
-                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-xs space-y-1">
-                  <p className="font-bold flex items-center gap-1"><AlertTriangle className="h-4 w-4" />Atenção: Leito PCP Selecionado</p>
-                  <p>Confirme se o paciente atende aos critérios de elegibilidade antes de prosseguir.</p>
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-xs space-y-2">
+                  <p className="font-bold flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    Atenção: Leito PCP Selecionado!
+                  </p>
+                  <p>Apenas para ciência, o paciente atende aos critérios abaixo?</p>
+                  <ul className="list-disc list-inside pl-2 text-xs">
+                    {pcpChecklist.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
               <div className="p-4 bg-blue-50 dark:bg-blue-900/50 rounded-lg border border-blue-200">
@@ -199,8 +222,13 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
             </div>
             <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setEtapa(1)}>Voltar</Button>
-              <Button variant="secondary" onClick={copiarParaClipboard}><Copy className="mr-2 h-4 w-4"/>Copiar</Button>
-              <Button onClick={handleConfirmar}><CheckCircle className="mr-2 h-4 w-4"/>{isAlteracao ? 'Confirmar Alteração' : 'Confirmar Regulação'}</Button>
+              <Button variant="secondary" onClick={copiarParaClipboard}>
+                <Copy className="mr-2 h-4 w-4"/>Copiar
+              </Button>
+              <Button onClick={handleConfirmar}>
+                <CheckCircle className="mr-2 h-4 w-4"/>
+                {isAlteracao ? 'Confirmar Alteração' : 'Confirmar Regulação'}
+              </Button>
             </DialogFooter>
           </>
         );

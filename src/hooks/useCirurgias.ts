@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, onSnapshot, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, query, onSnapshot, orderBy, doc, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { SolicitacaoCirurgica, SolicitacaoCirurgicaFormData } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
@@ -108,11 +108,60 @@ export const useCirurgias = () => {
     }
   };
 
+  const reservarLeitoParaCirurgia = async (cirurgiaId: string, leito: any) => {
+    setLoading(true);
+    try {
+      const cirurgiaRef = doc(db, 'cirurgiasRegulaFacil', cirurgiaId);
+      const setorRef = doc(db, 'setoresRegulaFacil', leito.setorId);
+
+      const setorDoc = await getDoc(setorRef);
+      if (!setorDoc.exists()) throw new Error("Setor não encontrado");
+
+      const setorData = setorDoc.data();
+      const leitosAtualizados = setorData.leitos.map((l: any) => {
+        if (l.id === leito.id) {
+          return {
+            ...l,
+            statusLeito: 'Reservado' as const,
+            dataAtualizacaoStatus: new Date().toISOString(),
+            observacoes: `Reservado para cirurgia - ${cirurgiaId}`
+          };
+        }
+        return l;
+      });
+
+      const batch = writeBatch(db);
+      batch.update(cirurgiaRef, { 
+        leitoReservado: leito.codigoLeito, 
+        setorReservado: leito.setorNome,
+        status: 'Agendada' 
+      });
+      batch.update(setorRef, { leitos: leitosAtualizados });
+      await batch.commit();
+
+      toast({ 
+        title: "Sucesso!", 
+        description: `Leito ${leito.codigoLeito} reservado para cirurgia.` 
+      });
+    } catch (error) {
+      console.error('Erro ao reservar leito:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao reservar leito. Tente novamente.",
+        variant: "destructive"
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     cirurgias,
     loading,
     criarSolicitacao,
     atualizarSolicitacao,
-    excluirSolicitacao
+    excluirSolicitacao,
+    reservarLeitoParaCirurgia
   };
 };

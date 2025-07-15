@@ -9,8 +9,11 @@ import { Download, BedDouble, Ambulance, X, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
 import { useCirurgiasEletivas } from '@/hooks/useCirurgiasEletivas';
+import { useCirurgias } from '@/hooks/useCirurgias';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
+import { TransferenciaModal } from '@/components/modals/TransferenciaModal';
+import { AlocacaoCirurgiaModal } from '@/components/modals/AlocacaoCirurgiaModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
 import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
 import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
@@ -44,13 +47,17 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, cancelarPedidoRemanejamento } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, cancelarPedidoRemanejamento, iniciarTransferenciaExterna } = useSetores();
   const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
+  const { reservarLeitoParaCirurgia } = useCirurgias();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
+  const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
+  const [alocacaoCirurgiaModalOpen, setAlocacaoCirurgiaModalOpen] = useState(false);
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
   const [pacienteParaAcao, setPacienteParaAcao] = useState<any | null>(null);
+  const [cirurgiaParaAlocar, setCirurgiaParaAlocar] = useState<any | null>(null);
   const [isAlteracaoMode, setIsAlteracaoMode] = useState(false);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
@@ -117,8 +124,31 @@ const RegulacaoLeitos = () => {
   };
 
   const handleAlocarLeitoCirurgia = (cirurgia: any) => {
-    console.log("Alocar leito para:", cirurgia);
-    // Lógica para abrir um novo modal de alocação de leito
+    setCirurgiaParaAlocar(cirurgia);
+    setAlocacaoCirurgiaModalOpen(true);
+  };
+
+  const handleConfirmarAlocacaoCirurgia = async (cirurgia: any, leito: any) => {
+    try {
+      await reservarLeitoParaCirurgia(cirurgia.id, leito);
+      setAlocacaoCirurgiaModalOpen(false);
+      setCirurgiaParaAlocar(null);
+    } catch (error) {
+      console.error('Erro ao alocar leito para cirurgia:', error);
+    }
+  };
+
+  const handleIniciarTransferenciaExterna = (paciente: any) => {
+    setPacienteParaAcao(paciente);
+    setTransferenciaModalOpen(true);
+  };
+
+  const handleConfirmarTransferenciaExterna = (destino: string, motivo: string) => {
+    if (pacienteParaAcao) {
+      iniciarTransferenciaExterna(pacienteParaAcao.setorId, pacienteParaAcao.leitoId, destino, motivo);
+      setTransferenciaModalOpen(false);
+      setPacienteParaAcao(null);
+    }
   };
 
   const handleConcluir = (paciente: any) => {
@@ -557,7 +587,7 @@ const RegulacaoLeitos = () => {
                       key={p.leitoId}
                       paciente={p}
                       onCancel={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
-                      onTransfer={() => handleOpenRegulacaoModal(p, 'uti')}
+                      onTransfer={() => handleIniciarTransferenciaExterna(p)}
                       onRegularUTI={() => handleOpenRegulacaoModal(p, 'uti')}
                     />
                   ))}
@@ -779,6 +809,19 @@ const RegulacaoLeitos = () => {
           open={resumoModalOpen}
           onOpenChange={setResumoModalOpen}
           pacientesRegulados={pacientesJaRegulados}
+        />
+
+        <TransferenciaModal
+          open={transferenciaModalOpen}
+          onOpenChange={setTransferenciaModalOpen}
+          onConfirm={handleConfirmarTransferenciaExterna}
+        />
+
+        <AlocacaoCirurgiaModal
+          open={alocacaoCirurgiaModalOpen}
+          onOpenChange={setAlocacaoCirurgiaModalOpen}
+          cirurgia={cirurgiaParaAlocar}
+          onAlocarLeito={handleConfirmarAlocacaoCirurgia}
         />
 
         {pacienteParaRegular && (
