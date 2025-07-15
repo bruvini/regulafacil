@@ -1,13 +1,15 @@
 
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Setor } from '@/types/hospital';
+import { Setor, Leito } from '@/types/hospital';
 import LeitoCard from './LeitoCard';
 
 interface SetorCardProps {
   setor: Setor;
+  onMoverPaciente: (leito: Leito) => void;
+  onAbrirObs: (leito: Leito) => void;
 }
 
-const SetorCard = ({ setor }: SetorCardProps) => {
+const SetorCard = ({ setor, onMoverPaciente, onAbrirObs }: SetorCardProps) => {
   const leitosVagos = setor.leitos.filter(leito => leito.statusLeito === 'Vago').length;
   const totalLeitos = setor.leitos.length;
 
@@ -37,7 +39,8 @@ const SetorCard = ({ setor }: SetorCardProps) => {
                 leito={leito} 
                 setorId={setor.id!} 
                 todosLeitosDoSetor={setor.leitos}
-                onMoverPaciente={() => {}}
+                onMoverPaciente={onMoverPaciente}
+                onAbrirObs={onAbrirObs}
               />
             ))}
           </div>

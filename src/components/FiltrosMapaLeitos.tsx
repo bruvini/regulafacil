@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ interface FiltrosMapaLeitosProps {
     setor: string;
     sexo: string;
     status: string;
+    provavelAlta: string;
     isolamentos: string[];
   };
   setFiltros: (filtros: any) => void;
