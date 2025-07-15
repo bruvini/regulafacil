@@ -32,7 +32,11 @@ export const useSetores = () => {
   const criarSetor = async (novoSetor: Omit<Setor, 'id'>) => {
     setLoading(true);
     try {
-      await addDoc(collection(db, 'setoresRegulaFacil'), novoSetor);
+      const setorComLeitos = {
+        ...novoSetor,
+        leitos: novoSetor.leitos || []
+      };
+      await addDoc(collection(db, 'setoresRegulaFacil'), setorComLeitos);
       toast({ title: "Sucesso!", description: "Setor criado com sucesso." });
     } catch (error) {
       toast({ title: "Erro", description: "Erro ao criar setor. Tente novamente.", variant: "destructive" });
@@ -90,6 +94,157 @@ export const useSetores = () => {
       console.error("Erro ao atualizar leito:", error);
       toast({ title: "Erro", description: "Erro ao atualizar leito. Tente novamente.", variant: "destructive" });
     }
+  };
+
+  const atualizarStatusLeito = async (setorId: string, leitoId: string, novoStatus: string, motivo?: string) => {
+    const atualizacoes: Partial<Leito> = {
+      statusLeito: novoStatus as any,
+      dataAtualizacaoStatus: new Date().toISOString()
+    };
+    
+    if (motivo) {
+      atualizacoes.motivoBloqueio = motivo;
+    }
+
+    await updateLeitoInSetor(setorId, leitoId, atualizacoes);
+  };
+
+  const desbloquearLeito = async (setorId: string, leitoId: string) => {
+    await updateLeitoInSetor(setorId, leitoId, { 
+      statusLeito: 'Vago', 
+      motivoBloqueio: undefined,
+      dataAtualizacaoStatus: new Date().toISOString()
+    });
+  };
+
+  const finalizarHigienizacao = async (setorId: string, leitoId: string) => {
+    await updateLeitoInSetor(setorId, leitoId, { 
+      statusLeito: 'Vago',
+      dataAtualizacaoStatus: new Date().toISOString()
+    });
+  };
+
+  const liberarLeito = async (setorId: string, leitoId: string) => {
+    await updateLeitoInSetor(setorId, leitoId, { 
+      statusLeito: 'Higienizacao',
+      dadosPaciente: null,
+      dataAtualizacaoStatus: new Date().toISOString()
+    });
+  };
+
+  const solicitarUTI = async (setorId: string, leitoId: string) => {
+    const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+    const setorDoc = await getDoc(setorRef);
+
+    if (!setorDoc.exists()) return;
+
+    const setorData = setorDoc.data() as Setor;
+    const leitosAtualizados = setorData.leitos.map(leito => {
+      if (leito.id === leitoId && leito.dadosPaciente) {
+        return { 
+          ...leito, 
+          dadosPaciente: { 
+            ...leito.dadosPaciente, 
+            aguardaUTI: true,
+            dataPedidoUTI: new Date().toISOString()
+          } 
+        };
+      }
+      return leito;
+    });
+
+    await updateDoc(setorRef, { leitos: leitosAtualizados });
+    toast({ title: "UTI solicitada", description: "Paciente adicionado à fila de UTI." });
+  };
+
+  const solicitarRemanejamento = async (setorId: string, leitoId: string, motivo: string) => {
+    const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+    const setorDoc = await getDoc(setorRef);
+
+    if (!setorDoc.exists()) return;
+
+    const setorData = setorDoc.data() as Setor;
+    const leitosAtualizados = setorData.leitos.map(leito => {
+      if (leito.id === leitoId && leito.dadosPaciente) {
+        return { 
+          ...leito, 
+          dadosPaciente: { 
+            ...leito.dadosPaciente, 
+            remanejarPaciente: true,
+            motivoRemanejamento: motivo
+          } 
+        };
+      }
+      return leito;
+    });
+
+    await updateDoc(setorRef, { leitos: leitosAtualizados });
+    toast({ title: "Remanejamento solicitado", description: "Paciente marcado para remanejamento." });
+  };
+
+  const transferirPaciente = async (setorId: string, leitoId: string, destino: string, motivo: string) => {
+    const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+    const setorDoc = await getDoc(setorRef);
+
+    if (!setorDoc.exists()) return;
+
+    const setorData = setorDoc.data() as Setor;
+    const leitosAtualizados = setorData.leitos.map(leito => {
+      if (leito.id === leitoId && leito.dadosPaciente) {
+        return { 
+          ...leito, 
+          dadosPaciente: { 
+            ...leito.dadosPaciente, 
+            transferirPaciente: true,
+            destinoTransferencia: destino,
+            motivoTransferencia: motivo
+          } 
+        };
+      }
+      return leito;
+    });
+
+    await updateDoc(setorRef, { leitos: leitosAtualizados });
+    toast({ title: "Transferência solicitada", description: "Paciente marcado para transferência." });
+  };
+
+  const cancelarReserva = async (setorId: string, leitoId: string) => {
+    await updateLeitoInSetor(setorId, leitoId, { 
+      statusLeito: 'Vago',
+      dadosPaciente: null,
+      dataAtualizacaoStatus: new Date().toISOString()
+    });
+  };
+
+  const concluirTransferencia = async (leito: any, setorId: string) => {
+    await updateLeitoInSetor(setorId, leito.id, { 
+      statusLeito: 'Ocupado',
+      dataAtualizacaoStatus: new Date().toISOString()
+    });
+  };
+
+  const toggleProvavelAlta = async (setorId: string, leitoId: string) => {
+    const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+    const setorDoc = await getDoc(setorRef);
+
+    if (!setorDoc.exists()) return;
+
+    const setorData = setorDoc.data() as Setor;
+    const leitosAtualizados = setorData.leitos.map(leito => {
+      if (leito.id === leitoId && leito.dadosPaciente) {
+        return { 
+          ...leito, 
+          dadosPaciente: { 
+            ...leito.dadosPaciente, 
+            provavelAlta: !leito.dadosPaciente.provavelAlta
+          } 
+        };
+      }
+      return leito;
+    });
+
+    await updateDoc(setorRef, { leitos: leitosAtualizados });
+    toast({ title: "Provável alta atualizada", description: "Status de provável alta foi alterado." });
   };
 
   const cancelarPedidoUTI = async (setorId: string, leitoId: string) => {
@@ -345,6 +500,35 @@ export const useSetores = () => {
     toast({ title: "Transferência Externa Iniciada", description: "Paciente adicionado à fila de transferência externa." });
   };
 
+  // Mock functions for missing functionality
+  const adicionarLeito = async (setorId: string, leito: Partial<Leito>) => {
+    console.log("adicionarLeito not implemented");
+  };
+
+  const atualizarLeito = async (setorId: string, leitoId: string, dados: Partial<Leito>) => {
+    console.log("atualizarLeito not implemented");
+  };
+
+  const excluirLeito = async (setorId: string, leitoId: string) => {
+    console.log("excluirLeito not implemented");
+  };
+
+  const moverPaciente = async (origem: any, destino: any, paciente: any) => {
+    console.log("moverPaciente not implemented");
+  };
+
+  const atualizarRegrasIsolamento = async (setorId: string, leitoId: string, isolamentoId: string, regras: string[]) => {
+    console.log("atualizarRegrasIsolamento not implemented");
+  };
+
+  const finalizarIsolamentoPaciente = async (setorId: string, leitoId: string, isolamentoId: string) => {
+    console.log("finalizarIsolamentoPaciente not implemented");
+  };
+
+  const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, isolamento: any) => {
+    console.log("adicionarIsolamentoPaciente not implemented");
+  };
+
   return {
     setores,
     loading,
@@ -352,6 +536,16 @@ export const useSetores = () => {
     atualizarSetor,
     excluirSetor,
     updateLeitoInSetor,
+    atualizarStatusLeito,
+    desbloquearLeito,
+    finalizarHigienizacao,
+    liberarLeito,
+    solicitarUTI,
+    solicitarRemanejamento,
+    transferirPaciente,
+    cancelarReserva,
+    concluirTransferencia,
+    toggleProvavelAlta,
     cancelarPedidoUTI,
     cancelarTransferencia,
     cancelarPedidoRemanejamento,
@@ -359,6 +553,13 @@ export const useSetores = () => {
     cancelarRegulacao,
     concluirRegulacao,
     confirmarRegulacao,
-    iniciarTransferenciaExterna
+    iniciarTransferenciaExterna,
+    adicionarLeito,
+    atualizarLeito,
+    excluirLeito,
+    moverPaciente,
+    atualizarRegrasIsolamento,
+    finalizarIsolamentoPaciente,
+    adicionarIsolamentoPaciente
   };
 };

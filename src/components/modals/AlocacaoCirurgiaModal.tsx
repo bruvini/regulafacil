@@ -113,11 +113,11 @@ export const AlocacaoCirurgiaModal = ({ open, onOpenChange, cirurgia, onAlocarLe
                         <AccordionTrigger className="hover:no-underline">
                           <div className="flex justify-between items-center w-full pr-4">
                             <span className="font-semibold">{setorNome}</span>
-                            <Badge variant="secondary">{leitos.length}</Badge>
+                            <Badge variant="secondary">{(leitos as any[]).length}</Badge>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="space-y-2">
-                          {leitos.map(leito => (
+                          {(leitos as any[]).map(leito => (
                             <Card 
                               key={leito.id} 
                               className={`cursor-pointer transition-colors ${
