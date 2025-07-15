@@ -58,8 +58,8 @@ export const useLeitoFinder = () => {
                 return false;
             }
             
-            // 1. Filtro Básico: Apenas leitos vagos
-            if (leito.statusLeito !== 'Vago') return false;
+            // 1. Filtro Básico: Apenas leitos vagos ou em higienização
+            if (!['Vago', 'Higienizacao'].includes(leito.statusLeito)) return false;
             
             // 2. Filtro de Setor Excluído
             if (setoresExcluidos.includes(leito.setorNome)) return false;

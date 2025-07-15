@@ -19,9 +19,9 @@ export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Pr
 
   if (!paciente) return null;
 
-  const handleAddEtapa = () => {
+  const handleAddEtapa = async () => {
     if (novaEtapa.trim()) {
-      adicionarRegistroTransferencia(paciente.setorId, paciente.leitoId, novaEtapa);
+      await adicionarRegistroTransferencia(paciente.setorId, paciente.leitoId, novaEtapa);
       setNovaEtapa('');
     }
   };

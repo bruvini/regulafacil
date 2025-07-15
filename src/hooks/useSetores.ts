@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -221,7 +220,8 @@ export const useSetores = () => {
           dadosPaciente: { 
             ...leito.dadosPaciente, 
             remanejarPaciente: true,
-            motivoRemanejamento: motivo
+            motivoRemanejamento: motivo,
+            dataPedidoRemanejamento: new Date().toISOString()
           } 
         };
       }
@@ -377,7 +377,9 @@ export const useSetores = () => {
             ...leito, 
             dadosPaciente: { 
               ...leito.dadosPaciente, 
-              remanejarPaciente: false 
+              remanejarPaciente: false,
+              motivoRemanejamento: undefined,
+              dataPedidoRemanejamento: undefined
             } 
           };
         }
@@ -578,6 +580,40 @@ export const useSetores = () => {
     console.log("adicionarIsolamentoPaciente not implemented");
   };
 
+  const cancelarRemanejamentoPendente = async (setorId: string, leitoId: string) => {
+    try {
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      const setorDoc = await getDoc(setorRef);
+
+      if (!setorDoc.exists()) {
+        console.error("Setor não encontrado");
+        return;
+      }
+
+      const setorData = setorDoc.data() as Setor;
+      const leitosAtualizados = setorData.leitos.map(leito => {
+        if (leito.id === leitoId && leito.dadosPaciente) {
+          return { 
+            ...leito, 
+            dadosPaciente: { 
+              ...leito.dadosPaciente, 
+              remanejarPaciente: false,
+              motivoRemanejamento: undefined,
+              dataPedidoRemanejamento: undefined
+            } 
+          };
+        }
+        return leito;
+      });
+
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+      toast({ title: "Remanejamento cancelado", description: "Pedido de remanejamento cancelado." });
+    } catch (error) {
+      console.error("Erro ao cancelar remanejamento:", error);
+      toast({ title: "Erro", description: "Erro ao cancelar remanejamento. Tente novamente.", variant: "destructive" });
+    }
+  };
+
   return {
     setores,
     loading,
@@ -611,6 +647,7 @@ export const useSetores = () => {
     finalizarIsolamentoPaciente,
     adicionarIsolamentoPaciente,
     adicionarRegistroTransferencia,
-    concluirTransferenciaExterna
+    concluirTransferenciaExterna,
+    cancelarRemanejamentoPendente
   };
 };

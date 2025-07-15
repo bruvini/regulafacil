@@ -1,7 +1,6 @@
 
 import { DadosPaciente } from '@/types/hospital';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ClipboardList, X, Clock } from 'lucide-react';
@@ -21,8 +20,7 @@ export const AguardandoTransferenciaItem = ({ paciente, onCancel, onGerenciar }:
       <div>
         <p className="font-bold text-sm">{paciente.nomePaciente} → {paciente.destinoTransferencia}</p>
         <div className="flex items-center gap-2 mt-1">
-            <Badge variant="secondary">{paciente.statusTransferencia}</Badge>
-            <p className="text-xs text-muted-foreground">Motivo: {paciente.motivoTransferencia}</p>
+          <p className="text-xs text-muted-foreground">Motivo: {paciente.motivoTransferencia}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">

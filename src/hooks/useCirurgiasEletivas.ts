@@ -16,15 +16,14 @@ export const useCirurgiasEletivas = () => {
     const q = query(
       collection(db, 'cirurgiasRegulaFacil'),
       where('dataPrevistaInternacao', '>=', hoje),
-      where('dataPrevistaInternacao', '<=', fimAmanha),
-      where('leitoReservado', '==', null) // <-- Filtro adicionado
+      where('dataPrevistaInternacao', '<=', fimAmanha)
     );
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const cirurgiasCarregadas: SolicitacaoCirurgica[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as SolicitacaoCirurgica));
+      const cirurgiasCarregadas: SolicitacaoCirurgica[] = querySnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as SolicitacaoCirurgica))
+        .filter(cirurgia => !cirurgia.leitoReservado);
+      
       setCirurgias(cirurgiasCarregadas);
       setLoading(false);
     });

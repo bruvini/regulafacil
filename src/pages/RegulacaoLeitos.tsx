@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
 import { useCirurgiasEletivas } from '@/hooks/useCirurgiasEletivas';
 import { useCirurgias } from '@/hooks/useCirurgias';
+import { useAlertasIsolamento } from '@/hooks/useAlertasIsolamento';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
 import { TransferenciaModal } from '@/components/modals/TransferenciaModal';
@@ -49,9 +49,10 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, cancelarPedidoRemanejamento, iniciarTransferenciaExterna } = useSetores();
+  const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, cancelarPedidoRemanejamento, iniciarTransferenciaExterna, solicitarRemanejamento, cancelarRemanejamentoPendente } = useSetores();
   const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
   const { reservarLeitoParaCirurgia } = useCirurgias();
+  const { alertas } = useAlertasIsolamento();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
@@ -185,6 +186,32 @@ const RegulacaoLeitos = () => {
     setCancelamentoModalOpen(false);
     setPacienteParaAcao(null);
   };
+
+  // Integração com alertas de isolamento
+  useEffect(() => {
+    const pacientesEmRemanejamento = todosPacientesPendentes.filter(p => p.remanejarPaciente);
+
+    // Adicionar pacientes dos alertas que não estão na lista de remanejamento
+    alertas.forEach(alerta => {
+      const jaExiste = pacientesEmRemanejamento.some(p => p.nomePaciente === alerta.nomePaciente);
+      if (!jaExiste) {
+        const pacienteParaRemanejar = todosPacientesPendentes.find(p => p.nomePaciente === alerta.nomePaciente);
+        if (pacienteParaRemanejar) {
+          solicitarRemanejamento(pacienteParaRemanejar.setorId, pacienteParaRemanejar.leitoId, alerta.motivo);
+        }
+      }
+    });
+
+    // Remover da lista de remanejamento se o alerta não existir mais
+    pacientesEmRemanejamento.forEach(paciente => {
+      if (paciente.motivoRemanejamento?.startsWith('Risco de contaminação')) {
+        const aindaEmAlerta = alertas.some(a => a.nomePaciente === paciente.nomePaciente);
+        if (!aindaEmAlerta) {
+          cancelarRemanejamentoPendente(paciente.setorId, paciente.leitoId);
+        }
+      }
+    });
+  }, [alertas, todosPacientesPendentes, solicitarRemanejamento, cancelarRemanejamentoPendente]);
 
   const renderListaComAgrupamento = (titulo: string, pacientes: any[], onRegularClick?: (paciente: any) => void, onAlta?: (setorId: string, leitoId: string) => void) => {
     const pacientesAgrupados = agruparPorEspecialidade(pacientes);
