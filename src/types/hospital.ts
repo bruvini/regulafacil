@@ -1,3 +1,4 @@
+
 // Adicione esta nova interface no topo
 export interface IsolamentoVigente {
   isolamentoId: string; // ID do tipo de isolamento da coleção isolamentosRegulaFacil
@@ -26,6 +27,8 @@ export interface DadosPaciente {
   motivoTransferencia?: string;
   dataTransferencia?: string;
   statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
+  
+  provavelAlta?: boolean; // Novo campo para provável alta
   
   isolamentosVigentes?: IsolamentoVigente[];
   
