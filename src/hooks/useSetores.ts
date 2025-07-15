@@ -1048,6 +1048,23 @@ export const useSetores = () => {
     }
   };
 
+  const toggleProvavelAlta = async (setorId: string, leitoId: string) => {
+    const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+    if (!leito?.dadosPaciente) return;
+
+    const novosDados = { ...leito.dadosPaciente };
+    const temProvavelAlta = !!novosDados.provavelAlta;
+
+    if (temProvavelAlta) {
+      delete novosDados.provavelAlta;
+    } else {
+      novosDados.provavelAlta = true;
+    }
+
+    await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: novosDados });
+    toast({ title: "Status de Alta Atualizado!" });
+  };
+
   return {
     setores,
     loading,
@@ -1079,5 +1096,6 @@ export const useSetores = () => {
     concluirTransferencia,
     cancelarPedidoRemanejamento,
     moverPaciente,
+    toggleProvavelAlta,
   };
 };

@@ -12,6 +12,7 @@ import {
   BrainCircuit
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +26,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -97,19 +99,29 @@ function AppSidebar() {
                 
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={isActive}>
-                      <NavLink 
-                        to={item.url}
-                        className={({ isActive }) => 
-                          isActive 
-                            ? 'bg-medical-primary/10 text-medical-primary font-medium border-r-2 border-medical-primary' 
-                            : 'hover:bg-medical-primary/5 text-foreground'
-                        }
-                      >
-                        <IconComponent className="mr-2 h-4 w-4" />
-                        {state !== 'collapsed' && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton asChild isActive={isActive}>
+                            <NavLink 
+                              to={item.url}
+                              className={({ isActive }) => 
+                                cn(
+                                  'flex items-center w-full h-full',
+                                  isActive ? 'bg-medical-primary/10 text-medical-primary' : 'hover:bg-medical-primary/5 text-foreground'
+                                )
+                              }
+                            >
+                              <IconComponent className={cn("h-5 w-5", state === 'expanded' ? 'mr-2' : 'mx-auto')} />
+                              {state !== 'collapsed' && <span>{item.title}</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        {state === 'collapsed' && (
+                          <TooltipContent side="right"><p>{item.title}</p></TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   </SidebarMenuItem>
                 );
               })}
@@ -123,7 +135,7 @@ function AppSidebar() {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         

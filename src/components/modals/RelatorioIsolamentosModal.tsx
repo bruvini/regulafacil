@@ -22,7 +22,10 @@ export const RelatorioIsolamentosModal = ({ open, onOpenChange }: Props) => {
           leito: l.codigoLeito,
           nome: l.dadosPaciente!.nomePaciente,
           sexo: l.dadosPaciente!.sexoPaciente.charAt(0),
-          isolamentos: l.dadosPaciente!.isolamentosVigentes!.map(i => i.sigla).join(', ')
+          isolamentos: l.dadosPaciente!.isolamentosVigentes!.map(i => ({
+            sigla: i.sigla,
+            dataInicio: i.dataInicioVigilancia
+          }))
         }));
 
       if (pacientesDoSetor.length > 0) {
@@ -49,13 +52,20 @@ export const RelatorioIsolamentosModal = ({ open, onOpenChange }: Props) => {
                           <CardTitle className="text-base">{setorNome}</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
-                          <ul className="list-disc list-inside space-y-1 text-sm">
+                          <div className="space-y-2">
                             {pacientes.map(p => (
-                              <li key={p.leito}>
-                                <strong>{p.leito}:</strong> {p.nome} ({p.sexo}) - <span className="font-semibold text-red-600">{p.isolamentos}</span>
-                              </li>
+                              <div key={p.leito} className="text-sm border-b pb-2 last:border-b-0">
+                                <p><strong>{p.leito}:</strong> {p.nome} ({p.sexo})</p>
+                                <ul className="list-disc list-inside pl-4 mt-1">
+                                  {p.isolamentos.map((iso: any) => (
+                                    <li key={iso.sigla}>
+                                      <span className="font-semibold text-red-600">{iso.sigla}:</span> Incluído em {new Date(iso.dataInicio).toLocaleDateString('pt-BR')}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
                             ))}
-                          </ul>
+                          </div>
                         </CardContent>
                       </Card>
                     ))

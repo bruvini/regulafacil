@@ -1,6 +1,6 @@
 
 import { useState, useMemo } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, ArrowRightLeft as RemanejarIcon, Ambulance as TransferenciaIcon, AlertTriangle as UtiIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +36,7 @@ const calcularIdade = (dataNascimento: string): string => {
 };
 
 const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: LeitoCardProps) => {
-  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente, cancelarReserva, concluirTransferencia } = useSetores();
+  const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente, cancelarReserva, concluirTransferencia, toggleProvavelAlta } = useSetores();
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
   const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
@@ -72,12 +72,13 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
   const handleConfirmarTransferencia = (destino: string, motivo: string) => transferirPaciente(setorId, leito.id, destino, motivo);
   const handleCancelarReserva = () => cancelarReserva(setorId, leito.id);
   const handleConfirmarTransferenciaInterna = () => concluirTransferencia(leito, setorId);
+  const handleToggleProvavelAlta = () => toggleProvavelAlta(setorId, leito.id);
 
   return (
     <>
       {/* A ESTRUTURA PRINCIPAL DO CARD */}
       <Card className={cn(
-        "flex flex-col min-w-[260px] h-[220px] p-3 shadow-card hover:shadow-medical transition-all duration-200 border", // LARGURA MÍNIMA E ALTURA FIXA
+        "flex flex-col min-w-[260px] h-[220px] p-3 shadow-card hover:shadow-medical transition-all duration-200 border",
         paciente?.sexoPaciente === 'Feminino' && 'border-2 border-pink-500',
         paciente?.sexoPaciente === 'Masculino' && 'border-2 border-blue-500'
       )}>
@@ -97,7 +98,55 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
               <LeitoStatusIsolamento isolamentos={infoBloqueioIsolamento.isolamentos} sexo={infoBloqueioIsolamento.sexo} />
             ) : leito.statusLeito === 'Ocupado' && paciente ? (
               <div className="text-left space-y-1">
-                <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground flex-shrink-0" /><p className="font-medium text-sm leading-tight truncate">{paciente.nomePaciente}</p></div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <p className="font-medium text-sm leading-tight truncate">{paciente.nomePaciente}</p>
+                  </div>
+                  {/* ÍCONES DE STATUS DO PACIENTE */}
+                  <div className="flex items-center space-x-1">
+                    {paciente.provavelAlta && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Bell className="h-4 w-4 text-green-500" />
+                          </TooltipTrigger>
+                          <TooltipContent><p>Provável Alta</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {paciente.aguardaUTI && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <UtiIcon className="h-4 w-4 text-red-500" />
+                          </TooltipTrigger>
+                          <TooltipContent><p>Aguardando UTI</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {paciente.remanejarPaciente && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <RemanejarIcon className="h-4 w-4 text-yellow-500" />
+                          </TooltipTrigger>
+                          <TooltipContent><p>Remanejamento Solicitado</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {paciente.transferirPaciente && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <TransferenciaIcon className="h-4 w-4 text-blue-500" />
+                          </TooltipTrigger>
+                          <TooltipContent><p>Transferência Externa</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground pl-6">{calcularIdade(paciente.dataNascimento)} anos • {paciente.sexoPaciente?.charAt(0) || '?'}</p>
                 <div className="flex items-center gap-2"><Stethoscope className="h-4 w-4 text-muted-foreground flex-shrink-0" /><p className="text-xs text-muted-foreground truncate">{paciente.especialidadePaciente}</p></div>
                 {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
@@ -365,6 +414,17 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent><p>Transferência Externa</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleToggleProvavelAlta}>
+                        <LogOut className={`h-4 w-4 ${paciente?.provavelAlta ? 'text-green-500' : ''}`} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Sinalizar Provável Alta</p></TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
