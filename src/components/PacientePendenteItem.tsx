@@ -3,6 +3,7 @@ import { DadosPaciente } from '@/types/hospital';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { LogIn, LogOut, Clock, CheckCheck, Pencil, XCircle } from 'lucide-react';
 import { formatarDuracao } from '@/lib/utils';
 
@@ -120,16 +121,32 @@ export const PacientePendenteItem = ({
         )}
         
         {onAlta && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={onAlta}>
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Informar Alta</p></TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <AlertDialog>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600">
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent><p>Informar Alta</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Alta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação irá liberar o leito do paciente. Deseja continuar?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={onAlta}>Confirmar Alta</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
     </div>

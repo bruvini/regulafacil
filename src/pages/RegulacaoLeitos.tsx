@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Download, BedDouble, Ambulance, X, Clock } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSetores } from '@/hooks/useSetores';
+import { useCirurgiasEletivas } from '@/hooks/useCirurgiasEletivas';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
 import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
@@ -16,6 +17,7 @@ import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
 import { AguardandoTransferenciaItem } from '@/components/AguardandoTransferenciaItem';
 import { PacientePendenteItem } from '@/components/PacientePendenteItem';
 import { RemanejamentoPendenteItem } from '@/components/RemanejamentoPendenteItem';
+import { CirurgiaEletivaItem } from '@/components/CirurgiaEletivaItem';
 import { DadosPaciente } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
 import { collection, doc, writeBatch } from 'firebase/firestore';
@@ -43,6 +45,7 @@ interface SyncSummary {
 
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading, cancelarPedidoUTI, cancelarTransferencia, altaAposRecuperacao, confirmarRegulacao, concluirRegulacao, cancelarRegulacao, cancelarPedidoRemanejamento } = useSetores();
+  const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
   const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
@@ -111,6 +114,11 @@ const RegulacaoLeitos = () => {
       (acc[especialidade] = acc[especialidade] || []).push(paciente);
       return acc;
     }, {} as Record<string, any[]>);
+  };
+
+  const handleAlocarLeitoCirurgia = (cirurgia: any) => {
+    console.log("Alocar leito para:", cirurgia);
+    // Lógica para abrir um novo modal de alocação de leito
   };
 
   const handleConcluir = (paciente: any) => {
@@ -578,10 +586,21 @@ const RegulacaoLeitos = () => {
             </Card>
           )}
 
-          <Card className="shadow-card border border-border/50">
-            <CardHeader><CardTitle>Cirurgias Eletivas</CardTitle></CardHeader>
-            <CardContent><p className="text-sm text-muted-foreground italic">Funcionalidade em desenvolvimento.</p></CardContent>
-          </Card>
+          {cirurgias.length > 0 && (
+            <Card className="shadow-card border border-border/50">
+              <CardHeader className="flex-row items-center justify-between py-3 px-4">
+                <CardTitle className="text-base font-semibold">Cirurgias Eletivas (Próx. 48h)</CardTitle>
+                <Badge variant="secondary">{cirurgias.length}</Badge>
+              </CardHeader>
+              <CardContent className="p-2">
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {cirurgias.map(c => (
+                    <CirurgiaEletivaItem key={c.id} cirurgia={c} onAlocarLeito={handleAlocarLeitoCirurgia} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <Accordion type="multiple" className="w-full space-y-4">
@@ -594,7 +613,6 @@ const RegulacaoLeitos = () => {
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Bloco Decisão Cirúrgica */}
                 <Card className="shadow-card border border-border/50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -623,7 +641,6 @@ const RegulacaoLeitos = () => {
                   </CardContent>
                 </Card>
 
-                {/* Bloco Decisão Clínica */}
                 <Card className="shadow-card border border-border/50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -652,7 +669,6 @@ const RegulacaoLeitos = () => {
                   </CardContent>
                 </Card>
 
-                {/* Bloco Recuperação Cirúrgica */}
                 <Card className="shadow-card border border-border/50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -682,12 +698,11 @@ const RegulacaoLeitos = () => {
                 </Card>
               </div>
 
-              {/* Bloco 2: Pacientes já regulados */}
               {pacientesJaRegulados.length > 0 && (
                 <div className="pt-4 border-t">
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="font-semibold flex items-center gap-2">
-                      Pacientes com Regulação Definida
+                      Pacientes Regulados
                       <Badge variant="secondary">{pacientesJaRegulados.length}</Badge>
                     </h4>
                     <Button size="sm" variant="outline" onClick={() => setResumoModalOpen(true)}>

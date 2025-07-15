@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,22 +24,6 @@ interface RegulacaoModalProps {
   modo?: 'normal' | 'uti';
 }
 
-const pcpChecklist = [
-  "Estar entre 18 e 60 anos de idade",
-  "Não ser obeso",
-  "Não possuir acompanhante",
-  "Ser independente nas tarefas diárias",
-  "Não ter risco de queda",
-  "Não possuir limitações de movimento",
-  "Não ter realizado cirurgia de grande porte nos últimos 30 dias",
-  "Não ter tido quedas ou desmaios nas últimas 24h",
-  "Não ter tido 2 ou mais episódios de alterações de SSVV nas últimas 24h",
-  "Não precisar de monitoramento contínuo",
-  "Não possuir condições que afete seu intelecto (AVC, Alzheimer, Parkinson, Convulsão, etc)",
-  "Não usar dispositivos invasivos além de Acesso Venoso Periférico",
-  "Não necessitar de isolamento por infecção"
-];
-
 const calcularIdade = (dataNascimento?: string): string => {
     if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
     const [dia, mes, ano] = dataNascimento.split('/').map(Number);
@@ -54,7 +39,6 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
   const [leitosDisponiveis, setLeitosDisponiveis] = useState<any[]>([]);
   const [leitoSelecionado, setLeitoSelecionado] = useState<any | null>(null);
   const [etapa, setEtapa] = useState(1);
-  const [pcpChecks, setPcpChecks] = useState<boolean[]>(Array(pcpChecklist.length).fill(false));
   const [observacoes, setObservacoes] = useState('');
   const [motivoAlteracao, setMotivoAlteracao] = useState('');
 
@@ -66,7 +50,6 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
       // Resetar tudo quando o modal fechar
       setEtapa(isAlteracao ? 0 : 1);
       setLeitoSelecionado(null);
-      setPcpChecks(Array(pcpChecklist.length).fill(false));
       setObservacoes('');
       setMotivoAlteracao('');
     }
@@ -81,13 +64,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
 
   const handleSelectLeito = (leito: any) => {
     setLeitoSelecionado(leito);
-    if (leito.leitoPCP) setEtapa(2);
-    else setEtapa(3);
-  };
-
-  const handlePcpConfirm = () => {
-    if (pcpChecks.every(Boolean)) setEtapa(isAlteracao ? 4 : 3);
-    else toast({ title: "Atenção", description: "Todos os critérios para o Leito PCP devem ser confirmados.", variant: "destructive" });
+    setEtapa(isAlteracao ? 3 : 2);
   };
 
   const getMensagemConfirmacao = () => {
@@ -123,6 +100,13 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
     const mensagem = getMensagemConfirmacao();
     navigator.clipboard.writeText(mensagem);
     toast({ title: "Copiado!", description: "Mensagem de regulação copiada para a área de transferência." });
+  };
+
+  const handleConfirmar = () => {
+    const mensagem = getMensagemConfirmacao();
+    navigator.clipboard.writeText(mensagem);
+    toast({ title: "Regulação Confirmada!", description: "A mensagem foi copiada para a área de transferência." });
+    onConfirmRegulacao(leitoSelecionado, observacoes, motivoAlteracao);
   };
 
   const renderContent = () => {
@@ -192,32 +176,18 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
             </ScrollArea>
           </>
         );
-      case 2: // Checklist PCP
-        return (
-          <>
-            <DialogDescription className="flex items-center gap-2 text-amber-700"><AlertTriangle/>O leito selecionado é um Leito PCP. Confirme todos os critérios de elegibilidade.</DialogDescription>
-            <ScrollArea className="h-[50vh] mt-4">
-                <Card><CardContent className="p-4 space-y-3">
-                    {pcpChecklist.map((item, index) => (
-                        <div key={index} className="flex items-center space-x-2">
-                            <Checkbox id={`pcp-${index}`} checked={pcpChecks[index]} onCheckedChange={(checked) => setPcpChecks(prev => prev.map((c, i) => i === index ? !!checked : c))} />
-                            <Label htmlFor={`pcp-${index}`} className="text-sm">{item}</Label>
-                        </div>
-                    ))}
-                </CardContent></Card>
-            </ScrollArea>
-            <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setEtapa(isAlteracao ? 1 : 1)}>Voltar</Button>
-              <Button onClick={handlePcpConfirm}><ClipboardCheck className="mr-2 h-4 w-4"/>Confirmar Critérios</Button>
-            </DialogFooter>
-          </>
-        );
-      case 3: // Confirmação Final (etapa original)
-      case 4: // Confirmação Final (para modo alteração)
+      case 2: // Confirmação Final (etapa original)
+      case 3: // Confirmação Final (para modo alteração)
         return (
           <>
             <DialogDescription>Revise os dados da regulação e adicione observações se necessário.</DialogDescription>
             <div className="space-y-4 mt-4">
+              {leitoSelecionado?.leitoPCP && (
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-xs space-y-1">
+                  <p className="font-bold flex items-center gap-1"><AlertTriangle className="h-4 w-4" />Atenção: Leito PCP Selecionado</p>
+                  <p>Confirme se o paciente atende aos critérios de elegibilidade antes de prosseguir.</p>
+                </div>
+              )}
               <div className="p-4 bg-blue-50 dark:bg-blue-900/50 rounded-lg border border-blue-200">
                   <p className="whitespace-pre-wrap font-mono text-xs">{getMensagemConfirmacao()}</p>
               </div>
@@ -228,9 +198,9 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
               />
             </div>
             <DialogFooter className="mt-4">
-              <Button variant="outline" onClick={() => setEtapa(leitoSelecionado?.leitoPCP ? 2 : 1)}>Voltar</Button>
+              <Button variant="outline" onClick={() => setEtapa(1)}>Voltar</Button>
               <Button variant="secondary" onClick={copiarParaClipboard}><Copy className="mr-2 h-4 w-4"/>Copiar</Button>
-              <Button onClick={() => onConfirmRegulacao(leitoSelecionado, observacoes, motivoAlteracao)}><CheckCircle className="mr-2 h-4 w-4"/>{isAlteracao ? 'Confirmar Alteração' : 'Confirmar Regulação'}</Button>
+              <Button onClick={handleConfirmar}><CheckCircle className="mr-2 h-4 w-4"/>{isAlteracao ? 'Confirmar Alteração' : 'Confirmar Regulação'}</Button>
             </DialogFooter>
           </>
         );

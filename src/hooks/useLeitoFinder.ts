@@ -1,3 +1,4 @@
+
 import { useMemo, useCallback } from 'react';
 import { useSetores } from './useSetores';
 import { Leito, DadosPaciente } from '@/types/hospital';
@@ -44,9 +45,19 @@ export const useLeitoFinder = () => {
             "UNID. AVC AGUDO", "UNID. DE AVC - INTEGRAL"
         ];
 
+        const setoresEnfermariaPermitidos = [
+            "UNID. CLINICA MEDICA", "UNID. CIRURGICA", "UNID. NEFROLOGIA TRANSPLANTE", 
+            "UNID. JS ORTOPEDIA", "UNID. ONCOLOGIA", "UNID. INT. GERAL - UIG"
+        ];
+
         const isolamentosPacienteStr = paciente.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
 
         const leitosDisponiveis = todosLeitosComSetor.filter(leito => {
+            // Filtro de enfermaria permitida para modo normal
+            if (modo === 'normal' && !setoresEnfermariaPermitidos.includes(leito.setorNome)) {
+                return false;
+            }
+            
             // 1. Filtro Básico: Apenas leitos vagos
             if (leito.statusLeito !== 'Vago') return false;
             
