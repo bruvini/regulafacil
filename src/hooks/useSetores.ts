@@ -168,7 +168,7 @@ export const useSetores = () => {
 
       const leitosAtualizados = setor.leitos.map(l => 
         l.id === leitoId && l.dadosPaciente
-          ? { ...l, dadosPaciente: { ...l.dadosPaciente, remanejarPaciente: true } }
+          ? { ...l, dadosPaciente: { ...l.dadosPaciente, remanejarPaciente: true, motivoRemanejamento: motivo } }
           : l
       );
 
@@ -310,7 +310,7 @@ export const useSetores = () => {
     }
   };
 
-  const atualizarSetor = async (setorId: string, data: SetorFormData) => {
+  const atualizarSetor = async (setorId: string, data: any) => {
     setLoading(true);
     try {
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
@@ -450,14 +450,12 @@ export const useSetores = () => {
     try {
       const batch = writeBatch(db);
       
-      // Find source sector and bed
       const setorOrigem = setores.find(s => s.id === origemSetorId);
       if (!setorOrigem) throw new Error('Setor de origem não encontrado');
       
       const leitoOrigem = setorOrigem.leitos.find(l => l.id === origemLeitoId);
       if (!leitoOrigem?.dadosPaciente) throw new Error('Paciente não encontrado');
 
-      // Update source bed
       const leitosOrigemAtualizados = setorOrigem.leitos.map(l => 
         l.id === origemLeitoId 
           ? { ...l, statusLeito: 'Higienizacao', dadosPaciente: null, dataAtualizacaoStatus: new Date().toISOString() }
@@ -467,7 +465,6 @@ export const useSetores = () => {
       const setorOrigemRef = doc(db, 'setoresRegulaFacil', origemSetorId);
       batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizados });
 
-      // Update destination bed
       const setorDestino = setores.find(s => s.id === destinoSetorId);
       if (!setorDestino) throw new Error('Setor de destino não encontrado');
 
@@ -571,19 +568,39 @@ export const useSetores = () => {
     }
   };
 
-  const adicionarRegistroTransferencia = async (data: any) => {
+  const adicionarRegistroTransferencia = async (setorId: string, leitoId: string, etapa: string) => {
     setLoading(true);
     try {
-      await addDoc(collection(db, 'transferencias'), data);
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => 
+        l.id === leitoId && l.dadosPaciente
+          ? { 
+              ...l, 
+              dadosPaciente: { 
+                ...l.dadosPaciente, 
+                historicoTransferencia: [...(l.dadosPaciente.historicoTransferencia || []), {
+                  data: new Date().toISOString(),
+                  etapa
+                }]
+              }
+            }
+          : l
+      );
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+
       toast({
         title: "Sucesso",
-        description: "Transferência registrada com sucesso",
+        description: "Etapa registrada com sucesso",
       });
     } catch (error) {
-      console.error('Erro ao registrar transferência:', error);
+      console.error('Erro ao registrar etapa:', error);
       toast({
         title: "Erro",
-        description: "Erro ao registrar transferência",
+        description: "Erro ao registrar etapa",
         variant: "destructive",
       });
     } finally {
@@ -591,11 +608,21 @@ export const useSetores = () => {
     }
   };
 
-  const concluirTransferenciaExterna = async (transferId: string) => {
+  const concluirTransferenciaExterna = async (setorId: string, leitoId: string) => {
     setLoading(true);
     try {
-      const transferRef = doc(db, 'transferencias', transferId);
-      await updateDoc(transferRef, { status: 'concluida' });
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => 
+        l.id === leitoId 
+          ? { ...l, statusLeito: 'Higienizacao', dadosPaciente: null, dataAtualizacaoStatus: new Date().toISOString() }
+          : l
+      );
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+
       toast({
         title: "Sucesso",
         description: "Transferência externa concluída",
@@ -612,11 +639,21 @@ export const useSetores = () => {
     }
   };
 
-  const cancelarTransferencia = async (transferId: string) => {
+  const cancelarTransferencia = async (setorId: string, leitoId: string) => {
     setLoading(true);
     try {
-      const transferRef = doc(db, 'transferencias', transferId);
-      await updateDoc(transferRef, { status: 'cancelada' });
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => 
+        l.id === leitoId && l.dadosPaciente
+          ? { ...l, dadosPaciente: { ...l.dadosPaciente, transferirPaciente: false, historicoTransferencia: [] } }
+          : l
+      );
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+
       toast({
         title: "Sucesso",
         description: "Transferência cancelada",
@@ -631,6 +668,219 @@ export const useSetores = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const altaAposRecuperacao = async (setorId: string, leitoId: string) => {
+    setLoading(true);
+    try {
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => 
+        l.id === leitoId 
+          ? { ...l, statusLeito: 'Higienizacao', dadosPaciente: null, dataAtualizacaoStatus: new Date().toISOString() }
+          : l
+      );
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      toast({
+        title: "Sucesso",
+        description: "Alta registrada com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao registrar alta:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao registrar alta",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmarRegulacao = async (paciente: any, origem: any, leitoDestino: any, observacoes: string) => {
+    setLoading(true);
+    try {
+      const setor = setores.find(s => s.id === paciente.setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => 
+        l.id === paciente.leitoId 
+          ? { 
+              ...l, 
+              statusLeito: 'Regulado',
+              regulacao: {
+                paraSetor: leitoDestino.setorNome,
+                paraLeito: leitoDestino.codigoLeito,
+                observacoes,
+                dataRegulacao: new Date().toISOString()
+              }
+            }
+          : l
+      );
+
+      const setorRef = doc(db, 'setoresRegulaFacil', paciente.setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      toast({
+        title: "Sucesso",
+        description: "Regulação confirmada com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao confirmar regulação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao confirmar regulação",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const concluirRegulacao = async (paciente: any) => {
+    setLoading(true);
+    try {
+      const setorOrigem = setores.find(s => s.id === paciente.setorId);
+      if (!setorOrigem) throw new Error('Setor de origem não encontrado');
+
+      const leitoOrigem = setorOrigem.leitos.find(l => l.id === paciente.leitoId);
+      if (!leitoOrigem?.dadosPaciente || !leitoOrigem.regulacao) throw new Error('Dados de regulação não encontrados');
+
+      const setorDestino = setores.find(s => s.nomeSetor === leitoOrigem.regulacao.paraSetor);
+      if (!setorDestino) throw new Error('Setor de destino não encontrado');
+
+      const leitoDestino = setorDestino.leitos.find(l => l.codigoLeito === leitoOrigem.regulacao.paraLeito);
+      if (!leitoDestino) throw new Error('Leito de destino não encontrado');
+
+      await moverPaciente(paciente.setorId, paciente.leitoId, setorDestino.id!, leitoDestino.id);
+
+      toast({
+        title: "Sucesso",
+        description: "Regulação concluída com sucesso",
+      });
+    } catch (error) {
+      console.error('Erro ao concluir regulação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao concluir regulação",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelarRegulacao = async (paciente: any, motivo: string) => {
+    setLoading(true);
+    try {
+      const setor = setores.find(s => s.id === paciente.setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => 
+        l.id === paciente.leitoId 
+          ? { ...l, statusLeito: 'Ocupado', regulacao: null }
+          : l
+      );
+
+      const setorRef = doc(db, 'setoresRegulaFacil', paciente.setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      toast({
+        title: "Sucesso",
+        description: "Regulação cancelada",
+      });
+    } catch (error) {
+      console.error('Erro ao cancelar regulação:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao cancelar regulação",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelarPedidoRemanejamento = async (setorId: string, leitoId: string) => {
+    setLoading(true);
+    try {
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => 
+        l.id === leitoId && l.dadosPaciente
+          ? { ...l, dadosPaciente: { ...l.dadosPaciente, remanejarPaciente: false, motivoRemanejamento: null } }
+          : l
+      );
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      toast({
+        title: "Sucesso",
+        description: "Pedido de remanejamento cancelado",
+      });
+    } catch (error) {
+      console.error('Erro ao cancelar pedido de remanejamento:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao cancelar pedido de remanejamento",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const iniciarTransferenciaExterna = async (setorId: string, leitoId: string, destino: string, motivo: string) => {
+    setLoading(true);
+    try {
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const leitosAtualizados = setor.leitos.map(l => 
+        l.id === leitoId && l.dadosPaciente
+          ? { 
+              ...l, 
+              dadosPaciente: { 
+                ...l.dadosPaciente, 
+                transferirPaciente: true,
+                destinoTransferencia: destino,
+                motivoTransferencia: motivo,
+                historicoTransferencia: [{
+                  data: new Date().toISOString(),
+                  etapa: 'Transferência iniciada'
+                }]
+              }
+            }
+          : l
+      );
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      toast({
+        title: "Sucesso",
+        description: "Transferência externa iniciada",
+      });
+    } catch (error) {
+      console.error('Erro ao iniciar transferência externa:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao iniciar transferência externa",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelarRemanejamentoPendente = async (setorId: string, leitoId: string) => {
+    await cancelarPedidoRemanejamento(setorId, leitoId);
   };
 
   const atualizarRegrasIsolamento = async (setorId: string, leitoId: string, isolamentoId: string, regrasCumpridas: string[]) => {
@@ -776,6 +1026,13 @@ export const useSetores = () => {
     adicionarRegistroTransferencia,
     concluirTransferenciaExterna,
     cancelarTransferencia,
+    altaAposRecuperacao,
+    confirmarRegulacao,
+    concluirRegulacao,
+    cancelarRegulacao,
+    cancelarPedidoRemanejamento,
+    iniciarTransferenciaExterna,
+    cancelarRemanejamentoPendente,
     atualizarRegrasIsolamento,
     finalizarIsolamentoPaciente,
     adicionarIsolamentoPaciente

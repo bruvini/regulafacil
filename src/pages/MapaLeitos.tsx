@@ -59,8 +59,15 @@ const MapaLeitos = () => {
 
   const handleConfirmarMovimentacao = (leitoDestino: any) => {
     if (pacienteParaMover) {
-      // Fix: moverPaciente expects 3 parameters, not 4
-      moverPaciente(pacienteParaMover.dados, leitoDestino, pacienteParaMover.leitoOrigemId);
+      const setorDestinoId = setores.find(s => s.leitos.some(l => l.id === leitoDestino.id))?.id;
+      if (setorDestinoId) {
+        moverPaciente(
+          pacienteParaMover.setorOrigemId, 
+          pacienteParaMover.leitoOrigemId, 
+          setorDestinoId, 
+          leitoDestino.id
+        );
+      }
     }
     setMovimentacaoModalOpen(false);
     setPacienteParaMover(null);
@@ -331,7 +338,7 @@ const MapaLeitos = () => {
         open={obsModalOpen}
         onOpenChange={setObsModalOpen}
         pacienteNome={pacienteParaObs?.dadosPaciente?.nomePaciente || ''}
-        observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []}
+        observacoes={pacienteParaObs?.dadosPaciente?.observacoes || []}
         onConfirm={handleConfirmObs}
       />
     </div>
