@@ -186,7 +186,9 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                   
                   {selectedSetor && (
                     <div className="space-y-3 max-h-80 overflow-y-auto">
-                      {selectedSetor.leitos.map((leito, index) => (
+                      {selectedSetor.leitos
+                        .sort((a, b) => a.codigoLeito.localeCompare(b.codigoLeito, undefined, { numeric: true, sensitivity: 'base' }))
+                        .map((leito, index) => (
                         <Card key={index}>
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between">
