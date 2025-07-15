@@ -40,13 +40,15 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
       await atualizarSetor(editingSetor.id, data);
       setEditingSetor(null);
     } else {
-      await criarSetor(data);
+      // Add leitos property to match Setor interface
+      const setorData = { ...data, leitos: [] };
+      await criarSetor(setorData);
     }
   };
 
   const handleLeitoSubmit = async (setorId: string, data: LeitoFormData) => {
     if (editingLeito) {
-      await atualizarLeito(editingLeito.setorId, editingLeito.leitoIndex, data);
+      await atualizarLeito(editingLeito.setorId, editingLeito.leitoIndex.toString(), data);
       setEditingLeito(null);
     } else {
       await adicionarLeito(setorId, data);
@@ -206,7 +208,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  onClick={() => excluirLeito(selectedSetor.id!, index)}
+                                  onClick={() => excluirLeito(selectedSetor.id!, index.toString())}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>

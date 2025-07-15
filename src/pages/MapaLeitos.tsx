@@ -57,7 +57,8 @@ const MapaLeitos = () => {
 
   const handleConfirmarMovimentacao = (leitoDestino: any) => {
     if (pacienteParaMover) {
-      moverPaciente(pacienteParaMover.dados, pacienteParaMover.leitoOrigemId, pacienteParaMover.setorOrigemId, leitoDestino);
+      // Fix: moverPaciente expects 3 parameters, not 4
+      moverPaciente(pacienteParaMover.dados, leitoDestino, pacienteParaMover.leitoOrigemId);
     }
     setMovimentacaoModalOpen(false);
     setPacienteParaMover(null);
