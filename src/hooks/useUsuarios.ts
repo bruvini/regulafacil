@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -45,21 +45,24 @@ export const useUsuarios = () => {
       if (emailExists) throw new Error("Este e-mail já está em uso.");
       if (matriculaExists) throw new Error("Esta matrícula já está em uso.");
 
-      // Crie o usuário no Firebase Auth
+      // Cria o usuário no Firebase Auth para obter o UID
       const userCredential = await createUserWithEmailAndPassword(auth, emailCompleto, senhaPadrao);
       const newUser = userCredential.user;
 
-      // Salve no Firestore, agora incluindo o UID do Auth
-      await addDoc(collection(db, 'usuariosRegulaFacil'), {
+      // CORREÇÃO PRINCIPAL: Usar setDoc com o UID do usuário como ID do documento
+      const userDocRef = doc(db, 'usuariosRegulaFacil', newUser.uid);
+
+      await setDoc(userDocRef, {
         uid: newUser.uid,
         nomeCompleto: data.nomeCompleto.toUpperCase(),
         matricula: data.matricula,
         email: emailCompleto,
         tipoAcesso: data.tipoAcesso,
-        permissoes: data.tipoAcesso === 'Comum' ? data.permissoes : [],
+        permissoes: data.tipoAcesso === 'Comum' ? data.permissoes || [] : [],
+        historicoAcessos: [] // Inicializa o histórico de acessos
       });
 
-      toast({ title: "Sucesso!", description: "Usuário criado no sistema e na autenticação." });
+      toast({ title: "Sucesso!", description: "Usuário criado com sucesso." });
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
       toast({ title: "Erro", description: error.message || "Não foi possível criar o usuário.", variant: "destructive" });
