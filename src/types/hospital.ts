@@ -1,3 +1,4 @@
+
 // Adicione esta nova interface no topo
 export interface HistoricoTransferenciaItem {
   etapa: string;
@@ -32,9 +33,10 @@ export interface DadosPaciente {
   motivoTransferencia?: string;
   dataTransferencia?: string;
   statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
-  historicoTransferencia?: HistoricoTransferenciaItem[]; // <-- NOVO CAMPO ADICIONADO
+  historicoTransferencia?: HistoricoTransferenciaItem[];
   
-  provavelAlta?: boolean; // Novo campo para provável alta
+  provavelAlta?: boolean;
+  obsPaciente?: string[]; // NOVO CAMPO ADICIONADO
   
   isolamentosVigentes?: IsolamentoVigente[];
   

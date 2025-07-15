@@ -19,6 +19,7 @@ export const useFiltrosMapaLeitos = (setores: Setor[]) => {
     setor: '',
     sexo: '',
     status: '',
+    provavelAlta: '',
     isolamentos: [] as string[],
   });
 
@@ -47,9 +48,9 @@ export const useFiltrosMapaLeitos = (setores: Setor[]) => {
     }
 
     // 2. Filtros Avançados
-    const { especialidade, setor, sexo, status, isolamentos } = filtrosAvancados;
+    const { especialidade, setor, sexo, status, provavelAlta, isolamentos } = filtrosAvancados;
 
-    if (especialidade || setor || sexo || status || isolamentos.length > 0) {
+    if (especialidade || setor || sexo || status || provavelAlta || isolamentos.length > 0) {
       setoresFiltrados = setoresFiltrados
         .map(s => {
           const leitosFiltrados = s.leitos.filter(l => {
@@ -81,6 +82,12 @@ export const useFiltrosMapaLeitos = (setores: Setor[]) => {
               }
             }
 
+            // Filtro por provável alta
+            if (provavelAlta) {
+              const deveTerAlta = provavelAlta === 'sim';
+              if (!!l.dadosPaciente?.provavelAlta !== deveTerAlta) return false;
+            }
+
             if (especialidade && l.dadosPaciente?.especialidadePaciente !== especialidade) return false;
             if (isolamentos.length > 0) {
               const isolamentosPaciente = l.dadosPaciente?.isolamentosVigentes?.map(iso => iso.isolamentoId) || [];
@@ -98,7 +105,7 @@ export const useFiltrosMapaLeitos = (setores: Setor[]) => {
 
   const resetFiltros = () => {
     setSearchTerm('');
-    setFiltrosAvancados({ especialidade: '', setor: '', sexo: '', status: '', isolamentos: [] });
+    setFiltrosAvancados({ especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', isolamentos: [] });
   };
   
   return { 

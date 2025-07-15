@@ -614,6 +614,20 @@ export const useSetores = () => {
     }
   };
 
+  const adicionarObservacaoPaciente = async (setorId: string, leitoId: string, observacao: string) => {
+    const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+    if (!leito?.dadosPaciente) return;
+
+    const obsAtuais = leito.dadosPaciente.obsPaciente || [];
+    const novosDados = {
+      ...leito.dadosPaciente,
+      obsPaciente: [...obsAtuais, observacao]
+    };
+
+    await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: novosDados });
+    toast({ title: "Observação Adicionada!" });
+  };
+
   return {
     setores,
     loading,
@@ -648,6 +662,7 @@ export const useSetores = () => {
     adicionarIsolamentoPaciente,
     adicionarRegistroTransferencia,
     concluirTransferenciaExterna,
-    cancelarRemanejamentoPendente
+    cancelarRemanejamentoPendente,
+    adicionarObservacaoPaciente
   };
 };

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,14 +17,17 @@ import { Settings, ShieldQuestion, ClipboardList } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
+import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
 
 const MapaLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [movimentacaoModalOpen, setMovimentacaoModalOpen] = useState(false);
   const [relatorioIsolamentoOpen, setRelatorioIsolamentoOpen] = useState(false);
   const [relatorioVagosOpen, setRelatorioVagosOpen] = useState(false);
+  const [obsModalOpen, setObsModalOpen] = useState(false);
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
-  const { setores, loading, moverPaciente } = useSetores();
+  const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
+  const { setores, loading, moverPaciente, adicionarObservacaoPaciente } = useSetores();
   
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setores);
 
@@ -62,6 +64,17 @@ const MapaLeitos = () => {
     }
     setMovimentacaoModalOpen(false);
     setPacienteParaMover(null);
+  };
+
+  const handleOpenObsModal = (leito: any) => {
+    setPacienteParaObs({ ...leito, setorId: setores.find(s => s.leitos.some(l => l.id === leito.id))?.id });
+    setObsModalOpen(true);
+  };
+
+  const handleConfirmObs = (obs: string) => {
+    if (pacienteParaObs) {
+      adicionarObservacaoPaciente(pacienteParaObs.setorId, pacienteParaObs.id, obs);
+    }
   };
 
   return (
@@ -182,6 +195,9 @@ const MapaLeitos = () => {
               ) : filteredSetores.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-2">
                   {filteredSetores.map((setor) => {
+                    const setorOriginal = setores.find(s => s.id === setor.id);
+                    if (!setorOriginal) return null;
+                    
                     const taxaOcupacao = calcularTaxaOcupacao(setor.leitos);
                     return (
                       <AccordionItem 
@@ -220,7 +236,7 @@ const MapaLeitos = () => {
                                           nomeQuarto={nomeQuarto}
                                           leitos={leitosDoQuarto}
                                           setorId={setor.id!}
-                                          todosLeitosDoSetor={setor.leitos}
+                                          todosLeitosDoSetor={setorOriginal.leitos}
                                           onMoverPaciente={handleOpenMovimentacaoModal}
                                         />
                                       ))}
@@ -234,8 +250,9 @@ const MapaLeitos = () => {
                                               key={leito.id}
                                               leito={leito}
                                               setorId={setor.id!}
-                                              todosLeitosDoSetor={setor.leitos}
+                                              todosLeitosDoSetor={setorOriginal.leitos}
                                               onMoverPaciente={handleOpenMovimentacaoModal}
+                                              onAbrirObs={handleOpenObsModal}
                                             />
                                           ))}
                                       </div>
@@ -308,6 +325,14 @@ const MapaLeitos = () => {
       <RelatorioVagosModal
         open={relatorioVagosOpen}
         onOpenChange={setRelatorioVagosOpen}
+      />
+
+      <ObservacoesModal
+        open={obsModalOpen}
+        onOpenChange={setObsModalOpen}
+        pacienteNome={pacienteParaObs?.dadosPaciente?.nomePaciente || ''}
+        observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []}
+        onConfirm={handleConfirmObs}
       />
     </div>
   );

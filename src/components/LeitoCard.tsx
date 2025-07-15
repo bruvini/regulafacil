@@ -1,6 +1,5 @@
-
 import { useState, useMemo } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, ArrowRightLeft as RemanejarIcon, Ambulance as TransferenciaIcon, AlertTriangle as UtiIcon } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, ArrowRightLeft as RemanejarIcon, Ambulance as TransferenciaIcon, AlertTriangle as UtiIcon, MessageSquarePlus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +21,7 @@ interface LeitoCardProps {
   setorId: string;
   todosLeitosDoSetor: Leito[];
   onMoverPaciente: (leito: Leito) => void;
+  onAbrirObs: (leito: Leito) => void;
 }
 
 const calcularIdade = (dataNascimento: string): string => {
@@ -35,7 +35,7 @@ const calcularIdade = (dataNascimento: string): string => {
   return idade.toString();
 };
 
-const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: LeitoCardProps) => {
+const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente, onAbrirObs }: LeitoCardProps) => {
   const { atualizarStatusLeito, desbloquearLeito, finalizarHigienizacao, liberarLeito, solicitarUTI, solicitarRemanejamento, transferirPaciente, cancelarReserva, concluirTransferencia, toggleProvavelAlta } = useSetores();
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
   const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
@@ -367,6 +367,17 @@ const LeitoCard = ({ leito, setorId, todosLeitosDoSetor, onMoverPaciente }: Leit
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent><p>Mover Paciente</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onAbrirObs(leito)}>
+                        <MessageSquarePlus className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Observações</p></TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
 

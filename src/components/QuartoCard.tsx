@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Leito } from '@/types/hospital';
 import LeitoCard from './LeitoCard';
@@ -24,6 +23,12 @@ const QuartoCard = ({ nomeQuarto, leitos, setorId, todosLeitosDoSetor, onMoverPa
     );
     return genders.size > 1;
   }, [leitos]);
+
+  // Função stub para onAbrirObs (não implementada no QuartoCard)
+  const handleAbrirObs = (leito: Leito) => {
+    // Esta função poderia ser implementada no futuro se necessário
+    console.log('Abrir observações para:', leito.codigoLeito);
+  };
 
   return (
     <Card className="bg-muted/30 border-2 border-dashed p-2">
@@ -57,6 +62,7 @@ const QuartoCard = ({ nomeQuarto, leitos, setorId, todosLeitosDoSetor, onMoverPa
                 setorId={setorId}
                 todosLeitosDoSetor={todosLeitosDoSetor}
                 onMoverPaciente={onMoverPaciente}
+                onAbrirObs={handleAbrirObs}
               />
             ))}
         </div>

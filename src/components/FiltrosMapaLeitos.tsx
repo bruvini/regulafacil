@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -115,6 +114,16 @@ export const FiltrosMapaLeitos = ({
                   {todosStatus.map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filtros.provavelAlta} onValueChange={(v) => setFiltros({...filtros, provavelAlta: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Alta Provável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sim">Sim</SelectItem>
+                  <SelectItem value="nao">Não</SelectItem>
                 </SelectContent>
               </Select>
             </div>
