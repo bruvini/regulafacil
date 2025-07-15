@@ -1,3 +1,4 @@
+
 import { 
   BedDouble, 
   Shield, 
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Sidebar,
   SidebarContent,
@@ -82,6 +84,14 @@ const menuItems = [
 function AppSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
+  const { userData } = useAuth();
+  
+  const menuItemsVisiveis = menuItems.filter(item => {
+    if (userData?.tipoAcesso === 'Administrador') return true;
+    if (item.url === '/inicio') return true;
+    const paginaId = item.url.replace('/', '');
+    return userData?.permissoes?.includes(paginaId);
+  });
   
   return (
     <Sidebar className={state === 'collapsed' ? 'w-14' : 'w-60'} collapsible="icon">
@@ -92,7 +102,7 @@ function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {menuItemsVisiveis.map((item) => {
                 const IconComponent = item.icon;
                 const isActive = location.pathname === item.url;
                 
@@ -133,6 +143,8 @@ function AppSidebar() {
 }
 
 const AppLayout = ({ children }: AppLayoutProps) => {
+  const { userData, logout } = useAuth();
+
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full">
@@ -140,11 +152,27 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         
         <div className="flex-1 flex flex-col">
           <header className="h-14 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-            <div className="flex items-center px-4 h-full">
-              <SidebarTrigger className="mr-4" />
-              <h1 className="font-semibold text-medical-primary">
-                Hospital Municipal São José - NIR
-              </h1>
+            <div className="flex items-center justify-between px-4 h-full">
+              <div className="flex items-center">
+                <SidebarTrigger className="mr-4" />
+                <h1 className="font-semibold text-medical-primary">
+                  Hospital Municipal São José - NIR
+                </h1>
+              </div>
+              
+              {userData && (
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground">
+                    Olá, {userData.nomeCompleto.split(' ')[0]}!
+                  </span>
+                  <button
+                    onClick={logout}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Sair
+                  </button>
+                </div>
+              )}
             </div>
           </header>
           

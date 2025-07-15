@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./hooks/useAuth";
 import HomePage from "./pages/HomePage";
 import RegulacaoLeitos from "./pages/RegulacaoLeitos";
 import MapaLeitos from "./pages/MapaLeitos";
@@ -15,36 +16,41 @@ import Auditoria from "./pages/Auditoria";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
-import AppLayout from "./components/AppLayout";
+import ProtectedLayout from "./components/ProtectedLayout";
+import { PermissionChecker } from "./components/PermissionChecker";
 import Footer from "./components/Footer";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <div className="min-h-screen flex flex-col">
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/inicio" element={<AppLayout><HomePage /></AppLayout>} />
-            <Route path="/regulacao-leitos" element={<AppLayout><RegulacaoLeitos /></AppLayout>} />
-            <Route path="/mapa-leitos" element={<AppLayout><MapaLeitos /></AppLayout>} />
-            <Route path="/gestao-isolamentos" element={<AppLayout><GestaoIsolamentos /></AppLayout>} />
-            <Route path="/marcacao-cirurgica" element={<AppLayout><MarcacaoCirurgica /></AppLayout>} />
-            <Route path="/huddle" element={<AppLayout><Huddle /></AppLayout>} />
-            <Route path="/gestao-estrategica" element={<AppLayout><GestaoEstrategica /></AppLayout>} />
-            <Route path="/auditoria" element={<AppLayout><Auditoria /></AppLayout>} />
-            <Route path="/gestao-usuarios" element={<AppLayout><GestaoUsuarios /></AppLayout>} />
-            <Route path="*" element={<AppLayout><NotFound /></AppLayout>} />
-          </Routes>
-        </BrowserRouter>
-        <Footer />
-      </div>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <div className="min-h-screen flex flex-col">
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<LoginPage />} />
+              <Route element={<ProtectedLayout />}>
+                <Route path="/inicio" element={<PermissionChecker><HomePage /></PermissionChecker>} />
+                <Route path="/regulacao-leitos" element={<PermissionChecker><RegulacaoLeitos /></PermissionChecker>} />
+                <Route path="/mapa-leitos" element={<PermissionChecker><MapaLeitos /></PermissionChecker>} />
+                <Route path="/gestao-isolamentos" element={<PermissionChecker><GestaoIsolamentos /></PermissionChecker>} />
+                <Route path="/marcacao-cirurgica" element={<PermissionChecker><MarcacaoCirurgica /></PermissionChecker>} />
+                <Route path="/huddle" element={<PermissionChecker><Huddle /></PermissionChecker>} />
+                <Route path="/gestao-estrategica" element={<PermissionChecker><GestaoEstrategica /></PermissionChecker>} />
+                <Route path="/auditoria" element={<PermissionChecker><Auditoria /></PermissionChecker>} />
+                <Route path="/gestao-usuarios" element={<PermissionChecker><GestaoUsuarios /></PermissionChecker>} />
+                <Route path="*" element={<PermissionChecker><NotFound /></PermissionChecker>} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+          <Footer />
+        </div>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </AuthProvider>
 );
 
 export default App;

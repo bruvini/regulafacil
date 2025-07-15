@@ -13,6 +13,7 @@ import {
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 const features = [
   {
@@ -74,6 +75,14 @@ const features = [
 ];
 
 const HomePage = () => {
+  const { userData } = useAuth();
+
+  const featuresVisiveis = features.filter(feature => {
+    if (userData?.tipoAcesso === 'Administrador') return true;
+    const paginaId = feature.path.replace('/', '');
+    return userData?.permissoes?.includes(paginaId);
+  });
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8">
@@ -88,7 +97,7 @@ const HomePage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {features.map((feature) => {
+          {featuresVisiveis.map((feature) => {
             const IconComponent = feature.icon;
             return (
               <Card 
@@ -130,6 +139,11 @@ const HomePage = () => {
                 Cada ferramenta foi desenvolvida para otimizar processos específicos 
                 da regulação hospitalar.
               </p>
+              {userData && (
+                <p className="text-sm text-muted-foreground mt-4">
+                  Logado como: {userData.nomeCompleto} ({userData.tipoAcesso})
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
