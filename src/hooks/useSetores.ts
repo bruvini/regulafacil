@@ -361,36 +361,17 @@ export const useSetores = () => {
   };
 
   const cancelarPedidoRemanejamento = async (setorId: string, leitoId: string) => {
+    const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+    // VERIFICAÇÃO DE SEGURANÇA: Só continua se o paciente e o pedido de remanejamento existirem
+    if (!leito?.dadosPaciente?.remanejarPaciente) return;
+
     try {
-      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      const setorDoc = await getDoc(setorRef);
-
-      if (!setorDoc.exists()) {
-        console.error("Setor não encontrado");
-        return;
-      }
-
-      const setorData = setorDoc.data() as Setor;
-      const leitosAtualizados = setorData.leitos.map(leito => {
-        if (leito.id === leitoId && leito.dadosPaciente) {
-          return { 
-            ...leito, 
-            dadosPaciente: { 
-              ...leito.dadosPaciente, 
-              remanejarPaciente: false,
-              motivoRemanejamento: undefined,
-              dataPedidoRemanejamento: undefined
-            } 
-          };
-        }
-        return leito;
-      });
-
-      await updateDoc(setorRef, { leitos: leitosAtualizados });
-      toast({ title: "Remanejamento cancelado", description: "Pedido de remanejamento cancelado." });
+      const { remanejarPaciente, motivoRemanejamento, dataPedidoRemanejamento, ...restoDosDados } = leito.dadosPaciente;
+      await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: restoDosDados });
+      toast({ title: "Solicitação Cancelada", description: "O pedido de remanejamento foi removido com sucesso." });
     } catch (error) {
-      console.error("Erro ao cancelar remanejamento:", error);
-      toast({ title: "Erro", description: "Erro ao cancelar remanejamento. Tente novamente.", variant: "destructive" });
+      console.error('Erro ao cancelar remanejamento:', error);
+      toast({ title: "Erro", description: "Não foi possível cancelar a solicitação.", variant: "destructive" });
     }
   };
 
@@ -576,8 +557,32 @@ export const useSetores = () => {
     console.log("finalizarIsolamentoPaciente not implemented");
   };
 
-  const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, isolamento: any) => {
-    console.log("adicionarIsolamentoPaciente not implemented");
+  const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, novosIsolamentos: any[]) => {
+    const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+    if (!leito?.dadosPaciente) return;
+
+    const isolamentosAtuais = leito.dadosPaciente.isolamentosVigentes || [];
+    const dadosPacienteAtualizado = {
+      ...leito.dadosPaciente,
+      isolamentosVigentes: [...isolamentosAtuais, ...novosIsolamentos]
+    };
+
+    await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: dadosPacienteAtualizado });
+    toast({ title: "Sucesso!", description: `${novosIsolamentos.length} isolamento(s) adicionado(s) ao paciente.` });
+  };
+
+  const adicionarObservacaoPaciente = async (setorId: string, leitoId: string, observacao: string) => {
+    const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
+    if (!leito?.dadosPaciente) return;
+
+    const obsAtuais = leito.dadosPaciente.obsPaciente || [];
+    const novosDados = {
+      ...leito.dadosPaciente,
+      obsPaciente: [...obsAtuais, observacao]
+    };
+
+    await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: novosDados });
+    toast({ title: "Observação Adicionada!" });
   };
 
   const cancelarRemanejamentoPendente = async (setorId: string, leitoId: string) => {
@@ -612,20 +617,6 @@ export const useSetores = () => {
       console.error("Erro ao cancelar remanejamento:", error);
       toast({ title: "Erro", description: "Erro ao cancelar remanejamento. Tente novamente.", variant: "destructive" });
     }
-  };
-
-  const adicionarObservacaoPaciente = async (setorId: string, leitoId: string, observacao: string) => {
-    const leito = setores.flatMap(s => s.leitos).find(l => l.id === leitoId);
-    if (!leito?.dadosPaciente) return;
-
-    const obsAtuais = leito.dadosPaciente.obsPaciente || [];
-    const novosDados = {
-      ...leito.dadosPaciente,
-      obsPaciente: [...obsAtuais, observacao]
-    };
-
-    await updateLeitoInSetor(setorId, leitoId, { dadosPaciente: novosDados });
-    toast({ title: "Observação Adicionada!" });
   };
 
   return {
