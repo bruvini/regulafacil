@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,9 @@ const LoginPage = () => {
     const emailCompleto = `${email}@joinville.sc.gov.br`;
 
     try {
+      // ADICIONA CONFIGURAÇÃO DE PERSISTÊNCIA ANTES DO LOGIN
+      await setPersistence(auth, browserLocalPersistence);
+
       const userCredential = await signInWithEmailAndPassword(auth, emailCompleto, password);
       const user = userCredential.user;
 

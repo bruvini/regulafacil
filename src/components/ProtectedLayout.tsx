@@ -3,9 +3,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Outlet } from 'react-router-dom';
 import AppLayout from './AppLayout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AlterarSenhaModal } from './modals/AlterarSenhaModal';
 
 const ProtectedLayout = () => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, isFirstLogin } = useAuth();
 
   if (loading) {
     return (
@@ -24,9 +25,17 @@ const ProtectedLayout = () => {
   }
 
   return (
-    <AppLayout>
-      <Outlet />
-    </AppLayout>
+    <>
+      {/* O modal de troca de senha é renderizado aqui, sobrepondo tudo */}
+      <AlterarSenhaModal open={isFirstLogin} />
+
+      {/* O layout principal só é acessível se não for o primeiro login */}
+      <div className={isFirstLogin ? 'pointer-events-none' : ''}>
+        <AppLayout>
+          <Outlet />
+        </AppLayout>
+      </div>
+    </>
   );
 };
 
