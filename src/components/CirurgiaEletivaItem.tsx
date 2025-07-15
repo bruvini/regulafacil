@@ -3,7 +3,7 @@ import { SolicitacaoCirurgica } from '@/types/hospital';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Bed, Calendar, Stethoscope } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 
 const calcularIdade = (dataNascimento: string): string => {
   if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
@@ -25,7 +25,10 @@ interface Props {
 
 export const CirurgiaEletivaItem = ({ cirurgia, onAlocarLeito }: Props) => {
   const idade = calcularIdade(cirurgia.dataNascimento);
-  const dataInternacaoFormatada = cirurgia.dataPrevistaInternacao ? 
+  
+  // Proper date validation before formatting
+  const dataInternacaoFormatada = cirurgia.dataPrevistaInternacao && 
+    isValid(cirurgia.dataPrevistaInternacao) ? 
     format(cirurgia.dataPrevistaInternacao, 'dd/MM/yyyy') : 
     'Data inválida';
 
