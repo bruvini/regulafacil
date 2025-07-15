@@ -11,6 +11,8 @@ import { useSetores } from '@/hooks/useSetores';
 import { useCirurgiasEletivas } from '@/hooks/useCirurgiasEletivas';
 import { useCirurgias } from '@/hooks/useCirurgias';
 import { useAlertasIsolamento } from '@/hooks/useAlertasIsolamento';
+import { useFiltrosRegulacao } from '@/hooks/useFiltrosRegulacao';
+import { FiltrosRegulacao } from '@/components/FiltrosRegulacao';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
 import { TransferenciaModal } from '@/components/modals/TransferenciaModal';
@@ -100,14 +102,17 @@ const RegulacaoLeitos = () => {
   const pacientesAguardandoRegulacao = todosPacientesPendentes.filter(p => p.statusLeito === 'Ocupado');
   const pacientesJaRegulados = todosPacientesPendentes.filter(p => p.statusLeito === 'Regulado');
 
-  const decisaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
-  const decisaoClinica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
-  const recuperacaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
+  // Usar o hook de filtros para os pacientes aguardando regulação
+  const { searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, filteredPacientes, resetFiltros } = useFiltrosRegulacao(pacientesAguardandoRegulacao);
+
+  const decisaoCirurgica = filteredPacientes.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
+  const decisaoClinica = filteredPacientes.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
+  const recuperacaoCirurgica = filteredPacientes.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
   const pacientesAguardandoUTI = todosPacientesPendentes.filter(p => p.aguardaUTI);
   const pacientesAguardandoTransferencia = todosPacientesPendentes.filter(p => p.transferirPaciente);
   const pacientesAguardandoRemanejamento = todosPacientesPendentes.filter(p => p.remanejarPaciente);
 
-  const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
+  const totalPendentes = filteredPacientes.length;
 
   const calcularTempoEspera = (dataInicio: string): string => {
     const inicio = new Date(dataInicio);
@@ -577,35 +582,26 @@ const RegulacaoLeitos = () => {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="w-full md:w-[70%]">
-            <Card className="h-full shadow-card border border-border/50">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground italic text-center md:text-left">Área destinada aos filtros de busca (em desenvolvimento).</p>
-              </CardContent>
-            </Card>
-          </div>
-          <div className="w-full md:w-[30%]">
-            <Card className="h-full shadow-card border border-border/50">
-              <CardHeader className="pb-2 pt-4">
-                <CardTitle className="text-lg">Ações Rápidas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={() => setImportModalOpen(true)}>
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Importar pacientes MV</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="flex justify-end">
+          <Card className="shadow-card border border-border/50">
+            <CardHeader className="pb-2 pt-4">
+              <CardTitle className="text-lg">Ações Rápidas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={() => setImportModalOpen(true)}>
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Importar pacientes MV</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -678,6 +674,14 @@ const RegulacaoLeitos = () => {
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 space-y-6">
+              <FiltrosRegulacao
+                filtros={filtrosAvancados}
+                setFiltros={setFiltrosAvancados}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                resetFiltros={resetFiltros}
+              />
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="shadow-card border border-border/50">
                   <CardHeader className="pb-3">
