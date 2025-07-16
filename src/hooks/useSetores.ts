@@ -649,6 +649,11 @@ export const useSetores = () => {
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
 
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito?.dadosPaciente) {
+        registrarLog(`Adicionou a etapa de transferência "${etapa}" para o paciente ${leito.dadosPaciente.nomePaciente}.`, 'Regulação de Leitos');
+      }
+
       toast({
         title: "Sucesso",
         description: "Etapa registrada com sucesso",
@@ -671,6 +676,7 @@ export const useSetores = () => {
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
 
+      const leito = setor.leitos.find(l => l.id === leitoId);
       const leitosAtualizados = setor.leitos.map(l => 
         l.id === leitoId 
           ? { ...l, statusLeito: 'Higienizacao', dadosPaciente: null, dataAtualizacaoStatus: new Date().toISOString() }
@@ -679,6 +685,10 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      if (leito?.dadosPaciente) {
+        registrarLog(`Concluiu a transferência externa do paciente ${leito.dadosPaciente.nomePaciente} (leito: ${leito.codigoLeito}). O leito foi liberado.`, 'Regulação de Leitos');
+      }
 
       toast({
         title: "Sucesso",
@@ -702,6 +712,7 @@ export const useSetores = () => {
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
 
+      const leito = setor.leitos.find(l => l.id === leitoId);
       const leitosAtualizados = setor.leitos.map(l => 
         l.id === leitoId && l.dadosPaciente
           ? { ...l, dadosPaciente: { ...l.dadosPaciente, transferirPaciente: false, historicoTransferencia: [] } }
@@ -710,6 +721,10 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      if (leito?.dadosPaciente) {
+        registrarLog(`Cancelou a transferência externa do paciente ${leito.dadosPaciente.nomePaciente} (leito: ${leito.codigoLeito}).`, 'Regulação de Leitos');
+      }
 
       toast({
         title: "Sucesso",
