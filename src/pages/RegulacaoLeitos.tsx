@@ -152,6 +152,11 @@ const RegulacaoLeitos = () => {
     setTransferenciaModalOpen(true);
   };
 
+  const handleIniciarTransferenciaExternaFromUTI = (paciente: any) => {
+    setPacienteParaAcao(paciente);
+    setTransferenciaModalOpen(true);
+  };
+
   const handleGerenciarTransferencia = (paciente: any) => {
     setPacienteParaAcao(paciente);
     setGerenciarTransferenciaOpen(true);
@@ -160,9 +165,9 @@ const RegulacaoLeitos = () => {
   const handleConfirmarTransferenciaExterna = (destino: string, motivo: string) => {
     if (pacienteParaAcao) {
       iniciarTransferenciaExterna(pacienteParaAcao.setorId, pacienteParaAcao.leitoId, destino, motivo);
-      setTransferenciaModalOpen(false);
-      setPacienteParaAcao(null);
     }
+    setTransferenciaModalOpen(false);
+    setPacienteParaAcao(null);
   };
 
   const handleConcluir = (paciente: any) => {
@@ -578,7 +583,7 @@ const RegulacaoLeitos = () => {
                       key={p.leitoId}
                       paciente={p}
                       onCancel={() => cancelarPedidoUTI(p.setorId, p.leitoId)}
-                      onTransfer={() => handleIniciarTransferenciaExterna(p)}
+                      onTransfer={() => handleIniciarTransferenciaExternaFromUTI(p)}
                       onRegularUTI={() => handleOpenRegulacaoModal(p, 'uti')}
                     />
                   ))}
