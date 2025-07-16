@@ -4,13 +4,14 @@ import { collection, addDoc, query, onSnapshot, orderBy, doc, updateDoc, deleteD
 import { db } from '@/lib/firebase';
 import { SolicitacaoCirurgica, SolicitacaoCirurgicaFormData } from '@/types/hospital';
 import { useToast } from '@/hooks/use-toast';
+import { useAuditoria } from './useAuditoria';
 
 export const useCirurgias = () => {
   const [loading, setLoading] = useState(false);
   const [cirurgias, setCirurgias] = useState<SolicitacaoCirurgica[]>([]);
   const { toast } = useToast();
+  const { registrarLog } = useAuditoria();
 
-  // Escutar mudanças em tempo real
   useEffect(() => {
     const q = query(
       collection(db, 'cirurgiasRegulaFacil'), 
@@ -48,6 +49,8 @@ export const useCirurgias = () => {
         description: "Solicitação cirúrgica criada com sucesso.",
         variant: "default"
       });
+
+      registrarLog(`Criou solicitação cirúrgica para ${dados.nomeCompleto} (Especialidade: ${dados.especialidade}).`, 'Marcação Cirúrgica');
     } catch (error) {
       console.error('Erro ao criar solicitação cirúrgica:', error);
       toast({

@@ -4,10 +4,12 @@ import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, order
 import { db } from '@/lib/firebase';
 import { TipoIsolamento, TipoIsolamentoFormData } from '@/types/isolamento';
 import { toast } from '@/hooks/use-toast';
+import { useAuditoria } from './useAuditoria';
 
 export const useIsolamentos = () => {
   const [isolamentos, setIsolamentos] = useState<TipoIsolamento[]>([]);
   const [loading, setLoading] = useState(false);
+  const { registrarLog } = useAuditoria();
 
   useEffect(() => {
     const q = query(collection(db, 'isolamentosRegulaFacil'), orderBy('nomeMicroorganismo'));

@@ -3,10 +3,12 @@ import { collection, doc, onSnapshot, updateDoc, writeBatch, addDoc, deleteDoc }
 import { db } from '@/lib/firebase';
 import { Setor, Leito, SetorFormData, LeitoFormData } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
+import { useAuditoria } from './useAuditoria';
 
 export const useSetores = () => {
   const [setores, setSetores] = useState<Setor[]>([]);
   const [loading, setLoading] = useState(false);
+  const { registrarLog } = useAuditoria();
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'setoresRegulaFacil'), (snapshot) => {
@@ -43,6 +45,11 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (novoStatus === 'Bloqueado' && leito) {
+        registrarLog(`Bloqueou o leito ${leito.codigoLeito}. Motivo: ${motivo}.`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao atualizar status do leito:', error);
       toast({
@@ -69,6 +76,11 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito) {
+        registrarLog(`Desbloqueou o leito ${leito.codigoLeito}.`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao desbloquear leito:', error);
       toast({
@@ -95,6 +107,11 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito) {
+        registrarLog(`Finalizou a higienização do leito ${leito.codigoLeito}.`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao finalizar higienização:', error);
       toast({
@@ -121,6 +138,11 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito) {
+        registrarLog(`Liberou o leito ${leito.codigoLeito} (paciente: ${leito.dadosPaciente?.nomePaciente}).`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao liberar leito:', error);
       toast({
@@ -147,6 +169,11 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito?.dadosPaciente) {
+        registrarLog(`Solicitou UTI para ${leito.dadosPaciente.nomePaciente} (leito: ${leito.codigoLeito}).`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao solicitar UTI:', error);
       toast({
@@ -173,6 +200,11 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito?.dadosPaciente) {
+        registrarLog(`Solicitou remanejamento para ${leito.dadosPaciente.nomePaciente} (leito: ${leito.codigoLeito}). Motivo: ${motivo}.`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao solicitar remanejamento:', error);
       toast({
@@ -206,6 +238,11 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito?.dadosPaciente) {
+        registrarLog(`Iniciou transferência externa para ${leito.dadosPaciente.nomePaciente} (leito: ${leito.codigoLeito}). Destino: ${destino}. Motivo: ${motivo}.`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao transferir paciente:', error);
       toast({
@@ -224,6 +261,7 @@ export const useSetores = () => {
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
 
+      const leito = setor.leitos.find(l => l.id === leitoId);
       const leitosAtualizados = setor.leitos.map(l => 
         l.id === leitoId 
           ? { ...l, statusLeito: 'Vago', dadosPaciente: null, dataAtualizacaoStatus: new Date().toISOString() }
@@ -232,6 +270,10 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      if (leito?.dadosPaciente) {
+        registrarLog(`Cancelou a reserva do leito ${leito.codigoLeito} para ${leito.dadosPaciente.nomePaciente}.`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao cancelar reserva:', error);
       toast({
@@ -258,6 +300,10 @@ export const useSetores = () => {
 
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await updateDoc(setorRef, { leitos: leitosAtualizados });
+
+      if (leito.dadosPaciente) {
+        registrarLog(`Confirmou a transferência de ${leito.dadosPaciente.nomePaciente} para o leito ${leito.codigoLeito}.`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao concluir transferência:', error);
       toast({
@@ -474,6 +520,7 @@ export const useSetores = () => {
       const setorDestino = setores.find(s => s.id === destinoSetorId);
       if (!setorDestino) throw new Error('Setor de destino não encontrado');
 
+      const leitoDestino = setorDestino.leitos.find(l => l.id === destinoLeitoId);
       const leitosDestinoAtualizados = setorDestino.leitos.map(l => 
         l.id === destinoLeitoId 
           ? { ...l, statusLeito: 'Ocupado', dadosPaciente: leitoOrigem.dadosPaciente, dataAtualizacaoStatus: new Date().toISOString() }
@@ -489,6 +536,10 @@ export const useSetores = () => {
         title: "Sucesso",
         description: "Paciente movido com sucesso",
       });
+
+      if (leitoDestino) {
+        registrarLog(`Moveu o paciente ${leitoOrigem.dadosPaciente.nomePaciente} do leito ${leitoOrigem.codigoLeito} para ${leitoDestino.codigoLeito}.`, 'Mapa de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao mover paciente:', error);
       toast({
@@ -557,6 +608,11 @@ export const useSetores = () => {
         title: "Sucesso",
         description: "Pedido de UTI cancelado",
       });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito?.dadosPaciente) {
+        registrarLog(`Cancelou o pedido de UTI para ${leito.dadosPaciente.nomePaciente} no leito ${leito.codigoLeito}.`, 'Regulação de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao cancelar pedido UTI:', error);
       toast({
@@ -677,6 +733,7 @@ export const useSetores = () => {
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
 
+      const leito = setor.leitos.find(l => l.id === leitoId);
       const leitosAtualizados = setor.leitos.map(l => 
         l.id === leitoId 
           ? { ...l, statusLeito: 'Higienizacao', dadosPaciente: null, dataAtualizacaoStatus: new Date().toISOString() }
@@ -690,6 +747,10 @@ export const useSetores = () => {
         title: "Sucesso",
         description: "Alta registrada com sucesso",
       });
+
+      if (leito?.dadosPaciente) {
+        registrarLog(`Informou alta para ${leito.dadosPaciente.nomePaciente} no leito ${leito.codigoLeito}.`, 'Regulação de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao registrar alta:', error);
       toast({
@@ -711,13 +772,11 @@ export const useSetores = () => {
       const setorOrigemRef = doc(db, 'setoresRegulaFacil', leitoOrigem.setorId);
       const setorDestinoRef = doc(db, 'setoresRegulaFacil', leitoDestino.setorId);
 
-      // Prepara os dados do paciente, limpando campos de UTI se existirem
       const dadosPacienteParaDestino = { ...(paciente || {}) };
-      delete dadosPacienteParaDestino.regulacao; // Remove regulação antiga
-      delete dadosPacienteParaDestino.aguardaUTI; // Limpa flag de UTI
-      delete dadosPacienteParaDestino.dataPedidoUTI; // Limpa data do pedido de UTI
+      delete dadosPacienteParaDestino.regulacao;
+      delete dadosPacienteParaDestino.aguardaUTI;
+      delete dadosPacienteParaDestino.dataPedidoUTI;
 
-      // 1. Atualiza o leito de ORIGEM para "Regulado"
       const setorOrigemData = setores.find(s => s.id === leitoOrigem.setorId)!;
       const leitosOrigemAtualizado = setorOrigemData.leitos.map(l => {
           if (l.id === leitoOrigem.leitoId) {
@@ -728,7 +787,7 @@ export const useSetores = () => {
                   regulacao: {
                       paraSetor: leitoDestino.setorNome || '',
                       paraLeito: leitoDestino.codigoLeito || '',
-                      data: agora, // Campo de data da regulação
+                      data: agora,
                       observacoes: observacoes || ''
                   }
               };
@@ -737,7 +796,6 @@ export const useSetores = () => {
       });
       batch.update(setorOrigemRef, { leitos: leitosOrigemAtualizado });
 
-      // 2. Atualiza o leito de DESTINO para "Reservado" com os dados do paciente
       const setorDestinoData = setores.find(s => s.id === leitoDestino.setorId)!;
       const leitosDestinoAtualizado = setorDestinoData.leitos.map(l => {
           if (l.id === leitoDestino.id) {
@@ -754,7 +812,6 @@ export const useSetores = () => {
           return l;
       });
 
-      // 3. Lida com a transação no mesmo setor ou em setores diferentes
       if (setorOrigemRef.path === setorDestinoRef.path) {
           const leitosCombinados = leitosOrigemAtualizado.map(l => leitosDestinoAtualizado.find(ld => ld.id === l.id) || l);
           batch.update(setorOrigemRef, { leitos: leitosCombinados });
@@ -764,6 +821,8 @@ export const useSetores = () => {
 
       await batch.commit();
       toast({ title: 'Regulação Confirmada', description: `Leito ${leitoDestino.codigoLeito} regulado com sucesso!` });
+      
+      registrarLog(`Regulou ${paciente.nomePaciente} do leito ${leitoOrigem.leitoCodigo} para ${leitoDestino.codigoLeito}.`, 'Regulação de Leitos');
     } catch (error) {
       console.error('Erro ao confirmar regulação:', error);
       toast({ title: 'Erro', description: 'Não foi possível confirmar a regulação.', variant: 'destructive' });
@@ -793,6 +852,8 @@ export const useSetores = () => {
         title: "Sucesso",
         description: "Regulação concluída com sucesso",
       });
+
+      registrarLog(`Concluiu a regulação de ${paciente.nomePaciente} para o leito ${leitoOrigem.regulacao.paraLeito}.`, 'Regulação de Leitos');
     } catch (error) {
       console.error('Erro ao concluir regulação:', error);
       toast({
@@ -824,6 +885,11 @@ export const useSetores = () => {
         title: "Sucesso",
         description: "Regulação cancelada",
       });
+
+      const leito = setor.leitos.find(l => l.id === paciente.leitoId);
+      if (leito?.regulacao) {
+        registrarLog(`Cancelou a regulação de ${paciente.nomePaciente} para o leito ${leito.regulacao.paraLeito}. Motivo: ${motivo}.`, 'Regulação de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao cancelar regulação:', error);
       toast({
@@ -855,6 +921,11 @@ export const useSetores = () => {
         title: "Sucesso",
         description: "Pedido de remanejamento cancelado",
       });
+
+      const leito = setor.leitos.find(l => l.id === leitoId);
+      if (leito?.dadosPaciente) {
+        registrarLog(`Cancelou a solicitação de remanejamento para ${leito.dadosPaciente.nomePaciente} no leito ${leito.codigoLeito}.`, 'Regulação de Leitos');
+      }
     } catch (error) {
       console.error('Erro ao cancelar pedido de remanejamento:', error);
       toast({
@@ -962,7 +1033,6 @@ export const useSetores = () => {
   };
 
   const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, novosIsolamentos: any[]) => {
-    // 1. VERIFICAÇÃO INICIAL: Garante que há dados para trabalhar.
     if (!novosIsolamentos || novosIsolamentos.length === 0) {
       toast({ title: "Aviso", description: "Nenhum isolamento selecionado.", variant: "destructive" });
       return;
@@ -977,12 +1047,7 @@ export const useSetores = () => {
 
       const leitosAtualizados = setor.leitos.map(l => {
         if (l.id === leitoId && l.dadosPaciente) {
-
-          // 2. LÓGICA DE ATUALIZAÇÃO CORRETA:
           const isolamentosAtuais = l.dadosPaciente.isolamentosVigentes || [];
-
-          // Usamos o operador 'spread' (...) para desempacotar o array 'novosIsolamentos'
-          // e adicionar seus itens individualmente ao array 'isolamentosAtuais'.
           const isolamentosCombinados = [...isolamentosAtuais, ...novosIsolamentos];
 
           const dadosPacienteAtualizado = {
@@ -996,7 +1061,6 @@ export const useSetores = () => {
         return l;
       });
 
-      // 3. ATUALIZAÇÃO SEGURA: Só atualiza o banco se a modificação foi bem-sucedida.
       if (leitoFoiAtualizado) {
           const setorRef = doc(db, 'setoresRegulaFacil', setorId);
           await updateDoc(setorRef, { leitos: leitosAtualizados });
