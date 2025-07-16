@@ -52,8 +52,8 @@ export const useAlertasIsolamento = () => {
       // 3. Regra de Alerta
       const temIncompatibilidade = companheirosDeQuarto.some(companheiro => {
           const isolamentosCompanheiro = companheiro.dadosPaciente?.isolamentosVigentes?.map(iso => iso.sigla) || [];
-          // Verifica se os arrays de isolamento são diferentes
-          return isolamentosPaciente.join(',') !== isolamentosCompanheiro.join(',');
+          // CORREÇÃO AQUI: Ordene os arrays antes de comparar
+          return isolamentosPaciente.sort().join(',') !== isolamentosCompanheiro.sort().join(',');
       });
 
       if (temIncompatibilidade) {

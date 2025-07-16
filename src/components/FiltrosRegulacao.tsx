@@ -33,11 +33,24 @@ interface FiltrosRegulacaoProps {
 export const FiltrosRegulacao = ({ filtros, setFiltros, searchTerm, setSearchTerm, resetFiltros }: FiltrosRegulacaoProps) => {
     return (
         <div className="p-4 border rounded-lg bg-card mb-6">
-            <Input 
+            <div className="relative">
+              <Input 
                 placeholder="Pesquisar por nome do paciente..." 
                 value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-            />
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pr-8"
+              />
+              {searchTerm && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                  onClick={() => setSearchTerm('')}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <Collapsible>
                 <CollapsibleTrigger asChild>
                     <Button variant="ghost" className="text-sm mt-2">

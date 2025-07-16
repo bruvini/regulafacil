@@ -22,6 +22,7 @@ interface FiltrosMapaLeitosProps {
     sexo: string;
     status: string;
     provavelAlta: string;
+    aguardaUTI: string;
     isolamentos: string[];
   };
   setFiltros: (filtros: any) => void;
@@ -62,11 +63,24 @@ export const FiltrosMapaLeitos = ({
         <CardTitle className="text-xl font-semibold text-medical-primary">Filtros</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Input 
-          placeholder="Pesquisar por paciente ou leito..." 
-          value={searchTerm} 
-          onChange={(e) => setSearchTerm(e.target.value)} 
-        />
+        <div className="relative">
+          <Input 
+            placeholder="Pesquisar por paciente ou leito..." 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pr-8"
+          />
+          {searchTerm && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+              onClick={() => setSearchTerm('')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="text-sm">
@@ -122,6 +136,16 @@ export const FiltrosMapaLeitos = ({
               <Select value={filtros.provavelAlta} onValueChange={(v) => setFiltros({...filtros, provavelAlta: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Alta Provável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sim">Sim</SelectItem>
+                  <SelectItem value="nao">Não</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filtros.aguardaUTI} onValueChange={(v) => setFiltros({...filtros, aguardaUTI: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Aguardando UTI" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="sim">Sim</SelectItem>

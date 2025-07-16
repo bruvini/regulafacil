@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useSetores } from '@/hooks/useSetores';
 import { useToast } from '@/hooks/use-toast';
 import { Copy } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Props {
   open: boolean;
@@ -25,7 +26,7 @@ export const RelatorioVagosModal = ({ open, onOpenChange }: Props) => {
   const leitosDisponiveis = useMemo(() => {
     const agrupados: Record<string, any[]> = {};
     const todosLeitos = setores.flatMap(s => s.leitos.map(l => ({ ...l, setorNome: s.nomeSetor })));
-    const setoresExcluidos = ["PS DECISÃO CLINICA", "CC - SALAS CIRURGICAS", "CC3", "CC - PRE OPERATORIO", "PS DECISÃO CIRURGICA", "CC - RECUPERAÇÃO", "UNID. DE AVC - INTEGRAL", "SALA LARANJA", "CCA PRE - OPERATORIO", "UNID. AVC AGUDO"];
+    const setoresExcluidos = ["PS DECISÃO CLINICA", "CC - SALAS CIRURGICAS", "CC3", "CC - PRE OPERATORIO", "PS DECISÃO CIRURGICA", "CC - RECUPERAÇÃO", "UNID. DE AVC - INTEGRAL", "SALA LARANJA", "CCA PRE - OPERATORIO", "UNID. AVC AGUDO", "CCA - SALAS CIRURGICAS"];
 
     setores.forEach(setor => {
         if (setoresExcluidos.includes(setor.nomeSetor)) return;
@@ -79,9 +80,18 @@ export const RelatorioVagosModal = ({ open, onOpenChange }: Props) => {
                   <Card>
                     <CardHeader className="py-2 px-4 flex-row items-center justify-between">
                       <CardTitle className="text-base">{setorNome}</CardTitle>
-                      <Button variant="outline" size="sm" onClick={() => handleCopy(setorNome, leitos)}>
-                          <Copy className="h-4 w-4 mr-2" /> Copiar Mensagem
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="icon" onClick={() => handleCopy(setorNome, leitos)}>
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                              <p>Copiar Mensagem</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
                       <ul className="space-y-1 text-sm">
