@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuditoria } from './useAuditoria';
 
 // Defina os tipos de dados aqui para consistência
 export interface Usuario {
@@ -21,6 +21,7 @@ export const useUsuarios = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { registrarLog } = useAuditoria();
   const auth = getAuth();
 
   useEffect(() => {
@@ -63,6 +64,9 @@ export const useUsuarios = () => {
       });
 
       toast({ title: "Sucesso!", description: "Usuário criado com sucesso." });
+      
+      // LOG AQUI:
+      registrarLog(`Criou o usuário "${data.nomeCompleto.toUpperCase()}" (Matrícula: ${data.matricula}) com perfil "${data.tipoAcesso}".`, 'Gestão de Usuários');
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
       toast({ title: "Erro", description: error.message || "Não foi possível criar o usuário.", variant: "destructive" });
@@ -80,6 +84,9 @@ export const useUsuarios = () => {
         nomeCompleto: data.nomeCompleto?.toUpperCase(),
       });
       toast({ title: "Sucesso!", description: "Usuário atualizado com sucesso." });
+      
+      // LOG AQUI:
+      registrarLog(`Editou o usuário "${data.nomeCompleto?.toUpperCase()}".`, 'Gestão de Usuários');
     } catch (error: any) {
       console.error("Erro ao atualizar usuário:", error);
       toast({ title: "Erro", description: "Não foi possível atualizar o usuário.", variant: "destructive" });
@@ -91,9 +98,15 @@ export const useUsuarios = () => {
   const excluirUsuario = async (id: string) => {
     setLoading(true);
     try {
+      const usuarioExcluido = usuarios.find(u => u.id === id);
       await deleteDoc(doc(db, 'usuariosRegulaFacil', id));
       // Aqui também entraria a lógica para deletar do Firebase Auth
       toast({ title: "Sucesso!", description: "Usuário excluído com sucesso." });
+      
+      // LOG AQUI:
+      if (usuarioExcluido) {
+        registrarLog(`Excluiu o usuário "${usuarioExcluido.nomeCompleto}".`, 'Gestão de Usuários');
+      }
     } catch (error: any) {
       console.error("Erro ao excluir usuário:", error);
       toast({ title: "Erro", description: "Não foi possível excluir o usuário.", variant: "destructive" });

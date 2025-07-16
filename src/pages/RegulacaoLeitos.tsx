@@ -33,6 +33,7 @@ import { intervalToDuration, parse } from 'date-fns';
 import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
 import { PacienteReguladoItem } from '@/components/PacienteReguladoItem';
 import { ResumoRegulacoesModal } from '@/components/modals/ResumoRegulacoesModal';
+import { useAuditoria } from '@/hooks/useAuditoria';
 
 interface PacienteDaPlanilha {
   nomeCompleto: string;
@@ -197,31 +198,42 @@ const RegulacaoLeitos = () => {
     setPacienteParaAcao(null);
   };
 
-  // Integração com alertas de isolamento
+  // Integração com alertas de isolamento - CORREÇÃO DO LOOP INFINITO
   useEffect(() => {
-    const pacientesEmRemanejamento = todosPacientesPendentes.filter(p => p.remanejarPaciente);
+    // Cria um mapa dos pacientes que já têm um remanejamento por motivo de contaminação.
+    const mapaRemanejamentoContaminacao = new Map();
+    todosPacientesPendentes.forEach(p => {
+      if (p.remanejarPaciente && p.motivoRemanejamento?.startsWith('Risco de contaminação')) {
+        mapaRemanejamentoContaminacao.set(p.nomePaciente, p);
+      }
+    });
 
-    // Adicionar pacientes dos alertas que não estão na lista de remanejamento
-    alertas.forEach(alerta => {
-      const jaExiste = pacientesEmRemanejamento.some(p => p.nomePaciente === alerta.nomePaciente);
-      if (!jaExiste) {
-        const pacienteParaRemanejar = todosPacientesPendentes.find(p => p.nomePaciente === alerta.nomePaciente);
+    // Cria um mapa dos pacientes que estão atualmente nos alertas.
+    const mapaAlertas = new Map(alertas.map(a => [a.nomePaciente, a]));
+
+    // Ação 1: Adicionar remanejamento para novos alertas.
+    mapaAlertas.forEach((alerta, nomePaciente) => {
+      // SÓ cria a solicitação se o paciente do alerta AINDA NÃO estiver na lista de remanejamento.
+      if (!mapaRemanejamentoContaminacao.has(nomePaciente)) {
+        const pacienteParaRemanejar = todosPacientesPendentes.find(p => p.nomePaciente === nomePaciente);
         if (pacienteParaRemanejar) {
+          console.log(`Disparando remanejamento para: ${nomePaciente}`); // Log para depuração
           solicitarRemanejamento(pacienteParaRemanejar.setorId, pacienteParaRemanejar.leitoId, alerta.motivo);
         }
       }
     });
 
-    // Remover da lista de remanejamento se o alerta não existir mais
-    pacientesEmRemanejamento.forEach(paciente => {
-      if (paciente.motivoRemanejamento?.startsWith('Risco de contaminação')) {
-        const aindaEmAlerta = alertas.some(a => a.nomePaciente === paciente.nomePaciente);
-        if (!aindaEmAlerta) {
-          cancelarRemanejamentoPendente(paciente.setorId, paciente.leitoId);
-        }
+    // Ação 2: Cancelar remanejamento se o alerta não existir mais.
+    mapaRemanejamentoContaminacao.forEach((paciente, nomePaciente) => {
+      // SÓ cancela se o paciente que estava em remanejamento NÃO ESTÁ MAIS na lista de alertas.
+      if (!mapaAlertas.has(nomePaciente)) {
+        console.log(`Cancelando remanejamento para: ${nomePaciente}`); // Log para depuração
+        cancelarPedidoRemanejamento(paciente.setorId, paciente.leitoId);
       }
     });
-  }, [alertas, todosPacientesPendentes, solicitarRemanejamento, cancelarRemanejamentoPendente]);
+
+    // As dependências agora são os arrays de dados, que só mudam quando há novas informações.
+  }, [alertas, todosPacientesPendentes, solicitarRemanejamento, cancelarPedidoRemanejamento]);
 
   const renderListaComAgrupamento = (titulo: string, pacientes: any[], onRegularClick?: (paciente: any) => void, onAlta?: (setorId: string, leitoId: string) => void) => {
     const pacientesAgrupados = agruparPorEspecialidade(pacientes);

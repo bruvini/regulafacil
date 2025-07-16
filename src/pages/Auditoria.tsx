@@ -1,10 +1,12 @@
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FileText, Trash2, Search } from 'lucide-react';
 import { useAuditoriaLogs } from '@/hooks/useAuditoriaLogs';
+import { useUsuarios } from '@/hooks/useUsuarios';
 import { 
   AlertDialog, 
   AlertDialogTrigger, 
@@ -17,15 +19,34 @@ import {
   AlertDialogAction 
 } from '@/components/ui/alert-dialog';
 
+const paginasSistema = ["Mapa de Leitos", "Regulação de Leitos", "Gestão de Isolamentos", "Marcação Cirúrgica", "Gestão de Usuários"];
+
 const Auditoria = () => {
   const { logs, loading, deleteAllLogs } = useAuditoriaLogs();
-  const [filtroTexto, setFiltroTexto] = useState('');
+  const { usuarios } = useUsuarios();
+  const [filtros, setFiltros] = useState({
+    texto: '',
+    pagina: '',
+    usuarioId: '',
+    dataInicio: '',
+    dataFim: ''
+  });
 
-  const filteredLogs = logs.filter(log => 
-    log.acao.toLowerCase().includes(filtroTexto.toLowerCase()) || 
-    log.usuario.nome.toLowerCase().includes(filtroTexto.toLowerCase()) ||
-    log.origem.toLowerCase().includes(filtroTexto.toLowerCase())
-  );
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      const dataLog = log.data.toDate();
+      if (filtros.texto && !log.acao.toLowerCase().includes(filtros.texto.toLowerCase()) && !log.usuario.nome.toLowerCase().includes(filtros.texto.toLowerCase())) return false;
+      if (filtros.pagina && log.origem !== filtros.pagina) return false;
+      if (filtros.usuarioId && log.usuario.uid !== filtros.usuarioId) return false;
+      if (filtros.dataInicio && dataLog < new Date(filtros.dataInicio)) return false;
+      if (filtros.dataFim && dataLog > new Date(filtros.dataFim)) return false;
+      return true;
+    });
+  }, [logs, filtros]);
+
+  const handleFiltroChange = (field: string, value: string) => {
+    setFiltros(prev => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -77,14 +98,48 @@ const Auditoria = () => {
                 Filtros de Pesquisa
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
                   placeholder="Pesquisar por ação, usuário ou origem..." 
                   className="pl-10"
-                  value={filtroTexto}
-                  onChange={(e) => setFiltroTexto(e.target.value)}
+                  value={filtros.texto}
+                  onChange={(e) => handleFiltroChange('texto', e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Select value={filtros.pagina} onValueChange={(v) => handleFiltroChange('pagina', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por Página" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paginasSistema.map(p => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filtros.usuarioId} onValueChange={(v) => handleFiltroChange('usuarioId', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por Usuário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {usuarios.map(u => (
+                      <SelectItem key={u.uid} value={u.uid!}>{u.nomeCompleto}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input 
+                  type="datetime-local" 
+                  placeholder="Data Início"
+                  value={filtros.dataInicio} 
+                  onChange={(e) => handleFiltroChange('dataInicio', e.target.value)} 
+                />
+                <Input 
+                  type="datetime-local" 
+                  placeholder="Data Fim"
+                  value={filtros.dataFim} 
+                  onChange={(e) => handleFiltroChange('dataFim', e.target.value)} 
                 />
               </div>
             </CardContent>
