@@ -961,38 +961,53 @@ export const useSetores = () => {
     }
   };
 
-  const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, novoIsolamento: any) => {
+  const adicionarIsolamentoPaciente = async (setorId: string, leitoId: string, novosIsolamentos: any[]) => {
+    // 1. VERIFICAÇÃO INICIAL: Garante que há dados para trabalhar.
+    if (!novosIsolamentos || novosIsolamentos.length === 0) {
+      toast({ title: "Aviso", description: "Nenhum isolamento selecionado.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
     try {
       const setor = setores.find(s => s.id === setorId);
       if (!setor) throw new Error('Setor não encontrado');
 
+      let leitoFoiAtualizado = false;
+
       const leitosAtualizados = setor.leitos.map(l => {
         if (l.id === leitoId && l.dadosPaciente) {
+
+          // 2. LÓGICA DE ATUALIZAÇÃO CORRETA:
           const isolamentosAtuais = l.dadosPaciente.isolamentosVigentes || [];
+
+          // Usamos o operador 'spread' (...) para desempacotar o array 'novosIsolamentos'
+          // e adicionar seus itens individualmente ao array 'isolamentosAtuais'.
+          const isolamentosCombinados = [...isolamentosAtuais, ...novosIsolamentos];
+
           const dadosPacienteAtualizado = {
             ...l.dadosPaciente,
-            isolamentosVigentes: [...isolamentosAtuais, novoIsolamento]
+            isolamentosVigentes: isolamentosCombinados
           };
+
+          leitoFoiAtualizado = true;
           return { ...l, dadosPaciente: dadosPacienteAtualizado };
         }
         return l;
       });
 
-      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
-      await updateDoc(setorRef, { leitos: leitosAtualizados });
+      // 3. ATUALIZAÇÃO SEGURA: Só atualiza o banco se a modificação foi bem-sucedida.
+      if (leitoFoiAtualizado) {
+          const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+          await updateDoc(setorRef, { leitos: leitosAtualizados });
+          toast({ title: "Sucesso!", description: `${novosIsolamentos.length} isolamento(s) adicionado(s) com sucesso.` });
+      } else {
+          throw new Error('Paciente ou leito não encontrado para atualização.');
+      }
 
-      toast({ 
-        title: "Vigilância Iniciada", 
-        description: `Isolamento ${novoIsolamento.sigla} adicionado ao paciente.` 
-      });
     } catch (error) {
       console.error('Erro ao adicionar isolamento:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Não foi possível adicionar o isolamento.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Erro", description: "Não foi possível adicionar o(s) isolamento(s).", variant: "destructive" });
     } finally {
       setLoading(false);
     }
