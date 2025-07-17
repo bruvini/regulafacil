@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -51,7 +50,22 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
       await atualizarLeito(editingLeito.setorId, editingLeito.leitoIndex.toString(), data);
       setEditingLeito(null);
     } else {
-      await adicionarLeito(setorId, data);
+      // Split only by comma and trim whitespace
+      const leitoCodigos = data.codigoLeito
+        .split(',')
+        .map(codigo => codigo.trim())
+        .filter(codigo => codigo.length > 0);
+      
+      // Create each bed sequentially
+      for (const codigoLeito of leitoCodigos) {
+        const leitoData = {
+          ...data,
+          codigoLeito
+        };
+        await adicionarLeito(setorId, leitoData);
+      }
+      // Reset the form after successful submission
+      setEditingLeito(null);
     }
   };
 
