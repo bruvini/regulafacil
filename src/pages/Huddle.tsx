@@ -206,7 +206,7 @@ const Huddle = () => {
       </div>
 
       {/* Estilos de impressão */}
-      <style jsx>{`
+      <style>{`
         @media print {
           .no-print {
             display: none !important;
