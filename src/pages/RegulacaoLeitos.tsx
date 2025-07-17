@@ -437,103 +437,103 @@ const RegulacaoLeitos = () => {
     const agora = new Date().toISOString();
     const batch = writeBatch(db);
 
-    // Criamos um mapa de busca para encontrar rapidamente os dados de um paciente existente
-    const mapaPacientesAtuais: Map<string, any> = new Map();
-    const mapaRegulacoesPendentes: Map<string, any> = new Map();
-    setores.flatMap(s => s.leitos).forEach(l => {
-      if (l.statusLeito === 'Ocupado' && l.dadosPaciente) {
-        mapaPacientesAtuais.set(l.dadosPaciente.nomePaciente, l.dadosPaciente);
-      } else if (l.statusLeito === 'Regulado' && l.dadosPaciente) {
-        mapaPacientesAtuais.set(l.dadosPaciente.nomePaciente, l.dadosPaciente);
-        mapaRegulacoesPendentes.set(l.dadosPaciente.nomePaciente, { regulacao: l.regulacao, leitoOrigem: l.codigoLeito });
-      }
-    });
+    // 1. Cria um mapa de todos os pacientes atuais, guardando seus dados completos.
+    const mapaPacientesAtuais = new Map<string, any>();
+    setores.flatMap(s => s.leitos)
+        .filter(l => l.dadosPaciente)
+        .forEach(l => {
+            mapaPacientesAtuais.set(l.dadosPaciente!.nomePaciente, { 
+                leito: l,
+                dados: l.dadosPaciente,
+                regulacao: l.regulacao 
+            });
+        });
 
     const setoresAtualizados = JSON.parse(JSON.stringify(setores));
 
     try {
-      // 1. Limpa todos os leitos ocupados para recomeçar
-      for (const setor of setoresAtualizados) {
-        for (const leito of setor.leitos) {
-          if (leito.statusLeito === 'Ocupado') {
-            leito.statusLeito = 'Vago';
-            leito.dadosPaciente = null;
-            leito.dataAtualizacaoStatus = agora;
-          }
-        }
-      }
-
-      // 2. Repovoa os leitos com base na planilha, preservando dados existentes
-      dadosPlanilhaProcessados.forEach((pacientePlanilha: PacienteDaPlanilha) => {
-        const setorTarget = setoresAtualizados.find((s: Setor) => s.nomeSetor === pacientePlanilha.setorNome);
-        if (setorTarget) {
-          const leitoTarget = setorTarget.leitos.find((l: any) => l.codigoLeito === pacientePlanilha.leitoCodigo);
-          if (leitoTarget) {
-            leitoTarget.statusLeito = 'Ocupado';
-            leitoTarget.dataAtualizacaoStatus = agora;
-
-            // CORREÇÃO PRINCIPAL AQUI:
-            const dadosAntigos = mapaPacientesAtuais.get(pacientePlanilha.nomeCompleto);
-            const regulacaoPendente = mapaRegulacoesPendentes.get(pacientePlanilha.nomeCompleto);
-
-            if (dadosAntigos) {
-              // Se o paciente já existia, preservamos seus dados clínicos (isolamentos, etc.)
-              // e apenas atualizamos as informações da internação que vêm da planilha.
-              leitoTarget.dadosPaciente = {
-                ...dadosAntigos, // <-- Preserva dados como `isolamentosVigentes`, `provavelAlta`, etc.
-                nomePaciente: pacientePlanilha.nomeCompleto,
-                dataNascimento: pacientePlanilha.dataNascimento,
-                sexoPaciente: pacientePlanilha.sexo,
-                dataInternacao: pacientePlanilha.dataInternacao,
-                especialidadePaciente: pacientePlanilha.especialidade
-              };
-
-              // LÓGICA DE PRESERVAÇÃO DE REGULAÇÃO
-              if (regulacaoPendente && regulacaoPendente.leitoOrigem !== pacientePlanilha.leitoCodigo) {
-                // O paciente se moveu E tinha uma regulação.
-                // Aqui implementaremos o modal de confirmação (Fase futura)
-                // Por enquanto, vamos manter a regulação, mas precisamos de uma forma de alertar o usuário.
-                leitoTarget.dadosPaciente.regulacao = regulacaoPendente.regulacao;
-                leitoTarget.statusLeito = 'Regulado';
-                leitoTarget.regulacao = regulacaoPendente.regulacao;
-              }
-            } else {
-              // Se for um paciente novo, criamos um objeto limpo
-              leitoTarget.dadosPaciente = {
-                nomePaciente: pacientePlanilha.nomeCompleto,
-                dataNascimento: pacientePlanilha.dataNascimento,
-                sexoPaciente: pacientePlanilha.sexo,
-                dataInternacao: pacientePlanilha.dataInternacao,
-                especialidadePaciente: pacientePlanilha.especialidade,
-                isolamentosVigentes: [], // Inicializa como array vazio
-              };
+        // 2. Limpa apenas os leitos OCUPADOS, preservando os REGULADOS e RESERVADOS por enquanto.
+        for (const setor of setoresAtualizados) {
+            for (const leito of setor.leitos) {
+                if (leito.statusLeito === 'Ocupado') {
+                    leito.statusLeito = 'Vago';
+                    leito.dadosPaciente = null;
+                    leito.dataAtualizacaoStatus = agora;
+                }
             }
-          }
         }
-      });
 
-      // 3. Persiste as alterações no banco de dados
-      setoresAtualizados.forEach((setor: Setor) => {
-        const setorRef = doc(db, 'setoresRegulaFacil', setor.id!);
-        batch.update(setorRef, { leitos: setor.leitos });
-      });
+        // 3. Processa cada paciente da planilha
+        for (const pacientePlanilha of dadosPlanilhaProcessados) {
+            const setorTarget = setoresAtualizados.find((s: Setor) => s.nomeSetor === pacientePlanilha.setorNome);
+            if (!setorTarget) continue;
 
-      await batch.commit();
+            const leitoTarget = setorTarget.leitos.find((l: any) => l.codigoLeito === pacientePlanilha.leitoCodigo);
+            if (!leitoTarget) continue;
 
-      toast({ 
-        title: 'Sucesso!', 
-        description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} pacientes atualizados.`,
-      });
+            const dadosAntigos = mapaPacientesAtuais.get(pacientePlanilha.nomeCompleto);
 
-      setImportModalOpen(false);
+            // Cenário A: Paciente novo ou que teve alta e voltou
+            if (!dadosAntigos) {
+                leitoTarget.statusLeito = 'Ocupado';
+                leitoTarget.dadosPaciente = {
+                    nomePaciente: pacientePlanilha.nomeCompleto,
+                    dataNascimento: pacientePlanilha.dataNascimento,
+                    sexoPaciente: pacientePlanilha.sexo,
+                    dataInternacao: pacientePlanilha.dataInternacao,
+                    especialidadePaciente: pacientePlanilha.especialidade,
+                    isolamentosVigentes: [],
+                };
+                leitoTarget.dataAtualizacaoStatus = agora;
+            } 
+            // Cenário B: Paciente que já existia no sistema
+            else {
+                const { dados, regulacao, leito: leitoAntigo } = dadosAntigos;
+                leitoTarget.statusLeito = 'Ocupado';
+                leitoTarget.dadosPaciente = {
+                    ...dados, // Preserva isolamentos, alta provável, etc.
+                    especialidadePaciente: pacientePlanilha.especialidade, // Atualiza dados da planilha
+                    dataInternacao: pacientePlanilha.dataInternacao
+                };
+                leitoTarget.dataAtualizacaoStatus = agora;
+
+                // LÓGICA CRÍTICA DE PRESERVAÇÃO DA REGULAÇÃO:
+                if (regulacao) {
+                    // Se o paciente se moveu PARA o leito que estava reservado para ele, a regulação foi concluída.
+                    if (regulacao.paraLeito === leitoTarget.codigoLeito) {
+                        leitoTarget.dadosPaciente.origem = { deSetor: leitoAntigo.setorNome, deLeito: leitoAntigo.codigoLeito };
+                        leitoTarget.statusLeito = 'Ocupado';
+                    } else {
+                        // Se ele se moveu para um leito DIFERENTE, a regulação anterior ainda está pendente. Preservamos ela.
+                        leitoTarget.statusLeito = 'Regulado';
+                        leitoTarget.regulacao = regulacao;
+                    }
+                }
+            }
+        }
+
+        // 4. Persiste as alterações no banco de dados
+        setoresAtualizados.forEach((setor: Setor) => {
+            const setorRef = doc(db, 'setoresRegulaFacil', setor.id!);
+            batch.update(setorRef, { leitos: setor.leitos });
+        });
+
+        await batch.commit();
+
+        toast({ 
+            title: 'Sucesso!', 
+            description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} pacientes atualizados.`,
+        });
+
+        setImportModalOpen(false);
 
     } catch (error) {
-      console.error("Erro ao sincronizar:", error);
-      toast({ title: 'Erro!', description: 'Não foi possível sincronizar os dados.', variant: 'destructive' });
+        console.error("Erro ao sincronizar:", error);
+        toast({ title: 'Erro!', description: 'Não foi possível sincronizar os dados.', variant: 'destructive' });
     } finally {
-      setIsSyncing(false);
-      setSyncSummary(null);
-      setValidationResult(null);
+        setIsSyncing(false);
+        setSyncSummary(null);
+        setValidationResult(null);
     }
   };
 
