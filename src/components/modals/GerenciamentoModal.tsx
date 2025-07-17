@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useSetores } from '@/hooks/useSetores';
-import { useLeitos } from '@/hooks/useLeitos';
+import { useLeitos } from '@/hooks/useLeitos'; // <-- IMPORTAÇÃO CORRETA
 import SetorForm from '../forms/SetorForm';
 import LeitoForm from '../forms/LeitoForm';
 import { SetorFormData, LeitoFormData, Leito, Setor } from '@/types/hospital';
@@ -19,6 +19,7 @@ interface GerenciamentoModalProps {
 }
 
 const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => {
+  // CORREÇÃO: Hooks separados para cada responsabilidade
   const { setores, loading: setoresLoading, criarSetor, atualizarSetor, excluirSetor } = useSetores();
   const { leitos, loading: leitosLoading, adicionarLeito, atualizarLeito, excluirLeito } = useLeitos();
 
@@ -39,6 +40,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     if (editingLeito) {
       await atualizarLeito(editingLeito.id!, data);
     } else {
+      // CORREÇÃO: Chama a função 'adicionarLeito' do hook correto 'useLeitos'
       await adicionarLeito(setorId, data);
     }
     setEditingLeito(null);

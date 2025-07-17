@@ -37,7 +37,6 @@ export const useSetores = () => {
   const criarSetor = async (data: SetorFormData) => {
     setLoading(true);
     try {
-      // CORREÇÃO: Passa apenas os dados do formulário, sem o array 'leitos'.
       await addDoc(collection(db, 'setoresRegulaFacil'), data);
       registrarLog(`Criou o setor "${data.nomeSetor}" (${data.siglaSetor}).`, 'Gestão de Setores');
       toast({
@@ -82,8 +81,6 @@ export const useSetores = () => {
     setLoading(true);
     try {
       const setor = setores.find(s => s.id === setorId);
-      // Aqui, futuramente, você pode adicionar uma lógica para verificar
-      // se existem leitos associados a este setor antes de permitir a exclusão.
       const setorRef = doc(db, 'setoresRegulaFacil', setorId);
       await deleteDoc(setorRef);
 
