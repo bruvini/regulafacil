@@ -50,9 +50,9 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
       await atualizarLeito(editingLeito.setorId, editingLeito.leitoIndex.toString(), data);
       setEditingLeito(null);
     } else {
-      // Split by any combination of comma or space and filter out empty entries
+      // Split only by comma and trim whitespace
       const leitoCodigos = data.codigoLeito
-        .split(/[,\s]+/)
+        .split(',')
         .map(codigo => codigo.trim())
         .filter(codigo => codigo.length > 0);
       
