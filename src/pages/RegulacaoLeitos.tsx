@@ -1,13 +1,13 @@
 // src/pages/RegulacaoLeitos.tsx
 
-import { useState, useEffect, useMemo } from 'react'; // Adicionado useMemo e useEffect
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Download, BedDouble, Ambulance, X, Clock, Settings, CheckCircle, Pencil, XCircle, FileText, TrendingUp, Users, BrainCircuit, Scissors, Home, Menu, MessageSquarePlus, LogOut, LogIn, ArrowRightLeft, AlertTriangle } from 'lucide-react';
+import { Download, BedDouble, Ambulance, X, Clock, Settings, CheckCircle, Pencil, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useCirurgiasEletivas } from '@/hooks/useCirurgiasEletivas';
 import { useCirurgias } from '@/hooks/useCirurgias';
@@ -26,22 +26,19 @@ import { PacientePendenteItem } from '@/components/PacientePendenteItem';
 import { RemanejamentoPendenteItem } from '@/components/RemanejamentoPendenteItem';
 import { CirurgiaEletivaItem } from '@/components/CirurgiaEletivaItem';
 import { useToast } from '@/hooks/use-toast';
-import { collection, doc, writeBatch, arrayUnion, updateDoc, deleteDoc, addDoc, getDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch, arrayUnion, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { isAfter, subDays, isValid, intervalToDuration, parse } from 'date-fns';
+import { intervalToDuration, parse } from 'date-fns';
 import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
 import { PacienteReguladoItem } from '@/components/PacienteReguladoItem';
 import { ResumoRegulacoesModal } from '@/components/modals/ResumoRegulacoesModal';
 import { useAuditoria } from '@/hooks/useAuditoria';
-
-// --- Imports de Hooks (ATUALIZADO) ---
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
+import { Paciente, Leito, HistoricoMovimentacao } from '@/types/hospital';
 
-// --- Tipos ---
-import { Paciente, Leito, Setor, HistoricoMovimentacao, SolicitacaoCirurgicaFormData } from '@/types/hospital';
-
+// Tipos locais para a sincronização
 interface PacienteDaPlanilha {
   nomeCompleto: string;
   dataNascimento: string;
@@ -53,80 +50,80 @@ interface PacienteDaPlanilha {
 }
 
 interface SyncSummary {
-    novasInternacoes: PacienteDaPlanilha[];
-    transferencias: { paciente: PacienteDaPlanilha; leitoAntigo: string }[];
-    altas: { paciente: Paciente, leitoAntigo: string }[];
+  novasInternacoes: PacienteDaPlanilha[];
+  transferencias: { paciente: PacienteDaPlanilha; leitoAntigo: string | undefined }[];
+  altas: { paciente: Paciente; leitoAntigo: string | undefined }[];
 }
 
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading } = useSetores();
-  const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
-  const { pacientes, loading: pacientesLoading } = usePacientes();
-  const { registrarLog } = useAuditoria();
-  const { toast } = useToast();
-  
-  const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
-  const { reservarLeitoParaCirurgia } = useCirurgias();
-  const { alertas } = useAlertasIsolamento();
-  const [importModalOpen, setImportModalOpen] = useState(false);
-  const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
-  const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
-  const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
-  const [alocacaoCirurgiaModalOpen, setAlocacaoCirurgiaModalOpen] = useState(false);
-  const [gerenciarTransferenciaOpen, setGerenciarTransferenciaOpen] = useState(false);
-  const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
-  const [pacienteParaAcao, setPacienteParaAcao] = useState<any | null>(null);
-  const [cirurgiaParaAlocar, setCirurgiaParaAlocar] = useState<any | null>(null);
-  const [isAlteracaoMode, setIsAlteracaoMode] = useState(false);
-  const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
-  const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
-  const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
-  const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti'>('normal');
-  const [resumoModalOpen, setResumoModalOpen] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+    const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
+    const { pacientes, loading: pacientesLoading } = usePacientes();
+    const { registrarLog } = useAuditoria();
+    const { toast } = useToast();
+    
+    const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
+    const { reservarLeitoParaCirurgia } = useCirurgias();
+    const { alertas } = useAlertasIsolamento();
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
+    const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
+    const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
+    const [alocacaoCirurgiaModalOpen, setAlocacaoCirurgiaModalOpen] = useState(false);
+    const [gerenciarTransferenciaOpen, setGerenciarTransferenciaOpen] = useState(false);
+    const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
+    const [pacienteParaAcao, setPacienteParaAcao] = useState<any | null>(null);
+    const [cirurgiaParaAlocar, setCirurgiaParaAlocar] = useState<any | null>(null);
+    const [isAlteracaoMode, setIsAlteracaoMode] = useState(false);
+    const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
+    const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
+    const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
+    const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti'>('normal');
+    const [resumoModalOpen, setResumoModalOpen] = useState(false);
+    const [processing, setProcessing] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
 
   const pacientesComDadosCompletos = useMemo(() => {
-    if (setoresLoading || leitosLoading || pacientesLoading) return [];
+        if (setoresLoading || leitosLoading || pacientesLoading) return [];
+        
+        const mapaSetores = new Map(setores.map(s => [s.id, s]));
+        const mapaLeitos = new Map(leitos.map(l => [l.id, l]));
 
-    const mapaSetores = new Map(setores.map(s => [s.id, s]));
-    const mapaLeitos = new Map(leitos.map(l => [l.id, l]));
+        return pacientes.map(paciente => {
+            const leito = mapaLeitos.get(paciente.leitoId);
+            const setor = leito ? mapaSetores.get(leito.setorId) : undefined;
+            const historicoRecente = leito ? leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1] : undefined;
 
-    return pacientes.map(paciente => {
-      const leito = mapaLeitos.get(paciente.leitoId);
-      const setor = leito ? mapaSetores.get(leito.setorId) : undefined;
-      const historicoRecente = leito ? leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1] : undefined;
-      
-      let paraSetorSigla = '';
-      if (historicoRecente?.statusLeito === 'Regulado' && historicoRecente.infoRegulacao) {
-        const setorDestino = setores.find(s => s.nomeSetor === historicoRecente.infoRegulacao!.paraSetor);
-        paraSetorSigla = setorDestino?.siglaSetor || '';
-      }
+            let paraSetorSigla = '';
+            if (historicoRecente?.statusLeito === 'Regulado' && historicoRecente.infoRegulacao) {
+                const setorDestino = setores.find(s => s.nomeSetor === historicoRecente.infoRegulacao!.paraSetor);
+                paraSetorSigla = setorDestino?.siglaSetor || '';
+            }
 
-      return {
-        ...paciente,
-        leitoCodigo: leito?.codigoLeito || 'N/A',
-        setorOrigem: setor?.nomeSetor || 'N/A',
-        siglaSetorOrigem: setor?.siglaSetor || 'N/A',
-        statusLeito: historicoRecente?.statusLeito || 'Vago',
-        regulacao: historicoRecente?.infoRegulacao ? { ...historicoRecente.infoRegulacao, paraSetorSigla } : undefined
-      };
-    });
-  }, [pacientes, leitos, setores, setoresLoading, leitosLoading, pacientesLoading]);
+            return {
+                ...paciente,
+                leitoCodigo: leito?.codigoLeito || 'N/A',
+                setorOrigem: setor?.nomeSetor || 'N/A',
+                siglaSetorOrigem: setor?.siglaSetor || 'N/A',
+                statusLeito: historicoRecente?.statusLeito || 'Vago',
+                regulacao: historicoRecente?.infoRegulacao ? { ...historicoRecente.infoRegulacao, paraSetorSigla } : undefined
+            };
+        });
+    }, [pacientes, leitos, setores, setoresLoading, leitosLoading, pacientesLoading]);
 
   const { filteredPacientes, ...filtrosProps } = useFiltrosRegulacao(pacientesComDadosCompletos);
 
-  const pacientesAguardandoRegulacao = filteredPacientes.filter(p => p.statusLeito === 'Ocupado');
-  const pacientesJaRegulados = filteredPacientes.filter(p => p.statusLeito === 'Regulado');
-  const pacientesAguardandoUTI = filteredPacientes.filter(p => p.aguardaUTI);
-  const pacientesAguardandoTransferencia = filteredPacientes.filter(p => p.transferirPaciente);
-  const pacientesAguardandoRemanejamento = filteredPacientes.filter(p => p.remanejarPaciente);
-  
-  const decisaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
-  const decisaoClinica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
-  const recuperacaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
+    const pacientesAguardandoRegulacao = filteredPacientes.filter(p => p.statusLeito === 'Ocupado');
+    const pacientesJaRegulados = filteredPacientes.filter(p => p.statusLeito === 'Regulado');
+    const pacientesAguardandoUTI = filteredPacientes.filter(p => p.aguardaUTI);
+    const pacientesAguardandoTransferencia = filteredPacientes.filter(p => p.transferirPaciente);
+    const pacientesAguardandoRemanejamento = filteredPacientes.filter(p => p.remanejarPaciente);
+    
+    const decisaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
+    const decisaoClinica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
+    const recuperacaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
 
-  const totalPendentes = pacientesAguardandoRegulacao.length;
+    const totalPendentes = pacientesAguardandoRegulacao.length;
 
   // --- Funções Auxiliares ---
   const agruparPorEspecialidade = (pacientes: any[]) => {
@@ -390,276 +387,167 @@ const RegulacaoLeitos = () => {
   };
 
   const handleProcessFileRequest = (file: File) => {
-    setProcessing(true);
-    setValidationResult(null);
-    setSyncSummary(null);
+        setProcessing(true);
+        setValidationResult(null);
+        setSyncSummary(null);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target.result;
-        const workbook = XLSX.read(data, { type: "binary" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
-          header: 1,
-        });
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = e.target!.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        const dadosPlanilha = jsonData.slice(3);
+                const pacientesDaPlanilha: PacienteDaPlanilha[] = jsonData.slice(3)
+                    .map((row: any) => ({
+                        nomeCompleto: row[0]?.trim(),
+                        dataNascimento: row[1]?.trim(),
+                        sexo: (row[2]?.trim() === 'F' ? 'Feminino' : 'Masculino'),
+                        dataInternacao: row[3]?.trim(),
+                        setorNome: row[4]?.trim(),
+                        leitoCodigo: row[6]?.trim(),
+                        especialidade: row[7]?.trim()
+                    }))
+                    .filter(p => p.nomeCompleto && p.leitoCodigo && p.setorNome);
 
-        const setoresPlanilha = new Set<string>();
-        const leitosPlanilha: Record<string, Set<string>> = {};
+                setDadosPlanilhaProcessados(pacientesDaPlanilha);
 
-        dadosPlanilha.forEach((row: any) => {
-          const nomeSetor = row[4]?.trim();
-          const nomeLeito = row[6]?.trim();
+                // --- VALIDAÇÃO CORRIGIDA ---
+                const setoresCadastrados = new Set(setores.map(s => s.nomeSetor));
+                const leitosCadastrados = new Set(leitos.map(l => l.codigoLeito));
 
-          if (nomeSetor) {
-            setoresPlanilha.add(nomeSetor);
-            if (nomeLeito) {
-              if (!leitosPlanilha[nomeSetor]) {
-                leitosPlanilha[nomeSetor] = new Set<string>();
-              }
-              leitosPlanilha[nomeSetor].add(nomeLeito);
-            }
-          }
-        });
+                const setoresFaltantes = [...new Set(pacientesDaPlanilha.map(p => p.setorNome))]
+                    .filter(nomeSetor => !setoresCadastrados.has(nomeSetor));
 
-        const setoresCadastrados = new Set(setores.map((s) => s.nomeSetor));
-        const leitosCadastrados: Record<string, Set<string>> = {};
-        setores.forEach((s) => {
-          leitosCadastrados[s.nomeSetor] = new Set(
-            s.leitos.map((l) => l.codigoLeito)
-          );
-        });
-
-        const setoresFaltantes = [...setoresPlanilha].filter(
-          (s) => !setoresCadastrados.has(s)
-        );
-
-        const leitosFaltantes: Record<string, string[]> = {};
-        Object.entries(leitosPlanilha).forEach(([setor, leitos]) => {
-          if (setoresCadastrados.has(setor)) {
-            const faltantes = [...leitos].filter(
-              (l) => !leitosCadastrados[setor]?.has(l)
-            );
-            if (faltantes.length > 0) {
-              leitosFaltantes[setor] = faltantes;
-            }
-          }
-        });
-
-        const temInconsistencias =
-          setoresFaltantes.length > 0 ||
-          Object.keys(leitosFaltantes).length > 0;
-
-        if (temInconsistencias) {
-          setValidationResult({ setoresFaltantes, leitosFaltantes });
-        } else {
-          const pacientesPlanilha: PacienteDaPlanilha[] = dadosPlanilha
-            .map((row: any) => ({
-              nomeCompleto: row[0]?.trim(),
-              dataNascimento: row[1]?.trim(),
-              sexo: (row[2]?.trim() === "F" ? "Feminino" : "Masculino") as
-                | "Masculino"
-                | "Feminino",
-              dataInternacao: row[3]?.trim(),
-              setorNome: row[4]?.trim(),
-              leitoCodigo: row[6]?.trim(),
-              especialidade: row[7]?.trim(),
-            }))
-            .filter((p) => p.nomeCompleto && p.leitoCodigo);
-
-          // Validação de leitos bloqueados
-          const todosLeitos = setores.flatMap((s) =>
-            s.leitos.map((l) => ({ ...l, setorNome: s.nomeSetor }))
-          );
-          const conflitosLeitosBloqueados = pacientesPlanilha.filter(
-            (paciente) => {
-              const leito = todosLeitos.find(
-                (l) => l.codigoLeito === paciente.leitoCodigo
-              );
-              return leito && leito.statusLeito === "Bloqueado";
-            }
-          );
-
-          if (conflitosLeitosBloqueados.length > 0) {
-            const conflitosDetalhados = conflitosLeitosBloqueados
-              .map((p) => `${p.nomeCompleto} - Leito ${p.leitoCodigo}`)
-              .join(", ");
-
-            toast({
-              title: "Erro: Leitos Bloqueados",
-              description: `Os seguintes pacientes estão alocados em leitos bloqueados: ${conflitosDetalhados}`,
-              variant: "destructive",
-            });
-            setProcessing(false);
-            return;
-          }
-
-          // Gerar resumo das operações
-          const leitosOcupados = todosLeitos.filter(
-            (l) => l.statusLeito === "Ocupado"
-          );
-          const summary: SyncSummary = {
-            novasInternacoes: [],
-            transferencias: [],
-            altas: [],
-          };
-
-          // Identificar altas
-          leitosOcupados.forEach((leitoOcupado) => {
-            if (
-              leitoOcupado.dadosPaciente &&
-              !pacientesPlanilha.some(
-                (p) =>
-                  p.nomeCompleto === leitoOcupado.dadosPaciente?.nomePaciente
-              )
-            ) {
-              summary.altas.push({
-                nomePaciente: leitoOcupado.dadosPaciente.nomePaciente,
-                leitoAntigo: leitoOcupado.codigoLeito,
-              });
-            }
-          });
-
-          // Identificar transferências e novas internações
-          pacientesPlanilha.forEach((pacientePlanilha) => {
-            const leitoAtual = leitosOcupados.find(
-              (l) =>
-                l.dadosPaciente?.nomePaciente === pacientePlanilha.nomeCompleto
-            );
-            const leitoDaPlanilha = todosLeitos.find(
-              (l) => l.codigoLeito === pacientePlanilha.leitoCodigo
-            );
-
-            if (!leitoDaPlanilha) return;
-
-            if (leitoAtual) {
-              if (leitoAtual.id !== leitoDaPlanilha.id) {
-                summary.transferencias.push({
-                  paciente: pacientePlanilha,
-                  leitoAntigo: leitoAtual.codigoLeito,
+                const leitosFaltantes: Record<string, string[]> = {};
+                pacientesDaPlanilha.forEach(p => {
+                    if (!leitosCadastrados.has(p.leitoCodigo)) {
+                        if (!leitosFaltantes[p.setorNome]) {
+                            leitosFaltantes[p.setorNome] = [];
+                        }
+                        leitosFaltantes[p.setorNome].push(p.leitoCodigo);
+                    }
                 });
-              }
-            } else {
-              summary.novasInternacoes.push(pacientePlanilha);
+
+                if (setoresFaltantes.length > 0 || Object.keys(leitosFaltantes).length > 0) {
+                    setValidationResult({ setoresFaltantes, leitosFaltantes });
+                    return;
+                }
+
+                // --- GERAÇÃO DE RESUMO CORRIGIDA ---
+                const mapaPacientesPlanilha = new Map(pacientesDaPlanilha.map(p => [p.nomeCompleto, p]));
+                const mapaPacientesSistema = new Map(pacientes.map(p => [p.nomeCompleto, p]));
+                const mapaLeitosSistema = new Map(leitos.map(l => [l.id, l]));
+
+                const altas = pacientes
+                    .filter(p => !mapaPacientesPlanilha.has(p.nomeCompleto))
+                    .map(p => ({ paciente: p, leitoAntigo: mapaLeitosSistema.get(p.leitoId)?.codigoLeito }));
+
+                const novasInternacoes = pacientesDaPlanilha.filter(p => !mapaPacientesSistema.has(p.nomeCompleto));
+                
+                const transferencias = pacientesDaPlanilha
+                    .filter(p => mapaPacientesSistema.has(p.nomeCompleto))
+                    .map(p => {
+                        const pacienteSistema = mapaPacientesSistema.get(p.nomeCompleto)!;
+                        const leitoAntigo = mapaLeitosSistema.get(pacienteSistema.leitoId);
+                        return { paciente: p, leitoAntigo: leitoAntigo?.codigoLeito };
+                    })
+                    .filter(t => t.paciente.leitoCodigo !== t.leitoAntigo);
+
+                setSyncSummary({ novasInternacoes, transferencias, altas });
+
+            } catch (error) {
+                console.error("Erro ao processar planilha:", error);
+                toast({ title: 'Erro de Processamento', description: 'Verifique o formato do arquivo.', variant: 'destructive' });
+            } finally {
+                setProcessing(false);
             }
-          });
+        };
+        reader.readAsBinaryString(file);
+    };
 
-          setSyncSummary(summary);
-          setDadosPlanilhaProcessados(pacientesPlanilha);
+  const handleConfirmSync = async () => {
+        if (!syncSummary) return;
+        setIsSyncing(true);
+      
+        const batch = writeBatch(db);
+        const agora = new Date().toISOString();
+        
+        const mapaLeitos = new Map(leitos.map(l => [l.codigoLeito, l]));
+        const mapaSetores = new Map(setores.map(s => [s.nomeSetor, s]));
+      
+        try {
+          // 1. Processar Altas
+          for (const { paciente, leitoAntigo } of syncSummary.altas) {
+            const leitoRef = doc(db, 'leitosRegulaFacil', paciente.leitoId);
+            const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+      
+            const historicoAlta: HistoricoMovimentacao = {
+              statusLeito: 'Higienizacao',
+              dataAtualizacaoStatus: agora,
+            };
+            batch.update(leitoRef, { historicoMovimentacao: arrayUnion(historicoAlta) });
+            batch.delete(pacienteRef);
+            registrarLog(`Alta (via importação) para ${paciente.nomeCompleto} do leito ${leitoAntigo}.`, "Sincronização MV");
+          }
+      
+          // 2. Processar Transferências
+          for (const { paciente, leitoAntigo } of syncSummary.transferencias) {
+            const pacienteSistema = pacientes.find(p => p.nomeCompleto === paciente.nomeCompleto)!;
+            const leitoAntigoRef = doc(db, 'leitosRegulaFacil', pacienteSistema.leitoId);
+            const leitoNovo = mapaLeitos.get(paciente.leitoCodigo)!;
+            const leitoNovoRef = doc(db, 'leitosRegulaFacil', leitoNovo.id);
+            const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteSistema.id);
+      
+            const historicoAlta: HistoricoMovimentacao = { statusLeito: 'Higienizacao', dataAtualizacaoStatus: agora };
+            const historicoOcupacao: HistoricoMovimentacao = { statusLeito: 'Ocupado', dataAtualizacaoStatus: agora, pacienteId: pacienteSistema.id };
+      
+            batch.update(leitoAntigoRef, { historicoMovimentacao: arrayUnion(historicoAlta) });
+            batch.update(leitoNovoRef, { historicoMovimentacao: arrayUnion(historicoOcupacao) });
+            batch.update(pacienteRef, { leitoId: leitoNovo.id, setorId: leitoNovo.setorId, especialidadePaciente: paciente.especialidade });
+            registrarLog(`Transferência (via importação) de ${pacienteSistema.nomeCompleto} do leito ${leitoAntigo} para ${leitoNovo.codigoLeito}.`, "Sincronização MV");
+          }
+      
+          // 3. Processar Novas Internações
+          for (const novaInternacao of syncSummary.novasInternacoes) {
+            const leito = mapaLeitos.get(novaInternacao.leitoCodigo)!;
+            const setor = mapaSetores.get(novaInternacao.setorNome)!;
+            const leitoRef = doc(db, 'leitosRegulaFacil', leito.id);
+            
+            const pacienteRef = doc(collection(db, 'pacientesRegulaFacil'));
+      
+            const novoPaciente: Omit<Paciente, 'id'> = {
+              leitoId: leito.id,
+              setorId: setor.id!,
+              nomeCompleto: novaInternacao.nomeCompleto,
+              dataNascimento: novaInternacao.dataNascimento,
+              sexoPaciente: novaInternacao.sexo,
+              dataInternacao: novaInternacao.dataInternacao,
+              especialidadePaciente: novaInternacao.especialidade,
+            };
+            batch.set(pacienteRef, novoPaciente);
+      
+            const historicoOcupacao: HistoricoMovimentacao = { statusLeito: 'Ocupado', dataAtualizacaoStatus: agora, pacienteId: pacienteRef.id };
+            batch.update(leitoRef, { historicoMovimentacao: arrayUnion(historicoOcupacao) });
+            registrarLog(`Nova internação (via importação) para ${novaInternacao.nomeCompleto} no leito ${leito.codigoLeito}.`, "Sincronização MV");
+          }
+      
+          await batch.commit();
+          toast({ title: 'Sucesso!', description: 'Sincronização concluída com sucesso!' });
+          setImportModalOpen(false);
+      
+        } catch (error) {
+          console.error("Erro ao sincronizar:", error);
+          toast({ title: 'Erro!', description: 'Não foi possível sincronizar os dados.', variant: 'destructive' });
+        } finally {
+          setIsSyncing(false);
+          setSyncSummary(null);
+          setValidationResult(null);
+          setDadosPlanilhaProcessados([]);
         }
-      } catch (error) {
-        console.error("Erro ao processar o arquivo Excel:", error);
-        toast({
-          title: "Erro de Processamento",
-          description:
-            "Ocorreu um erro ao ler a planilha. Verifique o formato do arquivo.",
-          variant: "destructive",
-        });
-      } finally {
-        setProcessing(false);
-      }
     };
-    reader.onerror = (error) => {
-      console.error("Erro ao ler o arquivo:", error);
-      toast({
-        title: "Erro de Leitura",
-        description: "Não foi possível ler o arquivo selecionado.",
-        variant: "destructive",
-      });
-      setProcessing(false);
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  const handleSync = async () => {
-    if (!syncSummary || setoresLoading || leitosLoading || pacientesLoading) return;
-    setIsSyncing(true);
-  
-    const batch = writeBatch(db);
-    const agora = new Date().toISOString();
-    
-    const mapaLeitos = new Map(leitos.map(l => [l.codigoLeito, l]));
-  
-    try {
-      // 1. Processar Altas: Deleta o paciente e atualiza o leito para "Higienização"
-      for (const pacienteDeAlta of syncSummary.altas) {
-        // Encontra o paciente completo no estado atual para obter IDs
-        const pacienteOriginal = pacientes.find(p => p.nomeCompleto === pacienteDeAlta.nomePaciente);
-        if (!pacienteOriginal) continue;
-
-        const leitoRef = doc(db, 'leitosRegulaFacil', pacienteOriginal.leitoId);
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteOriginal.id);
-  
-        const historicoAlta: HistoricoMovimentacao = {
-          statusLeito: 'Higienizacao',
-          dataAtualizacaoStatus: agora,
-        };
-        batch.update(leitoRef, { historicoMovimentacao: arrayUnion(historicoAlta) });
-        batch.delete(pacienteRef); // Deleta o documento do paciente
-        
-        registrarLog(`Alta (via importação) para ${pacienteDeAlta.nomePaciente} do leito ${pacienteDeAlta.leitoAntigo}.`, "Sincronização MV");
-      }
-  
-      // 2. Processar Transferências: Atualiza o paciente e os dois leitos envolvidos
-      for (const transferencia of syncSummary.transferencias) {
-        const pacienteSistema = pacientes.find(p => p.nomeCompleto === transferencia.paciente.nomeCompleto)!;
-        const leitoAntigo = leitos.find(l => l.id === pacienteSistema.leitoId)!;
-        const leitoNovo = mapaLeitos.get(transferencia.paciente.leitoCodigo)!;
-
-        const leitoAntigoRef = doc(db, 'leitosRegulaFacil', leitoAntigo.id);
-        const leitoNovoRef = doc(db, 'leitosRegulaFacil', leitoNovo.id);
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteSistema.id);
-  
-        const historicoAlta: HistoricoMovimentacao = { statusLeito: 'Higienizacao', dataAtualizacaoStatus: agora };
-        const historicoOcupacao: HistoricoMovimentacao = { statusLeito: 'Ocupado', dataAtualizacaoStatus: leitoAntigo.historicoMovimentacao.find(h => h.statusLeito === 'Ocupado')?.dataAtualizacaoStatus || agora, pacienteId: pacienteSistema.id };
-  
-        batch.update(leitoAntigoRef, { historicoMovimentacao: arrayUnion(historicoAlta) });
-        batch.update(leitoNovoRef, { historicoMovimentacao: arrayUnion(historicoOcupacao) });
-        batch.update(pacienteRef, { leitoId: leitoNovo.id, setorId: leitoNovo.setorId, especialidadePaciente: transferencia.paciente.especialidade });
-
-        registrarLog(`Transferência (via importação) de ${pacienteSistema.nomeCompleto} do leito ${leitoAntigo.codigoLeito} para ${leitoNovo.codigoLeito}.`, "Sincronização MV");
-      }
-  
-      // 3. Processar Novas Internações: Cria um novo paciente e atualiza o leito
-      for (const novaInternacao of syncSummary.novasInternacoes) {
-        const leito = mapaLeitos.get(novaInternacao.leitoCodigo)!;
-        const leitoRef = doc(db, 'leitosRegulaFacil', leito.id);
-        
-        const pacienteRef = doc(collection(db, 'pacientesRegulaFacil'));
-  
-        const novoPaciente: Omit<Paciente, 'id'> = {
-          leitoId: leito.id,
-          setorId: leito.setorId,
-          nomeCompleto: novaInternacao.nomeCompleto,
-          dataNascimento: novaInternacao.dataNascimento,
-          sexoPaciente: novaInternacao.sexo,
-          dataInternacao: novaInternacao.dataInternacao,
-          especialidadePaciente: novaInternacao.especialidade,
-        };
-        batch.set(pacienteRef, novoPaciente);
-  
-        const historicoOcupacao: HistoricoMovimentacao = { statusLeito: 'Ocupado', dataAtualizacaoStatus: agora, pacienteId: pacienteRef.id };
-        batch.update(leitoRef, { historicoMovimentacao: arrayUnion(historicoOcupacao) });
-        registrarLog(`Nova internação (via importação) para ${novaInternacao.nomeCompleto} no leito ${leito.codigoLeito}.`, "Sincronização MV");
-      }
-  
-      await batch.commit();
-      toast({ title: 'Sucesso!', description: 'Sincronização concluída com sucesso!' });
-      setImportModalOpen(false);
-  
-    } catch (error) {
-      console.error("Erro ao sincronizar:", error);
-      toast({ title: 'Erro!', description: 'Não foi possível sincronizar os dados.', variant: 'destructive' });
-    } finally {
-      setIsSyncing(false);
-      setSyncSummary(null);
-      setValidationResult(null);
-      setDadosPlanilha([]);
-    }
-  };
 
 return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
