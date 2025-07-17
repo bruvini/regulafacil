@@ -27,9 +27,11 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
     const [sortConfig, setSortConfig] = useState({ key: 'tempo', direction: 'desc' });
 
     const filteredPacientes = useMemo(() => {
+        if (!pacientes || pacientes.length === 0) return [];
+        
         let pacientesFiltrados = pacientes.filter(paciente => {
             // Filtro por Nome
-            if (searchTerm && !paciente.nomePaciente.toLowerCase().includes(searchTerm.toLowerCase())) {
+            if (searchTerm && !paciente.nomeCompleto?.toLowerCase().includes(searchTerm.toLowerCase())) {
                 return false;
             }
 
@@ -49,17 +51,19 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
             }
 
             // Filtro por Tempo de Internação
-            const dataEntrada = parse(paciente.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-            if (isValid(dataEntrada)) {
-                const tempo = filtrosAvancados.unidadeTempo === 'dias' 
-                    ? differenceInDays(new Date(), dataEntrada)
-                    : differenceInHours(new Date(), dataEntrada);
+            if (paciente.dataInternacao) {
+                const dataEntrada = parse(paciente.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+                if (isValid(dataEntrada)) {
+                    const tempo = filtrosAvancados.unidadeTempo === 'dias' 
+                        ? differenceInDays(new Date(), dataEntrada)
+                        : differenceInHours(new Date(), dataEntrada);
 
-                if (filtrosAvancados.tempoInternacaoMin && tempo < parseInt(filtrosAvancados.tempoInternacaoMin)) {
-                    return false;
-                }
-                if (filtrosAvancados.tempoInternacaoMax && tempo > parseInt(filtrosAvancados.tempoInternacaoMax)) {
-                    return false;
+                    if (filtrosAvancados.tempoInternacaoMin && tempo < parseInt(filtrosAvancados.tempoInternacaoMin)) {
+                        return false;
+                    }
+                    if (filtrosAvancados.tempoInternacaoMax && tempo > parseInt(filtrosAvancados.tempoInternacaoMax)) {
+                        return false;
+                    }
                 }
             }
 
@@ -71,14 +75,14 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
             let comparison = 0;
             
             if (sortConfig.key === 'nome') {
-                comparison = a.nomePaciente.localeCompare(b.nomePaciente);
+                comparison = (a.nomeCompleto || '').localeCompare(b.nomeCompleto || '');
             } else if (sortConfig.key === 'idade') {
                 const idadeA = calcularIdade(a.dataNascimento);
                 const idadeB = calcularIdade(b.dataNascimento);
                 comparison = idadeA - idadeB;
             } else if (sortConfig.key === 'tempo') {
-                const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-                const dataB = parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+                const dataA = a.dataInternacao ? parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
+                const dataB = b.dataInternacao ? parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
                 if (isValid(dataA) && isValid(dataB)) {
                     const tempoA = differenceInHours(new Date(), dataA);
                     const tempoB = differenceInHours(new Date(), dataB);
