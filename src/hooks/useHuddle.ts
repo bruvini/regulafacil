@@ -35,11 +35,15 @@ export const useHuddle = (huddleId: string) => {
     try {
       const pendenciasRef = collection(db, 'huddleRegulaFacil', huddleId, 'pendencias');
       
-      await addDoc(pendenciasRef, {
+      // Fix: Only include pacienteId if it has a value
+      const pendenciaParaSalvar = {
         ...novaPendencia,
+        ...(novaPendencia.pacienteId && { pacienteId: novaPendencia.pacienteId }),
         status: 'PENDENTE',
         dataCriacao: new Date()
-      });
+      };
+
+      await addDoc(pendenciasRef, pendenciaParaSalvar);
 
       toast({
         title: "Sucesso!",

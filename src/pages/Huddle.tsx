@@ -1,36 +1,92 @@
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useHuddle } from '@/hooks/useHuddle';
+import { useHuddleList } from '@/hooks/useHuddleList';
 import { CardPendencia } from '@/components/CardPendencia';
-import { NovaPendenciaModal } from '@/components/modals/NovaPendenciaModal';
+import { PendenciaHuddleModal } from '@/components/modals/PendenciaHuddleModal';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Printer, Users, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { Printer, Plus, History, Users, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pendencia } from '@/types/huddle';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const Huddle = () => {
+  const { huddleList } = useHuddleList();
   const [dataSelecionada] = useState(new Date());
   const [turno] = useState(() => {
     const hora = new Date().getHours();
     return hora < 14 ? 'MANHA' : 'TARDE';
   });
   
-  const huddleId = `${format(dataSelecionada, 'yyyy-MM-dd')}-${turno}`;
-  const { pendencias, loading, adicionarPendencia, atualizarStatusPendencia } = useHuddle(huddleId);
-  
+  const [huddleId, setHuddleId] = useState(`${format(dataSelecionada, 'yyyy-MM-dd')}-${turno}`);
+  const [modalOpen, setModalOpen] = useState(false);
   const [selectedPendencia, setSelectedPendencia] = useState<Pendencia | null>(null);
 
-  const colunas = {
+  const { pendencias, loading, adicionarPendencia, atualizarStatusPendencia } = useHuddle(huddleId);
+
+  useEffect(() => {
+    if (huddleList.length > 0 && !huddleId) {
+      setHuddleId(huddleList[0].id);
+    }
+  }, [huddleList, huddleId]);
+
+  const colunas = useMemo(() => ({
     PENDENTE: pendencias.filter(p => p.status === 'PENDENTE'),
     EM_ANDAMENTO: pendencias.filter(p => p.status === 'EM_ANDAMENTO'),
     RESOLVIDO: pendencias.filter(p => p.status === 'RESOLVIDO'),
-  };
+  }), [pendencias]);
 
-  const handlePrint = () => {
-    window.print();
+  const handleGeneratePdf = () => {
+    const doc = new jsPDF();
+    const selectedHuddle = huddleList.find(h => h.id === huddleId);
+    const turnoLabel = selectedHuddle?.turno === 'MANHA' ? 'Manhã' : 'Tarde';
+    const dataFormatada = selectedHuddle ? format(selectedHuddle.data, 'dd/MM/yyyy') : format(dataSelecionada, 'dd/MM/yyyy');
+    
+    doc.setFontSize(16);
+    doc.text(`Relatório de Pendências - Huddle ${turnoLabel}`, 14, 20);
+    doc.setFontSize(12);
+    doc.text(`Data: ${dataFormatada}`, 14, 30);
+
+    const getCategoryLabel = (categoria: string) => {
+      switch (categoria) {
+        case 'ALTA_PROLONGADA': return 'Alta Prolongada';
+        case 'VAGA_UTI': return 'Vaga UTI';
+        case 'SISREG': return 'SISREG';
+        case 'INTERNACAO_PROLONGADA': return 'Internação Prolongada';
+        default: return 'Outros';
+      }
+    };
+
+    const getStatusLabel = (status: string) => {
+      switch (status) {
+        case 'PENDENTE': return 'Para Discutir';
+        case 'EM_ANDAMENTO': return 'Em Andamento';
+        case 'RESOLVIDO': return 'Resolvido';
+        default: return status;
+      }
+    };
+
+    const tableData = pendencias.map(p => [
+      getCategoryLabel(p.categoria),
+      p.titulo,
+      p.responsavel.nome,
+      getStatusLabel(p.status),
+    ]);
+
+    (doc as any).autoTable({
+      head: [['Categoria', 'Título da Pendência', 'Responsável', 'Status']],
+      body: tableData,
+      startY: 40,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+
+    doc.save(`huddle_${format(dataSelecionada, 'yyyy-MM-dd')}_${turnoLabel}.pdf`);
   };
 
   const handleStatusChange = (pendenciaId: string, novoStatus: 'PENDENTE' | 'EM_ANDAMENTO' | 'RESOLVIDO') => {
@@ -69,18 +125,34 @@ const Huddle = () => {
                   Quadro de Comando Huddle
                 </h1>
                 <p className="text-muted-foreground">
-                  {dataFormatada} - Turno da {turnoLabel}
+                  O ponto de encontro da regulação para um fluxo de cuidados ágil e seguro.
                 </p>
               </div>
             </div>
           </div>
           
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handlePrint}>
+            <Select value={huddleId} onValueChange={setHuddleId}>
+              <SelectTrigger className="w-[280px]">
+                <History className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Ver histórico..." />
+              </SelectTrigger>
+              <SelectContent>
+                {huddleList.map(huddle => (
+                  <SelectItem key={huddle.id} value={huddle.id}>
+                    {`${format(huddle.data, 'dd/MM/yyyy')} - ${huddle.turno === 'MANHA' ? 'Manhã' : 'Tarde'}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleGeneratePdf}>
               <Printer className="mr-2 h-4 w-4" />
-              Imprimir Pendências
+              Gerar PDF
             </Button>
-            <NovaPendenciaModal onAdicionarPendencia={(pendencia) => adicionarPendencia(huddleId, pendencia)} />
+            <Button variant="medical" onClick={() => setModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Pendência
+            </Button>
           </div>
         </div>
 
@@ -205,22 +277,11 @@ const Huddle = () => {
         </div>
       </div>
 
-      {/* Estilos de impressão */}
-      <style>{`
-        @media print {
-          .no-print {
-            display: none !important;
-          }
-          
-          .print-break {
-            page-break-after: always;
-          }
-          
-          body {
-            background: white !important;
-          }
-        }
-      `}</style>
+      <PendenciaHuddleModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onSubmit={(pendencia) => adicionarPendencia(huddleId, pendencia)}
+      />
     </div>
   );
 };
