@@ -125,6 +125,50 @@ const RegulacaoLeitos = () => {
 
     const totalPendentes = pacientesAguardandoRegulacao.length;
 
+  // Combinação de todos os pacientes pendentes para o useEffect
+  const todosPacientesPendentes = useMemo(() => [
+    ...pacientesAguardandoRegulacao,
+    ...pacientesJaRegulados,
+    ...pacientesAguardandoUTI,
+    ...pacientesAguardandoTransferencia,
+    ...pacientesAguardandoRemanejamento
+  ], [pacientesAguardandoRegulacao, pacientesJaRegulados, pacientesAguardandoUTI, pacientesAguardandoTransferencia, pacientesAguardandoRemanejamento]);
+
+  // Funções para remanejamento que estavam faltando
+  const solicitarRemanejamento = async (setorId: string, leitoId: string, motivo: string) => {
+    try {
+      const paciente = pacientes.find(p => p.leitoId === leitoId);
+      if (paciente) {
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+        await updateDoc(pacienteRef, {
+          remanejarPaciente: true,
+          motivoRemanejamento: motivo,
+          dataPedidoRemanejamento: new Date().toISOString()
+        });
+        registrarLog(`Solicitou remanejamento para ${paciente.nomeCompleto}. Motivo: ${motivo}`, "Regulação de Leitos");
+      }
+    } catch (error) {
+      console.error('Erro ao solicitar remanejamento:', error);
+    }
+  };
+
+  const cancelarPedidoRemanejamento = async (setorId: string, leitoId: string) => {
+    try {
+      const paciente = pacientes.find(p => p.leitoId === leitoId);
+      if (paciente) {
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+        await updateDoc(pacienteRef, {
+          remanejarPaciente: false,
+          motivoRemanejamento: null,
+          dataPedidoRemanejamento: null
+        });
+        registrarLog(`Cancelou solicitação de remanejamento para ${paciente.nomeCompleto}.`, "Regulação de Leitos");
+      }
+    } catch (error) {
+      console.error('Erro ao cancelar remanejamento:', error);
+    }
+  };
+
   // --- Funções Auxiliares ---
   const agruparPorEspecialidade = (pacientes: any[]) => {
     return pacientes.reduce((acc, paciente) => {
@@ -143,7 +187,6 @@ const RegulacaoLeitos = () => {
     if (duracao.minutes) partes.push(`${duracao.minutes}m`);
     return partes.length > 0 ? partes.join(" ") : "Recente";
   };
-
 
   // --- Funções de Ação Recriadas ---
   const handleAlocarLeitoCirurgia = (cirurgia: any) => {
@@ -264,8 +307,6 @@ const RegulacaoLeitos = () => {
     toast({ title: "Sucesso", description: "Pedido de UTI cancelado." });
   };
 
-
-
   const handleCancelarRemanejamento = async (paciente: Paciente) => {
       const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
       await updateDoc(pacienteRef, { remanejarPaciente: false, motivoRemanejamento: null });
@@ -281,7 +322,7 @@ const RegulacaoLeitos = () => {
         p.remanejarPaciente &&
         p.motivoRemanejamento?.startsWith("Risco de contaminação")
       ) {
-        mapaRemanejamentoContaminacao.set(p.nomePaciente, p);
+        mapaRemanejamentoContaminacao.set(p.nomeCompleto, p);
       }
     });
 
@@ -293,7 +334,7 @@ const RegulacaoLeitos = () => {
       // SÓ cria a solicitação se o paciente do alerta AINDA NÃO estiver na lista de remanejamento.
       if (!mapaRemanejamentoContaminacao.has(nomePaciente)) {
         const pacienteParaRemanejar = todosPacientesPendentes.find(
-          (p) => p.nomePaciente === nomePaciente
+          (p) => p.nomeCompleto === nomePaciente
         );
         if (pacienteParaRemanejar) {
           console.log(`Disparando remanejamento para: ${nomePaciente}`); // Log para depuração
@@ -695,22 +736,22 @@ return (
               <FiltrosRegulacao {...filtrosProps} />
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                 <ListaPacientesPendentes
-                    titulo="Decisão Cirúrgica"
-                    pacientes={decisaoCirurgica}
-                    onRegularClick={handleOpenRegulacaoModal}
-                  />
-                  <ListaPacientesPendentes
-                    titulo="Decisão Clínica"
-                    pacientes={decisaoClinica}
-                    onRegularClick={handleOpenRegulacaoModal}
-                  />
-                  <ListaPacientesPendentes
-                    titulo="Recuperação Cirúrgica"
-                    pacientes={recuperacaoCirurgica}
-                    onRegularClick={handleOpenRegulacaoModal}
-                    onAlta={(setorId, leitoId) => atualizarStatusLeito(leitoId, 'Higienizacao')}
-                  />
+                 {renderListaComAgrupamento(
+                    "Decisão Cirúrgica",
+                    decisaoCirurgica,
+                    handleOpenRegulacaoModal
+                  )}
+                  {renderListaComAgrupamento(
+                    "Decisão Clínica",
+                    decisaoClinica,
+                    handleOpenRegulacaoModal
+                  )}
+                  {renderListaComAgrupamento(
+                    "Recuperação Cirúrgica",
+                    recuperacaoCirurgica,
+                    handleOpenRegulacaoModal,
+                    (setorId, leitoId) => atualizarStatusLeito(leitoId, 'Higienizacao')
+                  )}
               </div>
 
               {pacientesJaRegulados.length > 0 && (
