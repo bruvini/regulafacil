@@ -51,7 +51,16 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
       await atualizarLeito(editingLeito.setorId, editingLeito.leitoIndex.toString(), data);
       setEditingLeito(null);
     } else {
-      await adicionarLeito(setorId, data);
+      // Split by comma and trim whitespace for batch creation
+      const leitoCodigos = data.codigoLeito.split(',').map(codigo => codigo.trim());
+      
+      // Create each bed sequentially
+      for (const codigoLeito of leitoCodigos) {
+        await adicionarLeito(setorId, {
+          ...data,
+          codigoLeito
+        });
+      }
     }
   };
 
