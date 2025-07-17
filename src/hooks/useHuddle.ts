@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { collection, doc, onSnapshot, query, orderBy, addDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuditoria } from '@/hooks/useAuditoria';
 import { toast } from '@/hooks/use-toast';
 import { Pendencia, Comentario, NovaPendencia } from '@/types/huddle';
 
@@ -10,6 +11,7 @@ export const useHuddle = (huddleId: string) => {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [loading, setLoading] = useState(true);
   const { userData } = useAuth();
+  const { registrarLog } = useAuditoria();
 
   useEffect(() => {
     if (!huddleId) return;
@@ -45,6 +47,8 @@ export const useHuddle = (huddleId: string) => {
 
       await addDoc(pendenciasRef, pendenciaParaSalvar);
 
+      registrarLog(`Adicionou a pendência "${novaPendencia.titulo}" ao Huddle.`, 'Huddle');
+      
       toast({
         title: "Sucesso!",
         description: "Pendência adicionada com sucesso."
@@ -65,6 +69,11 @@ export const useHuddle = (huddleId: string) => {
       await updateDoc(pendenciaRef, {
         status: novoStatus
       });
+
+      const pendencia = pendencias.find(p => p.id === pendenciaId);
+      if (pendencia) {
+        registrarLog(`Alterou o status da pendência "${pendencia.titulo}" para ${novoStatus}.`, 'Huddle');
+      }
 
       toast({
         title: "Sucesso!",
@@ -94,6 +103,11 @@ export const useHuddle = (huddleId: string) => {
         },
         data: new Date()
       });
+
+      const pendencia = pendencias.find(p => p.id === pendenciaId);
+      if (pendencia) {
+        registrarLog(`Adicionou um comentário na pendência "${pendencia.titulo}".`, 'Huddle');
+      }
 
       toast({
         title: "Sucesso!",
