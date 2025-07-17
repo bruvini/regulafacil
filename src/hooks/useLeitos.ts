@@ -5,14 +5,11 @@ import {
   collection,
   doc,
   onSnapshot,
-  addDoc,
   updateDoc,
   deleteDoc,
   query,
   orderBy,
   arrayUnion,
-  where,
-  getDocs,
   writeBatch
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -48,41 +45,76 @@ export const useLeitos = () => {
   }, []);
 
   /**
-   * Adiciona um novo leito a um setor específico.
+   * Adiciona um ou mais leitos a um setor específico.
+   * Se o código do leito contiver vírgulas, cria múltiplos leitos.
    */
   const adicionarLeito = async (setorId: string, data: LeitoFormData) => {
     setLoading(true);
     try {
-      const novoHistorico: HistoricoMovimentacao = {
-        statusLeito: 'Vago',
-        dataAtualizacaoStatus: new Date().toISOString(),
-      };
+      const { codigoLeito, leitoPCP, leitoIsolamento } = data;
+      const agora = new Date().toISOString();
 
-      const novoLeito: Omit<Leito, 'id'> = {
-        setorId,
-        codigoLeito: data.codigoLeito,
-        leitoPCP: data.leitoPCP,
-        leitoIsolamento: data.leitoIsolamento,
-        historicoMovimentacao: [novoHistorico],
-      };
+      if (codigoLeito.includes(',')) {
+        // --- LÓGICA DE CRIAÇÃO EM LOTE ---
+        const batch = writeBatch(db);
+        const codigos = codigoLeito.split(',').map(c => c.trim()).filter(Boolean);
 
-      await addDoc(collection(db, 'leitosRegulaFacil'), novoLeito);
-      registrarLog(`Adicionou o leito ${data.codigoLeito} ao setor ID ${setorId}.`, 'Gestão de Leitos');
-      toast({
-        title: "Sucesso",
-        description: "Leito adicionado com sucesso.",
-      });
+        codigos.forEach(codigo => {
+          const novoHistorico: HistoricoMovimentacao = {
+            statusLeito: 'Vago',
+            dataAtualizacaoStatus: agora,
+          };
+          const novoLeito: Omit<Leito, 'id'> = {
+            setorId,
+            codigoLeito: codigo,
+            leitoPCP: false, // Default para lote
+            leitoIsolamento: false, // Default para lote
+            historicoMovimentacao: [novoHistorico],
+          };
+          const leitoRef = doc(collection(db, 'leitosRegulaFacil'));
+          batch.set(leitoRef, novoLeito);
+        });
+
+        await batch.commit();
+        registrarLog(`Adicionou ${codigos.length} leitos em lote ao setor ID ${setorId}.`, 'Gestão de Leitos');
+        toast({
+          title: "Sucesso!",
+          description: `${codigos.length} leitos adicionados com sucesso.`,
+        });
+
+      } else {
+        // --- LÓGICA DE CRIAÇÃO INDIVIDUAL ---
+        const leitosCollectionRef = collection(db, 'leitosRegulaFacil');
+        const novoHistorico: HistoricoMovimentacao = {
+          statusLeito: 'Vago',
+          dataAtualizacaoStatus: agora,
+        };
+        const novoLeito: Omit<Leito, 'id'> = {
+          setorId,
+          codigoLeito: codigoLeito.trim(),
+          leitoPCP,
+          leitoIsolamento,
+          historicoMovimentacao: [novoHistorico],
+        };
+        await addDoc(leitosCollectionRef, novoLeito);
+        registrarLog(`Adicionou o leito ${codigoLeito.trim()} ao setor ID ${setorId}.`, 'Gestão de Leitos');
+        toast({
+          title: "Sucesso",
+          description: "Leito adicionado com sucesso.",
+        });
+      }
     } catch (error) {
-      console.error('Erro ao adicionar leito:', error);
+      console.error('Erro ao adicionar leito(s):', error);
       toast({
         title: "Erro",
-        description: "Não foi possível adicionar o leito.",
+        description: "Não foi possível adicionar o(s) leito(s).",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
+
 
   /**
    * Atualiza as propriedades estáticas de um leito.
