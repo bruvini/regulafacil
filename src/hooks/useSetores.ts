@@ -1,26 +1,64 @@
+
 // src/hooks/useSetores.ts
 
 import { useState, useEffect } from 'react';
 import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Setor, SetorFormData } from '@/types/hospital';
+import { Setor, SetorFormData, Leito } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
 import { useAuditoria } from './useAuditoria';
 
 export const useSetores = () => {
-  const [setores, setSetores] = useState<Setor[]>([]);
+  const [setores, setSetores] = useState<(Setor & { leitos: Leito[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const { registrarLog } = useAuditoria();
 
   useEffect(() => {
-    const q = query(collection(db, 'setoresRegulaFacil'), orderBy('nomeSetor'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const setoresData = snapshot.docs.map(doc => ({
+    const setoresQuery = query(collection(db, 'setoresRegulaFacil'), orderBy('nomeSetor'));
+    const leitosQuery = query(collection(db, 'leitosRegulaFacil'), orderBy('codigoLeito'));
+
+    let setoresData: Setor[] = [];
+    let leitosData: Leito[] = [];
+    let loadingCount = 2;
+
+    const checkAndCombineData = () => {
+      loadingCount--;
+      if (loadingCount === 0) {
+        // Combinar setores com seus leitos
+        const setoresComLeitos = setoresData.map(setor => {
+          const leitosDoSetor = leitosData.filter(leito => leito.setorId === setor.id);
+          
+          // Adicionar status atual e dados do paciente aos leitos
+          const leitosComStatus = leitosDoSetor.map(leito => {
+            const ultimoHistorico = leito.historicoMovimentacao?.[leito.historicoMovimentacao.length - 1];
+            return {
+              ...leito,
+              statusLeito: ultimoHistorico?.statusLeito || 'Vago',
+              dataAtualizacaoStatus: ultimoHistorico?.dataAtualizacaoStatus,
+              dadosPaciente: ultimoHistorico?.pacienteId ? {
+                // Aqui você pode buscar dados do paciente se necessário
+                // Por enquanto deixo undefined, mas pode ser implementado depois
+              } : undefined
+            };
+          });
+
+          return {
+            ...setor,
+            leitos: leitosComStatus
+          };
+        });
+
+        setSetores(setoresComLeitos);
+        setLoading(false);
+      }
+    };
+
+    const unsubscribeSetores = onSnapshot(setoresQuery, (snapshot) => {
+      setoresData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Setor[];
-      setSetores(setoresData);
-      setLoading(false);
+      checkAndCombineData();
     }, (error) => {
       console.error('Erro ao buscar setores:', error);
       toast({
@@ -31,7 +69,26 @@ export const useSetores = () => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    const unsubscribeLeitos = onSnapshot(leitosQuery, (snapshot) => {
+      leitosData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Leito[];
+      checkAndCombineData();
+    }, (error) => {
+      console.error('Erro ao buscar leitos:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar leitos do sistema.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeSetores();
+      unsubscribeLeitos();
+    };
   }, []);
 
   const criarSetor = async (data: SetorFormData) => {
