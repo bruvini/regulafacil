@@ -1,26 +1,35 @@
-
-import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import LeitoCard from '@/components/LeitoCard';
-import QuartoCard from '@/components/QuartoCard';
-import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
-import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
-import { IndicadoresGerais } from '@/components/IndicadoresGerais';
-import { useSetores, LeitoExtendido, SetorComLeitos } from '@/hooks/useSetores';
-import { useLeitos } from '@/hooks/useLeitos';
-import { usePacientes } from '@/hooks/usePacientes';
-import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
-import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
-import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
-import { Settings, ShieldQuestion, ClipboardList } from 'lucide-react';
-import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
-import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
-import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
-import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
+import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import LeitoCard from "@/components/LeitoCard";
+import QuartoCard from "@/components/QuartoCard";
+import GerenciamentoModal from "@/components/modals/GerenciamentoModal";
+import { FiltrosMapaLeitos } from "@/components/FiltrosMapaLeitos";
+import { IndicadoresGerais } from "@/components/IndicadoresGerais";
+import { useSetores, LeitoExtendido, SetorComLeitos } from "@/hooks/useSetores";
+import { useLeitos } from "@/hooks/useLeitos";
+import { usePacientes } from "@/hooks/usePacientes";
+import { useIndicadoresHospital } from "@/hooks/useIndicadoresHospital";
+import { useFiltrosMapaLeitos } from "@/hooks/useFiltrosMapaLeitos";
+import { agruparLeitosPorQuarto } from "@/lib/leitoUtils";
+import { Settings, ShieldQuestion, ClipboardList } from "lucide-react";
+import { MovimentacaoModal } from "@/components/modals/MovimentacaoModal";
+import { RelatorioIsolamentosModal } from "@/components/modals/RelatorioIsolamentosModal";
+import { RelatorioVagosModal } from "@/components/modals/RelatorioVagosModal";
+import { ObservacoesModal } from "@/components/modals/ObservacoesModal";
 
 const MapaLeitos = () => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -32,10 +41,10 @@ const MapaLeitos = () => {
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
 
   // Buscar dados de todas as coleções
-  const { 
-    setores, 
-    loading: loadingSetores, 
-    moverPaciente, 
+  const {
+    setores,
+    loading: loadingSetores,
+    moverPaciente,
     adicionarObservacaoPaciente,
     atualizarStatusLeito,
     desbloquearLeito,
@@ -46,9 +55,9 @@ const MapaLeitos = () => {
     transferirPaciente,
     cancelarReserva,
     concluirTransferencia,
-    toggleProvavelAlta
+    toggleProvavelAlta,
   } = useSetores();
-  
+
   const { leitos, loading: loadingLeitos } = useLeitos();
   const { pacientes, loading: loadingPacientes } = usePacientes();
 
@@ -56,16 +65,19 @@ const MapaLeitos = () => {
   const setoresEnriquecidos = useMemo((): SetorComLeitos[] => {
     if (!setores.length || !leitos.length) return [];
 
-    return setores.map(setor => {
+    return setores.map((setor) => {
       const leitosDoSetor = leitos
-        .filter(leito => leito.setorId === setor.id)
-        .map(leito => {
-          const ultimoHistorico = leito.historicoMovimentacao?.[leito.historicoMovimentacao.length - 1];
-          const pacienteDoLeito = pacientes.find(p => p.leitoId === leito.id);
-          
+        .filter((leito) => leito.setorId === setor.id)
+        .map((leito) => {
+          const ultimoHistorico =
+            leito.historicoMovimentacao?.[
+              leito.historicoMovimentacao.length - 1
+            ];
+          const pacienteDoLeito = pacientes.find((p) => p.leitoId === leito.id);
+
           return {
             ...leito,
-            statusLeito: ultimoHistorico?.statusLeito || 'Vago',
+            statusLeito: ultimoHistorico?.statusLeito || "Vago",
             dataAtualizacaoStatus: ultimoHistorico?.dataAtualizacaoStatus,
             dadosPaciente: pacienteDoLeito,
             motivoBloqueio: ultimoHistorico?.motivoBloqueio,
@@ -75,28 +87,32 @@ const MapaLeitos = () => {
 
       return {
         ...setor,
-        leitos: leitosDoSetor
+        leitos: leitosDoSetor,
       };
     });
   }, [setores, leitos, pacientes]);
 
   const loading = loadingSetores || loadingLeitos || loadingPacientes;
-  
-  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
 
-  const { 
-    searchTerm, setSearchTerm, 
-    filtrosAvancados, setFiltrosAvancados,
+  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } =
+    useIndicadoresHospital(setoresEnriquecidos);
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    filtrosAvancados,
+    setFiltrosAvancados,
     resetFiltros,
     filteredSetores,
     especialidades,
-    todosStatus
+    todosStatus,
   } = useFiltrosMapaLeitos(setoresEnriquecidos);
 
   const calcularTaxaOcupacao = (leitos: LeitoExtendido[]) => {
     if (leitos.length === 0) return 0;
     const leitosOcupados = leitos.filter(
-      leito => !['Vago', 'Higienizacao', 'Bloqueado'].includes(leito.statusLeito)
+      (leito) =>
+        !["Vago", "Higienizacao", "Bloqueado"].includes(leito.statusLeito)
     ).length;
     return Math.round((leitosOcupados / leitos.length) * 100);
   };
@@ -105,19 +121,101 @@ const MapaLeitos = () => {
     setPacienteParaMover({
       dados: leito.dadosPaciente,
       leitoOrigemId: leito.id,
-      setorOrigemId: setoresEnriquecidos.find(s => s.leitos.some(l => l.id === leito.id))?.id
+      setorOrigemId: setoresEnriquecidos.find((s) =>
+        s.leitos.some((l) => l.id === leito.id)
+      )?.id,
     });
     setMovimentacaoModalOpen(true);
   };
 
+  const handleLiberarLeito = async (leitoId: string, pacienteId: string) => {
+    const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteId);
+    await deleteDoc(pacienteRef);
+    await atualizarStatusLeito(leitoId, "Higienizacao");
+    toast({
+      title: "Sucesso!",
+      description:
+        "Paciente recebeu alta e o leito foi liberado para higienização.",
+    });
+  };
+
+  const handleAtualizarStatus = async (
+    leitoId: string,
+    novoStatus: any,
+    motivo?: string
+  ) => {
+    await atualizarStatusLeito(leitoId, novoStatus, { motivoBloqueio: motivo });
+  };
+
+  const handleDesbloquear = async (leitoId: string) => {
+    await atualizarStatusLeito(leitoId, "Vago");
+  };
+
+  const handleFinalizarHigienizacao = async (leitoId: string) => {
+    await atualizarStatusLeito(leitoId, "Vago");
+  };
+
+  const handleSolicitarUTI = async (pacienteId: string) => {
+    const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteId);
+    await updateDoc(pacienteRef, {
+      aguardaUTI: true,
+      dataPedidoUTI: new Date().toISOString(),
+    });
+    toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
+  };
+
+  const handleSolicitarRemanejamento = async (
+    pacienteId: string,
+    motivo: string
+  ) => {
+    const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteId);
+    await updateDoc(pacienteRef, {
+      remanejarPaciente: true,
+      motivoRemanejamento: motivo,
+    });
+    setRemanejamentoModalOpen(false);
+  };
+
+  const handleTransferirPaciente = async (
+    pacienteId: string,
+    destino: string,
+    motivo: string
+  ) => {
+    const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteId);
+    await updateDoc(pacienteRef, {
+      transferirPaciente: true,
+      destinoTransferencia: destino,
+      motivoTransferencia: motivo,
+    });
+    setTransferenciaModalOpen(false);
+  };
+
+  const handleCancelarReserva = async (leitoId: string) => {
+    await atualizarStatusLeito(leitoId, "Vago");
+  };
+
+  const handleConcluirTransferencia = async (leito: LeitoEnriquecido) => {
+    await atualizarStatusLeito(leito.id, "Ocupado");
+  };
+
+  const handleToggleProvavelAlta = async (
+    pacienteId: string,
+    valorAtual: boolean
+  ) => {
+    const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteId);
+    await updateDoc(pacienteRef, { provavelAlta: !valorAtual });
+  };
+
   const handleConfirmarMovimentacao = (leitoDestino: any) => {
     if (pacienteParaMover) {
-      const setorDestinoId = setoresEnriquecidos.find(s => s.leitos.some(l => l.id === leitoDestino.id))?.id;
+      const setorDestinoId = setoresEnriquecidos.find((s) =>
+        s.leitos.some((l) => l.id === leitoDestino.id)
+      )?.id;
       if (setorDestinoId) {
         moverPaciente(
-          pacienteParaMover.setorOrigemId, 
-          pacienteParaMover.leitoOrigemId, 
-          setorDestinoId, 
+          pacienteParaMover.setorOrigemId,
+          pacienteParaMover.leitoOrigemId,
+          setorDestinoId,
           leitoDestino.id
         );
       }
@@ -127,13 +225,22 @@ const MapaLeitos = () => {
   };
 
   const handleOpenObsModal = (leito: LeitoExtendido) => {
-    setPacienteParaObs({ ...leito, setorId: setoresEnriquecidos.find(s => s.leitos.some(l => l.id === leito.id))?.id });
+    setPacienteParaObs({
+      ...leito,
+      setorId: setoresEnriquecidos.find((s) =>
+        s.leitos.some((l) => l.id === leito.id)
+      )?.id,
+    });
     setObsModalOpen(true);
   };
 
   const handleConfirmObs = (obs: string) => {
     if (pacienteParaObs) {
-      adicionarObservacaoPaciente(pacienteParaObs.setorId, pacienteParaObs.id, obs);
+      adicionarObservacaoPaciente(
+        pacienteParaObs.setorId,
+        pacienteParaObs.id,
+        obs
+      );
     }
   };
 
@@ -144,8 +251,12 @@ const MapaLeitos = () => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
-              <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
+              <h1 className="text-3xl font-bold text-medical-primary">
+                Mapa de Leitos
+              </h1>
+              <p className="text-muted-foreground">
+                Visualização em tempo real dos leitos hospitalares
+              </p>
             </div>
           </div>
 
@@ -170,9 +281,9 @@ const MapaLeitos = () => {
               </CardContent>
             </Card>
           ) : (
-            <IndicadoresGerais 
-              contagem={contagemPorStatus} 
-              taxa={taxaOcupacao} 
+            <IndicadoresGerais
+              contagem={contagemPorStatus}
+              taxa={taxaOcupacao}
               tempos={tempoMedioStatus}
               nivelPCP={nivelPCP}
             />
@@ -182,7 +293,7 @@ const MapaLeitos = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Bloco de Filtros */}
             <div className="lg:col-span-2">
-              <FiltrosMapaLeitos 
+              <FiltrosMapaLeitos
                 setores={setoresEnriquecidos}
                 filtros={filtrosAvancados}
                 setFiltros={setFiltrosAvancados}
@@ -198,36 +309,56 @@ const MapaLeitos = () => {
             <div className="lg:col-span-1">
               <Card className="shadow-card border border-border/50">
                 <CardHeader>
-                  <CardTitle className="text-xl font-semibold text-medical-primary">Ações Rápidas</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-medical-primary">
+                    Ações Rápidas
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <TooltipProvider>
                     <div className="flex space-x-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={() => setModalOpen(true)}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setModalOpen(true)}
+                          >
                             <Settings className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>Gerenciar Setores e Leitos</p></TooltipContent>
+                        <TooltipContent>
+                          <p>Gerenciar Setores e Leitos</p>
+                        </TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={() => setRelatorioIsolamentoOpen(true)}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setRelatorioIsolamentoOpen(true)}
+                          >
                             <ShieldQuestion className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>Relatório de Isolamentos</p></TooltipContent>
+                        <TooltipContent>
+                          <p>Relatório de Isolamentos</p>
+                        </TooltipContent>
                       </Tooltip>
 
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="outline" size="icon" onClick={() => setRelatorioVagosOpen(true)}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setRelatorioVagosOpen(true)}
+                          >
                             <ClipboardList className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>Relatório de Leitos Vagos</p></TooltipContent>
+                        <TooltipContent>
+                          <p>Relatório de Leitos Vagos</p>
+                        </TooltipContent>
                       </Tooltip>
                     </div>
                   </TooltipProvider>
@@ -239,8 +370,12 @@ const MapaLeitos = () => {
           {/* Bloco 3: Mapa de Setores */}
           <Card className="shadow-card border border-border/50">
             <CardHeader>
-              <h2 className="text-2xl font-bold text-medical-primary">Mapa de Setores</h2>
-              <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
+              <h2 className="text-2xl font-bold text-medical-primary">
+                Mapa de Setores
+              </h2>
+              <p className="text-muted-foreground">
+                Visualização em tempo real dos leitos hospitalares
+              </p>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -253,29 +388,41 @@ const MapaLeitos = () => {
                   ))}
                 </div>
               ) : filteredSetores.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full space-y-2">
+                <Accordion
+                  type="single"
+                  collapsible
+                  className="w-full space-y-2"
+                >
                   {filteredSetores.map((setor) => {
-                    const setorOriginal = setoresEnriquecidos.find(s => s.id === setor.id);
+                    const setorOriginal = setoresEnriquecidos.find(
+                      (s) => s.id === setor.id
+                    );
                     if (!setorOriginal) return null;
-                    
+
                     const taxaOcupacao = calcularTaxaOcupacao(setor.leitos);
                     return (
-                      <AccordionItem 
-                        key={setor.id!} 
+                      <AccordionItem
+                        key={setor.id!}
                         value={setor.id!}
                         className="border border-border/50 rounded-lg px-4"
                       >
                         <AccordionTrigger className="hover:no-underline">
                           <div className="flex justify-between items-center w-full pr-4">
                             <div className="flex flex-col items-start">
-                              <h3 className="text-lg font-semibold text-foreground">{setor.nomeSetor}</h3>
-                              <p className="text-sm text-muted-foreground font-mono">{setor.siglaSetor}</p>
+                              <h3 className="text-lg font-semibold text-foreground">
+                                {setor.nomeSetor}
+                              </h3>
+                              <p className="text-sm text-muted-foreground font-mono">
+                                {setor.siglaSetor}
+                              </p>
                             </div>
                             <div className="text-right">
                               <div className="text-2xl font-bold text-medical-primary">
                                 {taxaOcupacao}%
                               </div>
-                              <p className="text-xs text-muted-foreground">Ocupação</p>
+                              <p className="text-xs text-muted-foreground">
+                                Ocupação
+                              </p>
                             </div>
                           </div>
                         </AccordionTrigger>
@@ -283,46 +430,90 @@ const MapaLeitos = () => {
                           <div className="pt-4">
                             {setor.leitos.length > 0 ? (
                               (() => {
-                                const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
-                                const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+                                const { quartos, leitosSoltos } =
+                                  agruparLeitosPorQuarto(setor.leitos);
+                                const comparadorNatural = (
+                                  a: string,
+                                  b: string
+                                ) =>
+                                  a.localeCompare(b, undefined, {
+                                    numeric: true,
+                                    sensitivity: "base",
+                                  });
 
                                 return (
                                   <div className="space-y-4">
                                     {Object.entries(quartos)
-                                      .sort(([nomeQuartoA], [nomeQuartoB]) => comparadorNatural(nomeQuartoA, nomeQuartoB))
+                                      .sort(([nomeQuartoA], [nomeQuartoB]) =>
+                                        comparadorNatural(
+                                          nomeQuartoA,
+                                          nomeQuartoB
+                                        )
+                                      )
                                       .map(([nomeQuarto, leitosDoQuarto]) => (
                                         <QuartoCard
                                           key={nomeQuarto}
                                           nomeQuarto={nomeQuarto}
                                           leitos={leitosDoQuarto}
                                           setorId={setor.id!}
-                                          todosLeitosDoSetor={setorOriginal.leitos}
-                                          onMoverPaciente={handleOpenMovimentacaoModal}
+                                          todosLeitosDoSetor={
+                                            setorOriginal.leitos
+                                          }
+                                          onMoverPaciente={
+                                            handleOpenMovimentacaoModal
+                                          }
                                         />
                                       ))}
 
                                     {leitosSoltos.length > 0 && (
                                       <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4">
                                         {leitosSoltos
-                                          .sort((a, b) => comparadorNatural(a.codigoLeito, b.codigoLeito))
+                                          .sort((a, b) =>
+                                            comparadorNatural(
+                                              a.codigoLeito,
+                                              b.codigoLeito
+                                            )
+                                          )
                                           .map((leito) => (
                                             <LeitoCard
                                               key={leito.id}
                                               leito={leito}
                                               setorId={setor.id!}
-                                              todosLeitosDoSetor={setorOriginal.leitos}
-                                              onMoverPaciente={handleOpenMovimentacaoModal}
+                                              todosLeitosDoSetor={
+                                                setorOriginal.leitos
+                                              }
+                                              onMoverPaciente={
+                                                handleOpenMovimentacaoModal
+                                              }
                                               onAbrirObs={handleOpenObsModal}
-                                              onAtualizarStatus={atualizarStatusLeito}
-                                              onDesbloquear={desbloquearLeito}
-                                              onFinalizarHigienizacao={finalizarHigienizacao}
-                                              onLiberarLeito={liberarLeito}
-                                              onSolicitarUTI={solicitarUTI}
-                                              onSolicitarRemanejamento={solicitarRemanejamento}
-                                              onTransferirPaciente={transferirPaciente}
-                                              onCancelarReserva={cancelarReserva}
-                                              onConcluirTransferencia={concluirTransferencia}
-                                              onToggleProvavelAlta={toggleProvavelAlta}
+                                              onLiberarLeito={
+                                                handleLiberarLeito
+                                              }
+                                              onAtualizarStatus={
+                                                handleAtualizarStatus
+                                              }
+                                              onDesbloquear={handleDesbloquear}
+                                              onFinalizarHigienizacao={
+                                                handleFinalizarHigienizacao
+                                              }
+                                              onSolicitarUTI={
+                                                handleSolicitarUTI
+                                              }
+                                              onSolicitarRemanejamento={
+                                                handleSolicitarRemanejamento
+                                              }
+                                              onTransferirPaciente={
+                                                handleTransferirPaciente
+                                              }
+                                              onCancelarReserva={
+                                                handleCancelarReserva
+                                              }
+                                              onConcluirTransferencia={
+                                                handleConcluirTransferencia
+                                              }
+                                              onToggleProvavelAlta={
+                                                handleToggleProvavelAlta
+                                              }
                                             />
                                           ))}
                                       </div>
@@ -345,14 +536,17 @@ const MapaLeitos = () => {
                 <div className="text-center py-12">
                   <div className="max-w-md mx-auto">
                     <p className="text-lg text-muted-foreground mb-4">
-                      {setoresEnriquecidos.length === 0 ? "Nenhum setor cadastrado ainda" : "Nenhum resultado encontrado para os filtros aplicados."}
+                      {setoresEnriquecidos.length === 0
+                        ? "Nenhum setor cadastrado ainda"
+                        : "Nenhum resultado encontrado para os filtros aplicados."}
                     </p>
                     {setoresEnriquecidos.length === 0 ? (
                       <>
                         <p className="text-sm text-muted-foreground mb-6">
-                          Comece criando seu primeiro setor e adicionando leitos para visualizar o mapa hospitalar
+                          Comece criando seu primeiro setor e adicionando leitos
+                          para visualizar o mapa hospitalar
                         </p>
-                        <Button 
+                        <Button
                           onClick={() => setModalOpen(true)}
                           className="bg-medical-primary hover:bg-medical-secondary"
                         >
@@ -360,10 +554,7 @@ const MapaLeitos = () => {
                         </Button>
                       </>
                     ) : (
-                      <Button 
-                        onClick={resetFiltros}
-                        variant="outline"
-                      >
+                      <Button onClick={resetFiltros} variant="outline">
                         Limpar Filtros
                       </Button>
                     )}
@@ -375,20 +566,17 @@ const MapaLeitos = () => {
         </div>
       </div>
 
-      <GerenciamentoModal 
-        open={modalOpen} 
-        onOpenChange={setModalOpen} 
-      />
+      <GerenciamentoModal open={modalOpen} onOpenChange={setModalOpen} />
 
       <MovimentacaoModal
         open={movimentacaoModalOpen}
         onOpenChange={setMovimentacaoModalOpen}
-        pacienteNome={pacienteParaMover?.dados?.nomeCompleto || ''}
+        pacienteNome={pacienteParaMover?.dados?.nomeCompleto || ""}
         onConfirm={handleConfirmarMovimentacao}
       />
 
-      <RelatorioIsolamentosModal 
-        open={relatorioIsolamentoOpen} 
+      <RelatorioIsolamentosModal
+        open={relatorioIsolamentoOpen}
         onOpenChange={setRelatorioIsolamentoOpen}
       />
 
@@ -400,7 +588,7 @@ const MapaLeitos = () => {
       <ObservacoesModal
         open={obsModalOpen}
         onOpenChange={setObsModalOpen}
-        pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''}
+        pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ""}
         observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []}
         onConfirm={handleConfirmObs}
       />
