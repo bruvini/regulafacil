@@ -1,6 +1,6 @@
 // src/pages/RegulacaoLeitos.tsx
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
@@ -9,33 +9,40 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Download, BedDouble, Ambulance, X, Clock, Settings, CheckCircle, Pencil, XCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { intervalToDuration, parse } from 'date-fns';
+import { collection, doc, writeBatch, arrayUnion, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+// Hooks
+import { useSetores } from '@/hooks/useSetores';
+import { useLeitos } from '@/hooks/useLeitos';
+import { usePacientes } from '@/hooks/usePacientes';
 import { useCirurgiasEletivas } from '@/hooks/useCirurgiasEletivas';
 import { useCirurgias } from '@/hooks/useCirurgias';
 import { useAlertasIsolamento } from '@/hooks/useAlertasIsolamento';
 import { useFiltrosRegulacao } from '@/hooks/useFiltrosRegulacao';
+import { useAuditoria } from '@/hooks/useAuditoria';
+import { useToast } from '@/hooks/use-toast';
+
+// Componentes
 import { FiltrosRegulacao } from '@/components/FiltrosRegulacao';
 import { ImportacaoMVModal } from '@/components/modals/ImportacaoMVModal';
 import { RegulacaoModal } from '@/components/modals/RegulacaoModal';
 import { TransferenciaModal } from '@/components/modals/TransferenciaModal';
 import { AlocacaoCirurgiaModal } from '@/components/modals/AlocacaoCirurgiaModal';
 import { GerenciarTransferenciaModal } from '@/components/modals/GerenciarTransferenciaModal';
-import { ResultadoValidacao } from '@/components/modals/ValidacaoImportacao';
+import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
+import { PacienteReguladoItem } from '@/components/PacienteReguladoItem';
+import { ResumoRegulacoesModal } from '@/components/modals/ResumoRegulacoesModal';
 import { AguardandoUTIItem } from '@/components/AguardandoUTIItem';
 import { AguardandoTransferenciaItem } from '@/components/AguardandoTransferenciaItem';
 import { PacientePendenteItem } from '@/components/PacientePendenteItem';
 import { RemanejamentoPendenteItem } from '@/components/RemanejamentoPendenteItem';
 import { CirurgiaEletivaItem } from '@/components/CirurgiaEletivaItem';
-import { useToast } from '@/hooks/use-toast';
-import { collection, doc, writeBatch, arrayUnion, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { intervalToDuration, parse } from 'date-fns';
-import { CancelamentoModal } from '@/components/modals/CancelamentoModal';
-import { PacienteReguladoItem } from '@/components/PacienteReguladoItem';
-import { ResumoRegulacoesModal } from '@/components/modals/ResumoRegulacoesModal';
-import { useAuditoria } from '@/hooks/useAuditoria';
-import { useSetores } from '@/hooks/useSetores';
-import { useLeitos } from '@/hooks/useLeitos';
-import { usePacientes } from '@/hooks/usePacientes';
+import { ListaPacientesPendentes } from '@/components/ListaPacientesPendentes';
+import { ResultadoValidacao, SyncSummary, PacienteDaPlanilha } from '@/components/modals/ValidacaoImportacao';
+
+// Tipos
 import { Paciente, Leito, HistoricoMovimentacao } from '@/types/hospital';
 
 // Tipos locais para a sincronização
@@ -56,15 +63,7 @@ interface SyncSummary {
 }
 
 const RegulacaoLeitos = () => {
-  const { setores, loading: setoresLoading } = useSetores();
-    const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
-    const { pacientes, loading: pacientesLoading } = usePacientes();
-    const { registrarLog } = useAuditoria();
-    const { toast } = useToast();
-    
-    const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
-    const { reservarLeitoParaCirurgia } = useCirurgias();
-    const { alertas } = useAlertasIsolamento();
+  // --- Estados ---
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
     const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
@@ -82,10 +81,21 @@ const RegulacaoLeitos = () => {
     const [resumoModalOpen, setResumoModalOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
+    
+    // --- Hooks de Dados ---
+    const { setores, loading: setoresLoading } = useSetores();
+    const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
+    const { pacientes, loading: pacientesLoading } = usePacientes();
+    const { registrarLog } = useAuditoria();
+    const { toast } = useToast();
+    const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
+    const { reservarLeitoParaCirurgia } = useCirurgias();
+    const { alertas } = useAlertasIsolamento();
 
-  const pacientesComDadosCompletos = useMemo(() => {
+  // --- Lógica de Combinação de Dados ---
+    const pacientesComDadosCompletos = useMemo(() => {
         if (setoresLoading || leitosLoading || pacientesLoading) return [];
-        
+
         const mapaSetores = new Map(setores.map(s => [s.id, s]));
         const mapaLeitos = new Map(leitos.map(l => [l.id, l]));
 
@@ -111,18 +121,17 @@ const RegulacaoLeitos = () => {
         });
     }, [pacientes, leitos, setores, setoresLoading, leitosLoading, pacientesLoading]);
 
-  const { filteredPacientes, ...filtrosProps } = useFiltrosRegulacao(pacientesComDadosCompletos);
+  // --- Filtragem e Listas Derivadas ---
+    const { searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, filteredPacientes, resetFiltros, sortConfig, setSortConfig } = useFiltrosRegulacao(pacientesComDadosCompletos);
 
     const pacientesAguardandoRegulacao = filteredPacientes.filter(p => p.statusLeito === 'Ocupado');
     const pacientesJaRegulados = filteredPacientes.filter(p => p.statusLeito === 'Regulado');
     const pacientesAguardandoUTI = filteredPacientes.filter(p => p.aguardaUTI);
     const pacientesAguardandoTransferencia = filteredPacientes.filter(p => p.transferirPaciente);
     const pacientesAguardandoRemanejamento = filteredPacientes.filter(p => p.remanejarPaciente);
-    
     const decisaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
     const decisaoClinica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
     const recuperacaoCirurgica = pacientesAguardandoRegulacao.filter(p => p.setorOrigem === "CC - RECUPERAÇÃO");
-
     const totalPendentes = pacientesAguardandoRegulacao.length;
 
   // Combinação de todos os pacientes pendentes para o useEffect
@@ -133,6 +142,92 @@ const RegulacaoLeitos = () => {
     ...pacientesAguardandoTransferencia,
     ...pacientesAguardandoRemanejamento
   ], [pacientesAguardandoRegulacao, pacientesJaRegulados, pacientesAguardandoUTI, pacientesAguardandoTransferencia, pacientesAguardandoRemanejamento]);
+
+  // --- Funções de Ação ---
+    const handleOpenRegulacaoModal = (paciente: any, modo: 'normal' | 'uti' = 'normal') => {
+      setPacienteParaRegular(paciente);
+      setModoRegulacao(modo);
+      setIsAlteracaoMode(false);
+      setRegulacaoModalOpen(true);
+    };
+    
+    const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => {
+        if (!pacienteParaRegular) return;
+        
+        await atualizarStatusLeito(pacienteParaRegular.leitoId, 'Regulado', { 
+            pacienteId: pacienteParaRegular.id, 
+            infoRegulacao: { paraSetor: leitoDestino.setorNome, paraLeito: leitoDestino.codigoLeito, observacoes } 
+        });
+        
+        await atualizarStatusLeito(leitoDestino.id, 'Reservado', { pacienteId: pacienteParaRegular.id });
+    
+        setRegulacaoModalOpen(false);
+        setPacienteParaRegular(null);
+        setIsAlteracaoMode(false);
+    };
+
+    const handleConcluir = async (paciente: any) => {
+        if (!paciente.regulacao) return;
+        const leitoDestino = leitos.find(l => l.codigoLeito === paciente.regulacao.paraLeito);
+        if (leitoDestino) {
+            await atualizarStatusLeito(paciente.leitoId, 'Higienizacao');
+            await atualizarStatusLeito(leitoDestino.id, 'Ocupado', { pacienteId: paciente.id });
+            const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+            await updateDoc(pacienteRef, { leitoId: leitoDestino.id, setorId: leitoDestino.setorId });
+            registrarLog(`Concluiu regulação de ${paciente.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`, "Regulação de Leitos");
+        }
+    };
+    
+    const handleAlterar = (paciente: any) => {
+        setPacienteParaRegular(paciente);
+        setIsAlteracaoMode(true);
+        setRegulacaoModalOpen(true);
+    };
+
+    const handleCancelar = (paciente: any) => {
+        setPacienteParaAcao(paciente);
+        setCancelamentoModalOpen(true);
+    };
+    
+    const onConfirmarCancelamento = async (motivo: string) => {
+        if (pacienteParaAcao) {
+            const leitoOrigem = leitos.find(l => l.id === pacienteParaAcao.leitoId)!;
+            const historicoRegulacao = leitoOrigem.historicoMovimentacao.find(h => h.statusLeito === 'Regulado');
+            if(!historicoRegulacao || !historicoRegulacao.infoRegulacao) return;
+    
+            const leitoDestino = leitos.find(l => l.codigoLeito === historicoRegulacao.infoRegulacao!.paraLeito)!;
+            
+            await atualizarStatusLeito(leitoOrigem.id, 'Ocupado', { pacienteId: pacienteParaAcao.id });
+            await atualizarStatusLeito(leitoDestino.id, 'Vago');
+            
+            registrarLog(`Cancelou regulação de ${pacienteParaAcao.nomeCompleto}. Motivo: ${motivo}`, "Regulação de Leitos");
+        }
+        setCancelamentoModalOpen(false);
+        setPacienteParaAcao(null);
+    };
+
+    const cancelarPedidoUTI = async (paciente: Paciente) => {
+        const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
+        await updateDoc(pacienteRef, { aguardaUTI: false, dataPedidoUTI: undefined });
+        registrarLog(`Cancelou pedido de UTI para ${paciente.nomeCompleto}.`, "Regulação de Leitos");
+        toast({ title: "Sucesso", description: "Pedido de UTI cancelado." });
+    };
+
+    const handleCancelarRemanejamento = async (paciente: Paciente) => {
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+        await updateDoc(pacienteRef, { remanejarPaciente: false, motivoRemanejamento: undefined, dataPedidoRemanejamento: undefined });
+        registrarLog(`Cancelou solicitação de remanejamento para ${paciente.nomeCompleto}.`, "Regulação de Leitos");
+    };
+
+    const altaAposRecuperacao = async (leitoId: string) => {
+        const paciente = pacientes.find(p => p.leitoId === leitoId);
+        if (paciente) {
+            const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+            await deleteDoc(pacienteRef);
+            await atualizarStatusLeito(leitoId, 'Higienizacao');
+            registrarLog(`Alta (Recuperação Cirúrgica) para ${paciente.nomeCompleto}.`, 'Regulação de Leitos');
+        }
+    };
 
   // Funções para remanejamento que estavam faltando
   const solicitarRemanejamento = async (setorId: string, leitoId: string, motivo: string) => {
@@ -229,88 +324,9 @@ const RegulacaoLeitos = () => {
     setPacienteParaAcao(null);
   };
 
-  const handleConcluir = async (paciente: any) => {
-    if (!paciente.regulacao) return;
-    const leitoDestino = leitos.find(l => l.codigoLeito === paciente.regulacao.paraLeito);
-    if (leitoDestino) {
-        await atualizarStatusLeito(paciente.leitoId, 'Higienizacao');
-        await atualizarStatusLeito(leitoDestino.id, 'Ocupado', { pacienteId: paciente.id });
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
-        await updateDoc(pacienteRef, { leitoId: leitoDestino.id, setorId: leitoDestino.setorId });
-        registrarLog(`Concluiu regulação de ${paciente.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`, "Regulação de Leitos");
-    }
-  };
-
   const handleIniciarTransferenciaExternaFromUTI = (paciente: any) => {
     setPacienteParaAcao(paciente);
     setTransferenciaModalOpen(true);
-  };
-
-  const handleAlterar = (paciente: any) => {
-    setPacienteParaRegular(paciente);
-    setIsAlteracaoMode(true);
-    setRegulacaoModalOpen(true);
-  };
-
-  const handleCancelar = (paciente: any) => {
-    setPacienteParaAcao(paciente);
-    setCancelamentoModalOpen(true);
-  };
-
-  const onConfirmarCancelamento = async (motivo: string) => {
-    if (pacienteParaAcao) {
-        const leitoOrigem = leitos.find(l => l.id === pacienteParaAcao.leitoId)!;
-        const historicoRegulacao = leitoOrigem.historicoMovimentacao.find(h => h.statusLeito === 'Regulado');
-        if(!historicoRegulacao) return;
-
-        const leitoDestino = leitos.find(l => l.codigoLeito === historicoRegulacao.infoRegulacao?.paraLeito)!;
-        
-        await atualizarStatusLeito(leitoOrigem.id, 'Ocupado', { pacienteId: pacienteParaAcao.id });
-        await atualizarStatusLeito(leitoDestino.id, 'Vago');
-        
-        registrarLog(`Cancelou regulação de ${pacienteParaAcao.nomeCompleto}. Motivo: ${motivo}`, "Regulação de Leitos");
-    }
-    setCancelamentoModalOpen(false);
-    setPacienteParaAcao(null);
-  };
-
-  const handleOpenRegulacaoModal = (paciente: any, modo: 'normal' | 'uti' = 'normal') => {
-    setPacienteParaRegular(paciente);
-    setModoRegulacao(modo);
-    setIsAlteracaoMode(false);
-    setRegulacaoModalOpen(true);
-  };
-
-  const handleConfirmarRegulacao = async (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => {
-    if (!pacienteParaRegular) return;
-    
-    await atualizarStatusLeito(pacienteParaRegular.leitoId, 'Regulado', { 
-        pacienteId: pacienteParaRegular.id, 
-        infoRegulacao: { 
-            paraSetor: leitoDestino.setorNome, 
-            paraLeito: leitoDestino.codigoLeito,
-            observacoes 
-        } 
-    });
-    
-    await atualizarStatusLeito(leitoDestino.id, 'Reservado', { pacienteId: pacienteParaRegular.id });
-
-    setRegulacaoModalOpen(false);
-    setPacienteParaRegular(null);
-    setIsAlteracaoMode(false);
-  };
-
-  const cancelarPedidoUTI = async (paciente: Paciente) => {
-    const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
-    await updateDoc(pacienteRef, { aguardaUTI: false, dataPedidoUTI: null });
-    registrarLog(`Cancelou pedido de UTI para ${paciente.nomeCompleto}.`, "Regulação de Leitos");
-    toast({ title: "Sucesso", description: "Pedido de UTI cancelado." });
-  };
-
-  const handleCancelarRemanejamento = async (paciente: Paciente) => {
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
-      await updateDoc(pacienteRef, { remanejarPaciente: false, motivoRemanejamento: null });
-      registrarLog(`Cancelou solicitação de remanejamento para ${paciente.nomeCompleto}.`, "Regulação de Leitos");
   };
 
   // Integração com alertas de isolamento - CORREÇÃO DO LOOP INFINITO
@@ -736,22 +752,22 @@ return (
               <FiltrosRegulacao {...filtrosProps} />
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                 {renderListaComAgrupamento(
-                    "Decisão Cirúrgica",
-                    decisaoCirurgica,
-                    handleOpenRegulacaoModal
-                  )}
-                  {renderListaComAgrupamento(
-                    "Decisão Clínica",
-                    decisaoClinica,
-                    handleOpenRegulacaoModal
-                  )}
-                  {renderListaComAgrupamento(
-                    "Recuperação Cirúrgica",
-                    recuperacaoCirurgica,
-                    handleOpenRegulacaoModal,
-                    (setorId, leitoId) => atualizarStatusLeito(leitoId, 'Higienizacao')
-                  )}
+                 <ListaPacientesPendentes
+                    titulo="Decisão Cirúrgica"
+                    pacientes={decisaoCirurgica}
+                    onRegularClick={handleOpenRegulacaoModal}
+                  />
+                  <ListaPacientesPendentes
+                    titulo="Decisão Clínica"
+                    pacientes={decisaoClinica}
+                    onRegularClick={handleOpenRegulacaoModal}
+                  />
+                  <ListaPacientesPendentes
+                    titulo="Recuperação Cirúrgica"
+                    pacientes={recuperacaoCirurgica}
+                    onRegularClick={handleOpenRegulacaoModal}
+                    onAlta={(setorId, leitoId) => altaAposRecuperacao(leitoId)}
+                  />
               </div>
 
               {pacientesJaRegulados.length > 0 && (
@@ -837,7 +853,7 @@ return (
           syncSummary={syncSummary}
           processing={processing}
           isSyncing={isSyncing}
-          onConfirmSync={handleSync}
+          onConfirmSync={handleConfirmSync}
         />
 
         <CancelamentoModal
