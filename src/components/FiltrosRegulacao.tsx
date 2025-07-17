@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
 
 // Lista de especialidades atualizada
 const especialidades = [
@@ -28,9 +28,27 @@ interface FiltrosRegulacaoProps {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     resetFiltros: () => void;
+    sortConfig: { key: string; direction: string };
+    setSortConfig: (config: { key: string; direction: string }) => void;
 }
 
-export const FiltrosRegulacao = ({ filtros, setFiltros, searchTerm, setSearchTerm, resetFiltros }: FiltrosRegulacaoProps) => {
+export const FiltrosRegulacao = ({ 
+    filtros, 
+    setFiltros, 
+    searchTerm, 
+    setSearchTerm, 
+    resetFiltros, 
+    sortConfig, 
+    setSortConfig 
+}: FiltrosRegulacaoProps) => {
+    const handleSort = (key: string) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
     return (
         <div className="p-4 border rounded-lg bg-card mb-6">
             <div className="relative">
@@ -125,6 +143,31 @@ export const FiltrosRegulacao = ({ filtros, setFiltros, searchTerm, setSearchTer
                     </Button>
                 </CollapsibleContent>
             </Collapsible>
+            
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                <span className="text-sm font-medium">Ordenar por:</span>
+                <Button 
+                    variant={sortConfig.key === 'nome' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => handleSort('nome')}
+                >
+                    Nome {sortConfig.key === 'nome' && <ArrowUpDown className="h-4 w-4 ml-2" />}
+                </Button>
+                <Button 
+                    variant={sortConfig.key === 'idade' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => handleSort('idade')}
+                >
+                    Idade {sortConfig.key === 'idade' && <ArrowUpDown className="h-4 w-4 ml-2" />}
+                </Button>
+                <Button 
+                    variant={sortConfig.key === 'tempo' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => handleSort('tempo')}
+                >
+                    Tempo Internação {sortConfig.key === 'tempo' && <ArrowUpDown className="h-4 w-4 ml-2" />}
+                </Button>
+            </div>
         </div>
     );
 };

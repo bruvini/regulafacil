@@ -47,25 +47,21 @@ export const useUsuarios = () => {
       if (emailExists) throw new Error("Este e-mail já está em uso.");
       if (matriculaExists) throw new Error("Esta matrícula já está em uso.");
 
-      // FASE 2: COMENTÁRIO SOBRE LIMITAÇÃO DO SDK CLIENTE
-      // NOTA: A criação de usuários no Firebase Auth via SDK cliente 
-      // pode causar "sequestro de sessão". A forma correta seria usar 
-      // uma Cloud Function com Admin SDK. Por ora, criamos apenas no Firestore.
+      // ETAPA 1: Criar o usuário no Firebase Auth para obter o UID
+      const userCredential = await createUserWithEmailAndPassword(auth, emailCompleto, senhaPadrao);
+      const newUser = userCredential.user;
 
-      // Cria um UID simulado para manter consistência
-      const simulatedUID = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // Criar documento no Firestore diretamente
-      const userDocRef = doc(db, 'usuariosRegulaFacil', simulatedUID);
+      // ETAPA 2: Usar setDoc com o UID do Auth como ID do documento no Firestore
+      const userDocRef = doc(db, 'usuariosRegulaFacil', newUser.uid);
 
       await setDoc(userDocRef, {
-        uid: simulatedUID,
+        uid: newUser.uid, // Armazena a referência para consistência
         nomeCompleto: data.nomeCompleto.toUpperCase(),
         matricula: data.matricula,
         email: emailCompleto,
         tipoAcesso: data.tipoAcesso,
         permissoes: data.tipoAcesso === 'Comum' ? data.permissoes || [] : [],
-        historicoAcessos: [] // Inicializa o histórico de acessos
+        historicoAcessos: [] // Inicializa o histórico de acessos como um array vazio
       });
 
       toast({ title: "Sucesso!", description: "Usuário criado com sucesso." });
@@ -77,7 +73,11 @@ export const useUsuarios = () => {
       return true; // Retorna sucesso
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
-      toast({ title: "Erro", description: error.message || "Não foi possível criar o usuário.", variant: "destructive" });
+      // Este erro é importante para o admin, então mostre a mensagem do Firebase
+      const mensagemErro = error.code === 'auth/email-already-in-use' 
+          ? 'O e-mail fornecido já está em uso por outra conta.'
+          : error.message || "Não foi possível criar o usuário.";
+      toast({ title: "Erro", description: mensagemErro, variant: "destructive" });
       setLoading(false);
       return false; // Retorna falha
     }

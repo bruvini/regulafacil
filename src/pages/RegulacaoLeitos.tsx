@@ -104,7 +104,7 @@ const RegulacaoLeitos = () => {
   const pacientesJaRegulados = todosPacientesPendentes.filter(p => p.statusLeito === 'Regulado');
 
   // Usar o hook de filtros para os pacientes aguardando regulação
-  const { searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, filteredPacientes, resetFiltros } = useFiltrosRegulacao(pacientesAguardandoRegulacao);
+  const { searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, filteredPacientes, resetFiltros, sortConfig, setSortConfig } = useFiltrosRegulacao(pacientesAguardandoRegulacao);
 
   const decisaoCirurgica = filteredPacientes.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
   const decisaoClinica = filteredPacientes.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
@@ -439,11 +439,15 @@ const RegulacaoLeitos = () => {
 
     // Criamos um mapa de busca para encontrar rapidamente os dados de um paciente existente
     const mapaPacientesAtuais: Map<string, any> = new Map();
-    setores.flatMap(s => s.leitos)
-      .filter(l => l.statusLeito === 'Ocupado' && l.dadosPaciente)
-      .forEach(l => {
-        mapaPacientesAtuais.set(l.dadosPaciente!.nomePaciente, l.dadosPaciente);
-      });
+    const mapaRegulacoesPendentes: Map<string, any> = new Map();
+    setores.flatMap(s => s.leitos).forEach(l => {
+      if (l.statusLeito === 'Ocupado' && l.dadosPaciente) {
+        mapaPacientesAtuais.set(l.dadosPaciente.nomePaciente, l.dadosPaciente);
+      } else if (l.statusLeito === 'Regulado' && l.dadosPaciente) {
+        mapaPacientesAtuais.set(l.dadosPaciente.nomePaciente, l.dadosPaciente);
+        mapaRegulacoesPendentes.set(l.dadosPaciente.nomePaciente, { regulacao: l.regulacao, leitoOrigem: l.codigoLeito });
+      }
+    });
 
     const setoresAtualizados = JSON.parse(JSON.stringify(setores));
 
@@ -470,6 +474,7 @@ const RegulacaoLeitos = () => {
 
             // CORREÇÃO PRINCIPAL AQUI:
             const dadosAntigos = mapaPacientesAtuais.get(pacientePlanilha.nomeCompleto);
+            const regulacaoPendente = mapaRegulacoesPendentes.get(pacientePlanilha.nomeCompleto);
 
             if (dadosAntigos) {
               // Se o paciente já existia, preservamos seus dados clínicos (isolamentos, etc.)
@@ -482,6 +487,16 @@ const RegulacaoLeitos = () => {
                 dataInternacao: pacientePlanilha.dataInternacao,
                 especialidadePaciente: pacientePlanilha.especialidade
               };
+
+              // LÓGICA DE PRESERVAÇÃO DE REGULAÇÃO
+              if (regulacaoPendente && regulacaoPendente.leitoOrigem !== pacientePlanilha.leitoCodigo) {
+                // O paciente se moveu E tinha uma regulação.
+                // Aqui implementaremos o modal de confirmação (Fase futura)
+                // Por enquanto, vamos manter a regulação, mas precisamos de uma forma de alertar o usuário.
+                leitoTarget.dadosPaciente.regulacao = regulacaoPendente.regulacao;
+                leitoTarget.statusLeito = 'Regulado';
+                leitoTarget.regulacao = regulacaoPendente.regulacao;
+              }
             } else {
               // Se for um paciente novo, criamos um objeto limpo
               leitoTarget.dadosPaciente = {
@@ -657,6 +672,8 @@ const RegulacaoLeitos = () => {
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
                 resetFiltros={resetFiltros}
+                sortConfig={sortConfig}
+                setSortConfig={setSortConfig}
               />
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -670,19 +687,17 @@ const RegulacaoLeitos = () => {
                   <CardContent className="pt-0">
                     <ScrollArea className="h-72 pr-4">
                       <div className="space-y-1">
-                        {decisaoCirurgica
-                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
-                          .map(paciente => (
-                            <PacientePendenteItem 
-                              key={paciente.leitoId}
-                              paciente={paciente}
-                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
-                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
-                              onConcluir={handleConcluir}
-                              onAlterar={handleAlterar}
-                              onCancelar={handleCancelar}
-                            />
-                          ))}
+                        {decisaoCirurgica.map(paciente => (
+                          <PacientePendenteItem 
+                            key={paciente.leitoId}
+                            paciente={paciente}
+                            onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                            onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                            onConcluir={handleConcluir}
+                            onAlterar={handleAlterar}
+                            onCancelar={handleCancelar}
+                          />
+                        ))}
                       </div>
                     </ScrollArea>
                   </CardContent>
@@ -698,19 +713,17 @@ const RegulacaoLeitos = () => {
                   <CardContent className="pt-0">
                     <ScrollArea className="h-72 pr-4">
                       <div className="space-y-1">
-                        {decisaoClinica
-                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
-                          .map(paciente => (
-                            <PacientePendenteItem 
-                              key={paciente.leitoId}
-                              paciente={paciente}
-                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
-                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
-                              onConcluir={handleConcluir}
-                              onAlterar={handleAlterar}
-                              onCancelar={handleCancelar}
-                            />
-                          ))}
+                        {decisaoClinica.map(paciente => (
+                          <PacientePendenteItem 
+                            key={paciente.leitoId}
+                            paciente={paciente}
+                            onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                            onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                            onConcluir={handleConcluir}
+                            onAlterar={handleAlterar}
+                            onCancelar={handleCancelar}
+                          />
+                        ))}
                       </div>
                     </ScrollArea>
                   </CardContent>
@@ -726,19 +739,17 @@ const RegulacaoLeitos = () => {
                   <CardContent className="pt-0">
                     <ScrollArea className="h-72 pr-4">
                       <div className="space-y-1">
-                        {recuperacaoCirurgica
-                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
-                          .map(paciente => (
-                            <PacientePendenteItem 
-                              key={paciente.leitoId}
-                              paciente={paciente}
-                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
-                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
-                              onConcluir={handleConcluir}
-                              onAlterar={handleAlterar}
-                              onCancelar={handleCancelar}
-                            />
-                          ))}
+                        {recuperacaoCirurgica.map(paciente => (
+                          <PacientePendenteItem 
+                            key={paciente.leitoId}
+                            paciente={paciente}
+                            onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                            onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                            onConcluir={handleConcluir}
+                            onAlterar={handleAlterar}
+                            onCancelar={handleCancelar}
+                          />
+                        ))}
                       </div>
                     </ScrollArea>
                   </CardContent>
