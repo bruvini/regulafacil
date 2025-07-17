@@ -1,4 +1,3 @@
-
 // src/types/hospital.ts
 
 /**
@@ -26,64 +25,15 @@ export interface Setor {
 }
 
 /**
- * Dados do paciente para uso em componentes
+ * Representa a coleção `leitosRegulaFacil`.
  */
-export interface DadosPaciente {
-  nomePaciente: string;
-  dataNascimento: string;
-  sexoPaciente: 'Masculino' | 'Feminino';
-  dataInternacao: string;
-  especialidadePaciente: string;
-  aguardaUTI?: boolean;
-  dataPedidoUTI?: string;
-  remanejarPaciente?: boolean;
-  motivoRemanejamento?: string;
-  dataPedidoRemanejamento?: string;
-  transferirPaciente?: boolean;
-  destinoTransferencia?: string;
-  motivoTransferencia?: string;
-  dataTransferencia?: string;
-  statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
-  historicoTransferencia?: { etapa: string; data: string; usuario?: string; }[];
-  provavelAlta?: boolean;
-  obsPaciente?: string[];
-  isolamentosVigentes?: {
-    isolamentoId: string;
-    sigla: string;
-    dataInicioVigilancia: string;
-    regrasCumpridas: string[];
-  }[];
-  origem?: {
-    deSetor: string;
-    deLeito: string;
-  };
-}
-
-/**
- * Representa a coleção `leitosRegulaFacil` - versão base do Firestore.
- */
-export interface LeitoBase {
+export interface Leito {
   id: string; // O ID do documento no Firestore
   setorId: string;
   codigoLeito: string;
   leitoPCP: boolean;
   leitoIsolamento: boolean;
   historicoMovimentacao: HistoricoMovimentacao[];
-}
-
-/**
- * Representa um leito com propriedades computadas para uso em componentes.
- */
-export interface Leito extends LeitoBase {
-  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
-  dataAtualizacaoStatus: string;
-  dadosPaciente?: DadosPaciente;
-  motivoBloqueio?: string;
-  regulacao?: {
-    paraSetor: string;
-    paraLeito: string;
-    observacoes?: string;
-  };
 }
 
 /**

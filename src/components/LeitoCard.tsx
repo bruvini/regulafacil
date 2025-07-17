@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, ArrowRightLeft as RemanejarIcon, Ambulance as TransferenciaIcon, AlertTriangle as UtiIcon, MessageSquarePlus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Leito } from '@/types/hospital';
+import { Leito, DadosPaciente } from '@/types/hospital';
 import StatusBadge from './StatusBadge';
 import DurationDisplay from './DurationDisplay';
 import MotivoBloqueioModal from './modals/MotivoBloqueioModal';
