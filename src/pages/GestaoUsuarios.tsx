@@ -19,26 +19,19 @@ const GestaoUsuarios = () => {
     setIsModalOpen(true);
   };
 
-  // FASE 1: CORRIGIR FLUXO DE VALIDAÇÃO - SÓ FECHA O MODAL SE A OPERAÇÃO FOR BEM-SUCEDIDA
   const handleFormSubmit = async (data: any) => {
-    let success = false;
     if (editingUser) {
-      success = await atualizarUsuario(editingUser.id!, data);
+      await atualizarUsuario(editingUser.id!, data);
     } else {
-      success = await criarUsuario(data);
+      await criarUsuario(data);
     }
-
-    // SÓ FECHA O MODAL SE A OPERAÇÃO RETORNAR SUCESSO
-    if (success) {
-      setIsModalOpen(false);
-      setEditingUser(null);
-    }
+    setIsModalOpen(false);
+    setEditingUser(null);
   };
 
-  // FASE 4: AJUSTAR FUNÇÃO DE EXCLUSÃO PARA PASSAR UID
-  const handleDeleteUser = async (id: string, uid?: string) => {
+  const handleDeleteUser = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este usuário?')) {
-      await excluirUsuario(id, uid);
+      await excluirUsuario(id);
     }
   };
 
@@ -110,52 +103,41 @@ const GestaoUsuarios = () => {
                         <TableHead>Matrícula</TableHead>
                         <TableHead>E-mail</TableHead>
                         <TableHead>Tipo de Acesso</TableHead>
-                        <TableHead>Acessos</TableHead> {/* FASE 3: NOVA COLUNA */}
-                        <TableHead>Último Acesso</TableHead> {/* FASE 3: NOVA COLUNA */}
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {usuarios.map((user) => {
-                        // FASE 3: LÓGICA PARA HISTÓRICO DE ACESSO
-                        const ultimoAcesso = user.historicoAcessos && user.historicoAcessos.length > 0
-                          ? new Date(user.historicoAcessos[user.historicoAcessos.length - 1].toDate()).toLocaleString('pt-BR')
-                          : 'Nunca';
-
-                        return (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">
-                              {user.nomeCompleto}
-                            </TableCell>
-                            <TableCell>{user.matricula}</TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>
-                              {getTipoAcessoBadge(user.tipoAcesso)}
-                            </TableCell>
-                            <TableCell>{user.historicoAcessos?.length || 0}</TableCell> {/* FASE 3: NOVA CÉLULA */}
-                            <TableCell>{ultimoAcesso}</TableCell> {/* FASE 3: NOVA CÉLULA */}
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleOpenModal(user)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-destructive hover:text-destructive"
-                                  onClick={() => handleDeleteUser(user.id!, user.uid)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                      {usuarios.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">
+                            {user.nomeCompleto}
+                          </TableCell>
+                          <TableCell>{user.matricula}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>
+                            {getTipoAcessoBadge(user.tipoAcesso)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenModal(user)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteUser(user.id!)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 )}

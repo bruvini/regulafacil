@@ -24,10 +24,9 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
         tempoInternacaoMax: '',
         unidadeTempo: 'dias', // 'dias' ou 'horas'
     });
-    const [sortConfig, setSortConfig] = useState({ key: 'tempo', direction: 'desc' });
 
     const filteredPacientes = useMemo(() => {
-        let pacientesFiltrados = pacientes.filter(paciente => {
+        return pacientes.filter(paciente => {
             // Filtro por Nome
             if (searchTerm && !paciente.nomePaciente.toLowerCase().includes(searchTerm.toLowerCase())) {
                 return false;
@@ -65,52 +64,12 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
 
             return true;
         });
-
-        // NOVA LÓGICA DE ORDENAÇÃO
-        return [...pacientesFiltrados].sort((a, b) => {
-            let comparison = 0;
-            
-            if (sortConfig.key === 'nome') {
-                comparison = a.nomePaciente.localeCompare(b.nomePaciente);
-            } else if (sortConfig.key === 'idade') {
-                const idadeA = calcularIdade(a.dataNascimento);
-                const idadeB = calcularIdade(b.dataNascimento);
-                comparison = idadeA - idadeB;
-            } else if (sortConfig.key === 'tempo') {
-                const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-                const dataB = parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-                if (isValid(dataA) && isValid(dataB)) {
-                    const tempoA = differenceInHours(new Date(), dataA);
-                    const tempoB = differenceInHours(new Date(), dataB);
-                    comparison = tempoA - tempoB;
-                }
-            }
-
-            return sortConfig.direction === 'desc' ? -comparison : comparison;
-        });
-    }, [pacientes, searchTerm, filtrosAvancados, sortConfig]);
+    }, [pacientes, searchTerm, filtrosAvancados]);
 
     const resetFiltros = () => {
         setSearchTerm('');
-        setFiltrosAvancados({ 
-            especialidade: '', 
-            sexo: '', 
-            idadeMin: '', 
-            idadeMax: '', 
-            tempoInternacaoMin: '', 
-            tempoInternacaoMax: '', 
-            unidadeTempo: 'dias' 
-        });
+        setFiltrosAvancados({ especialidade: '', sexo: '', idadeMin: '', idadeMax: '', tempoInternacaoMin: '', tempoInternacaoMax: '', unidadeTempo: 'dias' });
     };
 
-    return { 
-        searchTerm, 
-        setSearchTerm, 
-        filtrosAvancados, 
-        setFiltrosAvancados, 
-        filteredPacientes, 
-        resetFiltros, 
-        sortConfig, 
-        setSortConfig 
-    };
+    return { searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, filteredPacientes, resetFiltros };
 };

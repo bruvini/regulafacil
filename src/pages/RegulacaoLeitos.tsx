@@ -104,7 +104,7 @@ const RegulacaoLeitos = () => {
   const pacientesJaRegulados = todosPacientesPendentes.filter(p => p.statusLeito === 'Regulado');
 
   // Usar o hook de filtros para os pacientes aguardando regulação
-  const { searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, filteredPacientes, resetFiltros, sortConfig, setSortConfig } = useFiltrosRegulacao(pacientesAguardandoRegulacao);
+  const { searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, filteredPacientes, resetFiltros } = useFiltrosRegulacao(pacientesAguardandoRegulacao);
 
   const decisaoCirurgica = filteredPacientes.filter(p => p.setorOrigem === "PS DECISÃO CIRURGICA");
   const decisaoClinica = filteredPacientes.filter(p => p.setorOrigem === "PS DECISÃO CLINICA");
@@ -437,103 +437,88 @@ const RegulacaoLeitos = () => {
     const agora = new Date().toISOString();
     const batch = writeBatch(db);
 
-    // 1. Cria um mapa de todos os pacientes atuais, guardando seus dados completos.
-    const mapaPacientesAtuais = new Map<string, any>();
+    // Criamos um mapa de busca para encontrar rapidamente os dados de um paciente existente
+    const mapaPacientesAtuais: Map<string, any> = new Map();
     setores.flatMap(s => s.leitos)
-        .filter(l => l.dadosPaciente)
-        .forEach(l => {
-            mapaPacientesAtuais.set(l.dadosPaciente!.nomePaciente, { 
-                leito: l,
-                dados: l.dadosPaciente,
-                regulacao: l.regulacao 
-            });
-        });
+      .filter(l => l.statusLeito === 'Ocupado' && l.dadosPaciente)
+      .forEach(l => {
+        mapaPacientesAtuais.set(l.dadosPaciente!.nomePaciente, l.dadosPaciente);
+      });
 
     const setoresAtualizados = JSON.parse(JSON.stringify(setores));
 
     try {
-        // 2. Limpa apenas os leitos OCUPADOS, preservando os REGULADOS e RESERVADOS por enquanto.
-        for (const setor of setoresAtualizados) {
-            for (const leito of setor.leitos) {
-                if (leito.statusLeito === 'Ocupado') {
-                    leito.statusLeito = 'Vago';
-                    leito.dadosPaciente = null;
-                    leito.dataAtualizacaoStatus = agora;
-                }
-            }
+      // 1. Limpa todos os leitos ocupados para recomeçar
+      for (const setor of setoresAtualizados) {
+        for (const leito of setor.leitos) {
+          if (leito.statusLeito === 'Ocupado') {
+            leito.statusLeito = 'Vago';
+            leito.dadosPaciente = null;
+            leito.dataAtualizacaoStatus = agora;
+          }
         }
+      }
 
-        // 3. Processa cada paciente da planilha
-        for (const pacientePlanilha of dadosPlanilhaProcessados) {
-            const setorTarget = setoresAtualizados.find((s: Setor) => s.nomeSetor === pacientePlanilha.setorNome);
-            if (!setorTarget) continue;
+      // 2. Repovoa os leitos com base na planilha, preservando dados existentes
+      dadosPlanilhaProcessados.forEach((pacientePlanilha: PacienteDaPlanilha) => {
+        const setorTarget = setoresAtualizados.find((s: Setor) => s.nomeSetor === pacientePlanilha.setorNome);
+        if (setorTarget) {
+          const leitoTarget = setorTarget.leitos.find((l: any) => l.codigoLeito === pacientePlanilha.leitoCodigo);
+          if (leitoTarget) {
+            leitoTarget.statusLeito = 'Ocupado';
+            leitoTarget.dataAtualizacaoStatus = agora;
 
-            const leitoTarget = setorTarget.leitos.find((l: any) => l.codigoLeito === pacientePlanilha.leitoCodigo);
-            if (!leitoTarget) continue;
-
+            // CORREÇÃO PRINCIPAL AQUI:
             const dadosAntigos = mapaPacientesAtuais.get(pacientePlanilha.nomeCompleto);
 
-            // Cenário A: Paciente novo ou que teve alta e voltou
-            if (!dadosAntigos) {
-                leitoTarget.statusLeito = 'Ocupado';
-                leitoTarget.dadosPaciente = {
-                    nomePaciente: pacientePlanilha.nomeCompleto,
-                    dataNascimento: pacientePlanilha.dataNascimento,
-                    sexoPaciente: pacientePlanilha.sexo,
-                    dataInternacao: pacientePlanilha.dataInternacao,
-                    especialidadePaciente: pacientePlanilha.especialidade,
-                    isolamentosVigentes: [],
-                };
-                leitoTarget.dataAtualizacaoStatus = agora;
-            } 
-            // Cenário B: Paciente que já existia no sistema
-            else {
-                const { dados, regulacao, leito: leitoAntigo } = dadosAntigos;
-                leitoTarget.statusLeito = 'Ocupado';
-                leitoTarget.dadosPaciente = {
-                    ...dados, // Preserva isolamentos, alta provável, etc.
-                    especialidadePaciente: pacientePlanilha.especialidade, // Atualiza dados da planilha
-                    dataInternacao: pacientePlanilha.dataInternacao
-                };
-                leitoTarget.dataAtualizacaoStatus = agora;
-
-                // LÓGICA CRÍTICA DE PRESERVAÇÃO DA REGULAÇÃO:
-                if (regulacao) {
-                    // Se o paciente se moveu PARA o leito que estava reservado para ele, a regulação foi concluída.
-                    if (regulacao.paraLeito === leitoTarget.codigoLeito) {
-                        leitoTarget.dadosPaciente.origem = { deSetor: leitoAntigo.setorNome, deLeito: leitoAntigo.codigoLeito };
-                        leitoTarget.statusLeito = 'Ocupado';
-                    } else {
-                        // Se ele se moveu para um leito DIFERENTE, a regulação anterior ainda está pendente. Preservamos ela.
-                        leitoTarget.statusLeito = 'Regulado';
-                        leitoTarget.regulacao = regulacao;
-                    }
-                }
+            if (dadosAntigos) {
+              // Se o paciente já existia, preservamos seus dados clínicos (isolamentos, etc.)
+              // e apenas atualizamos as informações da internação que vêm da planilha.
+              leitoTarget.dadosPaciente = {
+                ...dadosAntigos, // <-- Preserva dados como `isolamentosVigentes`, `provavelAlta`, etc.
+                nomePaciente: pacientePlanilha.nomeCompleto,
+                dataNascimento: pacientePlanilha.dataNascimento,
+                sexoPaciente: pacientePlanilha.sexo,
+                dataInternacao: pacientePlanilha.dataInternacao,
+                especialidadePaciente: pacientePlanilha.especialidade
+              };
+            } else {
+              // Se for um paciente novo, criamos um objeto limpo
+              leitoTarget.dadosPaciente = {
+                nomePaciente: pacientePlanilha.nomeCompleto,
+                dataNascimento: pacientePlanilha.dataNascimento,
+                sexoPaciente: pacientePlanilha.sexo,
+                dataInternacao: pacientePlanilha.dataInternacao,
+                especialidadePaciente: pacientePlanilha.especialidade,
+                isolamentosVigentes: [], // Inicializa como array vazio
+              };
             }
+          }
         }
+      });
 
-        // 4. Persiste as alterações no banco de dados
-        setoresAtualizados.forEach((setor: Setor) => {
-            const setorRef = doc(db, 'setoresRegulaFacil', setor.id!);
-            batch.update(setorRef, { leitos: setor.leitos });
-        });
+      // 3. Persiste as alterações no banco de dados
+      setoresAtualizados.forEach((setor: Setor) => {
+        const setorRef = doc(db, 'setoresRegulaFacil', setor.id!);
+        batch.update(setorRef, { leitos: setor.leitos });
+      });
 
-        await batch.commit();
+      await batch.commit();
 
-        toast({ 
-            title: 'Sucesso!', 
-            description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} pacientes atualizados.`,
-        });
+      toast({ 
+        title: 'Sucesso!', 
+        description: `Sincronização concluída! ${dadosPlanilhaProcessados.length} pacientes atualizados.`,
+      });
 
-        setImportModalOpen(false);
+      setImportModalOpen(false);
 
     } catch (error) {
-        console.error("Erro ao sincronizar:", error);
-        toast({ title: 'Erro!', description: 'Não foi possível sincronizar os dados.', variant: 'destructive' });
+      console.error("Erro ao sincronizar:", error);
+      toast({ title: 'Erro!', description: 'Não foi possível sincronizar os dados.', variant: 'destructive' });
     } finally {
-        setIsSyncing(false);
-        setSyncSummary(null);
-        setValidationResult(null);
+      setIsSyncing(false);
+      setSyncSummary(null);
+      setValidationResult(null);
     }
   };
 
@@ -672,8 +657,6 @@ const RegulacaoLeitos = () => {
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
                 resetFiltros={resetFiltros}
-                sortConfig={sortConfig}
-                setSortConfig={setSortConfig}
               />
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -687,17 +670,19 @@ const RegulacaoLeitos = () => {
                   <CardContent className="pt-0">
                     <ScrollArea className="h-72 pr-4">
                       <div className="space-y-1">
-                        {decisaoCirurgica.map(paciente => (
-                          <PacientePendenteItem 
-                            key={paciente.leitoId}
-                            paciente={paciente}
-                            onRegularClick={() => handleOpenRegulacaoModal(paciente)}
-                            onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
-                            onConcluir={handleConcluir}
-                            onAlterar={handleAlterar}
-                            onCancelar={handleCancelar}
-                          />
-                        ))}
+                        {decisaoCirurgica
+                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
+                          .map(paciente => (
+                            <PacientePendenteItem 
+                              key={paciente.leitoId}
+                              paciente={paciente}
+                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                              onConcluir={handleConcluir}
+                              onAlterar={handleAlterar}
+                              onCancelar={handleCancelar}
+                            />
+                          ))}
                       </div>
                     </ScrollArea>
                   </CardContent>
@@ -713,17 +698,19 @@ const RegulacaoLeitos = () => {
                   <CardContent className="pt-0">
                     <ScrollArea className="h-72 pr-4">
                       <div className="space-y-1">
-                        {decisaoClinica.map(paciente => (
-                          <PacientePendenteItem 
-                            key={paciente.leitoId}
-                            paciente={paciente}
-                            onRegularClick={() => handleOpenRegulacaoModal(paciente)}
-                            onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
-                            onConcluir={handleConcluir}
-                            onAlterar={handleAlterar}
-                            onCancelar={handleCancelar}
-                          />
-                        ))}
+                        {decisaoClinica
+                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
+                          .map(paciente => (
+                            <PacientePendenteItem 
+                              key={paciente.leitoId}
+                              paciente={paciente}
+                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                              onConcluir={handleConcluir}
+                              onAlterar={handleAlterar}
+                              onCancelar={handleCancelar}
+                            />
+                          ))}
                       </div>
                     </ScrollArea>
                   </CardContent>
@@ -739,17 +726,19 @@ const RegulacaoLeitos = () => {
                   <CardContent className="pt-0">
                     <ScrollArea className="h-72 pr-4">
                       <div className="space-y-1">
-                        {recuperacaoCirurgica.map(paciente => (
-                          <PacientePendenteItem 
-                            key={paciente.leitoId}
-                            paciente={paciente}
-                            onRegularClick={() => handleOpenRegulacaoModal(paciente)}
-                            onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
-                            onConcluir={handleConcluir}
-                            onAlterar={handleAlterar}
-                            onCancelar={handleCancelar}
-                          />
-                        ))}
+                        {recuperacaoCirurgica
+                          .sort((a, b) => a.nomePaciente.localeCompare(b.nomePaciente))
+                          .map(paciente => (
+                            <PacientePendenteItem 
+                              key={paciente.leitoId}
+                              paciente={paciente}
+                              onRegularClick={() => handleOpenRegulacaoModal(paciente)}
+                              onAlta={() => altaAposRecuperacao(paciente.setorId, paciente.leitoId)}
+                              onConcluir={handleConcluir}
+                              onAlterar={handleAlterar}
+                              onCancelar={handleCancelar}
+                            />
+                          ))}
                       </div>
                     </ScrollArea>
                   </CardContent>
