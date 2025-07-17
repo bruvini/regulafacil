@@ -1,3 +1,4 @@
+
 // src/hooks/useLeitos.ts
 
 import { useState, useEffect } from 'react';
@@ -115,7 +116,6 @@ export const useLeitos = () => {
       setLoading(false);
     }
   };
-
 
   /**
    * Atualiza as propriedades estáticas de um leito.
