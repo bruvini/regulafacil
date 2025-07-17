@@ -1,79 +1,75 @@
-// src/types/hospital.ts
 
-/**
- * Representa um único evento na linha do tempo de um leito.
- */
-export interface HistoricoMovimentacao {
-  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
-  dataAtualizacaoStatus: string; // ISO String
-  motivoBloqueio?: string;
-  pacienteId?: string; // ID do paciente se o status for Ocupado, Regulado ou Reservado
-  infoRegulacao?: {
-    paraSetor: string;
-    paraLeito: string;
-    observacoes?: string;
-  };
+// Adicione esta nova interface no topo
+export interface HistoricoTransferenciaItem {
+  etapa: string;
+  data: string;
+  usuario?: string; // Opcional, para registrar quem fez a anotação
 }
 
-/**
- * Representa a coleção `setoresRegulaFacil`.
- */
-export interface Setor {
-  id?: string;
-  nomeSetor: string;
-  siglaSetor: string;
+export interface IsolamentoVigente {
+  isolamentoId: string; // ID do tipo de isolamento da coleção isolamentosRegulaFacil
+  sigla: string;
+  dataInicioVigilancia: string;
+  regrasCumpridas: string[]; // Array com os IDs das regras já cumpridas
 }
 
-/**
- * Representa a coleção `leitosRegulaFacil`.
- */
-export interface Leito {
-  id: string; // O ID do documento no Firestore
-  setorId: string;
-  codigoLeito: string;
-  leitoPCP: boolean;
-  leitoIsolamento: boolean;
-  historicoMovimentacao: HistoricoMovimentacao[];
-}
-
-/**
- * Representa a coleção `pacientesRegulaFacil`.
- */
-export interface Paciente {
-  id: string; // O ID do documento no Firestore
-  leitoId: string;
-  setorId: string;
-  nomeCompleto: string;
+export interface DadosPaciente {
+  nomePaciente: string;
   dataNascimento: string;
   sexoPaciente: 'Masculino' | 'Feminino';
   dataInternacao: string;
   especialidadePaciente: string;
+
+  // --- NOVOS CAMPOS OPCIONAIS ---
   aguardaUTI?: boolean;
   dataPedidoUTI?: string;
+
   remanejarPaciente?: boolean;
   motivoRemanejamento?: string;
   dataPedidoRemanejamento?: string;
+
   transferirPaciente?: boolean;
   destinoTransferencia?: string;
   motivoTransferencia?: string;
   dataTransferencia?: string;
   statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
-  historicoTransferencia?: { etapa: string; data: string; usuario?: string; }[];
+  historicoTransferencia?: HistoricoTransferenciaItem[];
+  
   provavelAlta?: boolean;
-  obsPaciente?: string[];
-  isolamentosVigentes?: {
-    isolamentoId: string;
-    sigla: string;
-    dataInicioVigilancia: string;
-    regrasCumpridas: string[];
-  }[];
+  obsPaciente?: string[]; // NOVO CAMPO ADICIONADO
+  
+  isolamentosVigentes?: IsolamentoVigente[];
+  
   origem?: {
     deSetor: string;
     deLeito: string;
   };
 }
 
-// ... outros tipos (FormData, SolicitacaoCirurgica, etc.) permanecem os mesmos
+export interface Leito {
+  id: string;
+  codigoLeito: string;
+  leitoPCP: boolean;
+  leitoIsolamento: boolean;
+  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
+  dataAtualizacaoStatus: string;
+  motivoBloqueio?: string;
+  dadosPaciente?: DadosPaciente | null;
+  regulacao?: {
+    paraSetor: string;
+    paraLeito: string;
+    data: string;
+    observacoes?: string;
+  };
+}
+
+export interface Setor {
+  id?: string;
+  nomeSetor: string;
+  siglaSetor: string;
+  leitos: Leito[];
+}
+
 export interface SetorFormData {
   nomeSetor: string;
   siglaSetor: string;
@@ -88,7 +84,7 @@ export interface LeitoFormData {
 export interface SolicitacaoCirurgica {
   id?: string;
   nomeCompleto: string;
-  dataNascimento: string;
+  dataNascimento: string; // Mudando para string para facilitar input
   sexo: 'Masculino' | 'Feminino';
   especialidade: string;
   medicoSolicitante: string;
@@ -98,12 +94,12 @@ export interface SolicitacaoCirurgica {
   tipoLeitoNecessario: 'Enfermaria' | 'UTI';
   dataCriacao: Date;
   status: 'Pendente' | 'Agendada' | 'Realizada' | 'Cancelada';
-  leitoReservado?: string;
+  leitoReservado?: string; // Novo campo para armazenar código do leito
 }
 
 export interface SolicitacaoCirurgicaFormData {
   nomeCompleto: string;
-  dataNascimento: string;
+  dataNascimento: string; // Mudando para string
   sexo: 'Masculino' | 'Feminino';
   especialidade: string;
   medicoSolicitante: string;
@@ -112,9 +108,3 @@ export interface SolicitacaoCirurgicaFormData {
   dataPrevisaCirurgia: Date;
   tipoLeitoNecessario: 'Enfermaria' | 'UTI';
 }
-
-/**
- * Alias para compatibilidade com componentes existentes.
- * DadosPaciente é essencialmente o mesmo que Paciente.
- */
-export type DadosPaciente = Paciente;

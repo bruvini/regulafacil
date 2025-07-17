@@ -15,7 +15,7 @@ const especialidades = [
 ];
 
 interface FiltrosRegulacaoProps {
-    filtrosAvancados: {
+    filtros: {
         especialidade: string;
         sexo: string;
         idadeMin: string;
@@ -24,7 +24,7 @@ interface FiltrosRegulacaoProps {
         tempoInternacaoMax: string;
         unidadeTempo: string;
     };
-    setFiltrosAvancados: (filtros: any) => void;
+    setFiltros: (filtros: any) => void;
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     resetFiltros: () => void;
@@ -33,8 +33,8 @@ interface FiltrosRegulacaoProps {
 }
 
 export const FiltrosRegulacao = ({ 
-    filtrosAvancados, 
-    setFiltrosAvancados, 
+    filtros, 
+    setFiltros, 
     searchTerm, 
     setSearchTerm, 
     resetFiltros, 
@@ -78,7 +78,7 @@ export const FiltrosRegulacao = ({
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-4 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <Select value={filtrosAvancados?.especialidade || ''} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, especialidade: v})}>
+                        <Select value={filtros.especialidade} onValueChange={(v) => setFiltros({...filtros, especialidade: v})}>
                             <SelectTrigger><SelectValue placeholder="Especialidade" /></SelectTrigger>
                             <SelectContent>
                                 {especialidades.map(e => (
@@ -86,7 +86,7 @@ export const FiltrosRegulacao = ({
                                 ))}
                             </SelectContent>
                         </Select>
-                        <Select value={filtrosAvancados?.sexo || ''} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, sexo: v})}>
+                        <Select value={filtros.sexo} onValueChange={(v) => setFiltros({...filtros, sexo: v})}>
                             <SelectTrigger><SelectValue placeholder="Sexo" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="Masculino">Masculino</SelectItem>
@@ -101,14 +101,14 @@ export const FiltrosRegulacao = ({
                                 <Input 
                                     type="number" 
                                     placeholder="Min" 
-                                    value={filtrosAvancados?.idadeMin || ''} 
-                                    onChange={e => setFiltrosAvancados({...filtrosAvancados, idadeMin: e.target.value})} 
+                                    value={filtros.idadeMin} 
+                                    onChange={e => setFiltros({...filtros, idadeMin: e.target.value})} 
                                 />
                                 <Input 
                                     type="number" 
                                     placeholder="Max" 
-                                    value={filtrosAvancados?.idadeMax || ''} 
-                                    onChange={e => setFiltrosAvancados({...filtrosAvancados, idadeMax: e.target.value})} 
+                                    value={filtros.idadeMax} 
+                                    onChange={e => setFiltros({...filtros, idadeMax: e.target.value})} 
                                 />
                             </div>
                         </div>
@@ -118,18 +118,18 @@ export const FiltrosRegulacao = ({
                                 <Input 
                                     type="number" 
                                     placeholder="Min" 
-                                    value={filtrosAvancados?.tempoInternacaoMin || ''} 
-                                    onChange={e => setFiltrosAvancados({...filtrosAvancados, tempoInternacaoMin: e.target.value})} 
+                                    value={filtros.tempoInternacaoMin} 
+                                    onChange={e => setFiltros({...filtros, tempoInternacaoMin: e.target.value})} 
                                 />
                                 <Input 
                                     type="number" 
                                     placeholder="Max" 
-                                    value={filtrosAvancados?.tempoInternacaoMax || ''} 
-                                    onChange={e => setFiltrosAvancados({...filtrosAvancados, tempoInternacaoMax: e.target.value})} 
+                                    value={filtros.tempoInternacaoMax} 
+                                    onChange={e => setFiltros({...filtros, tempoInternacaoMax: e.target.value})} 
                                 />
                             </div>
                         </div>
-                        <Select value={filtrosAvancados?.unidadeTempo || 'dias'} onValueChange={v => setFiltrosAvancados({...filtrosAvancados, unidadeTempo: v})}>
+                        <Select value={filtros.unidadeTempo} onValueChange={v => setFiltros({...filtros, unidadeTempo: v})}>
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="dias">Dias</SelectItem>

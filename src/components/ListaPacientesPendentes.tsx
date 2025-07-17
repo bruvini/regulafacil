@@ -1,13 +1,6 @@
 
-// src/components/ListaPacientesPendentes.tsx
-
-import { Paciente } from '@/types/hospital';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
+import { DadosPaciente } from '@/types/hospital';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PacientePendenteItem } from './PacientePendenteItem';
@@ -15,38 +8,18 @@ import { parse } from 'date-fns';
 
 interface ListaPacientesPendentesProps {
   titulo: string;
-  pacientes: (Paciente & {
-    setorOrigem: string;
-    siglaSetorOrigem: string;
-    leitoCodigo: string;
-    leitoId: string;
-    statusLeito: string;
-    regulacao?: any;
-  })[];
-  onRegularClick: (paciente: Paciente) => void;
-  onAlta?: (leitoId: string) => void;
-  onConcluir: (paciente: Paciente) => void;
-  onAlterar: (paciente: Paciente) => void;
-  onCancelar: (paciente: Paciente) => void;
+  pacientes: (DadosPaciente & { setorOrigem: string; setorId?: string; leitoId?: string })[];
+  onRegularClick: (paciente: any) => void;
+  onAlta?: (setorId: string, leitoId: string) => void;
 }
 
-export const ListaPacientesPendentes = ({
-  titulo,
-  pacientes,
-  onRegularClick,
-  onAlta,
-  onConcluir,
-  onAlterar,
-  onCancelar
-}: ListaPacientesPendentesProps) => {
+export const ListaPacientesPendentes = ({ titulo, pacientes, onRegularClick, onAlta }: ListaPacientesPendentesProps) => {
+  // Ordena os pacientes pelo maior tempo de internação
   const pacientesOrdenados = [...pacientes].sort((a, b) => {
     const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
     const dataB = parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-    return dataA.getTime() - dataB.getTime();
+    return dataA.getTime() - dataB.getTime(); // Do mais antigo para o mais novo
   });
-
-  console.log('ListaPacientesPendentes - pacientes recebidos:', pacientes);
-  console.log('ListaPacientesPendentes - pacientes ordenados:', pacientesOrdenados);
 
   return (
     <Card className="flex flex-col">
@@ -58,19 +31,12 @@ export const ListaPacientesPendentes = ({
         {pacientes.length > 0 ? (
           <ScrollArea className="h-72 p-2">
             <div className="space-y-2">
-              {pacientesOrdenados.map((paciente) => (
-                <PacientePendenteItem
-                  key={`${paciente.id}-${paciente.leitoId}`}
-                  paciente={paciente}
+              {pacientesOrdenados.map(paciente => (
+                <PacientePendenteItem 
+                  key={paciente.nomePaciente} 
+                  paciente={paciente} 
                   onRegularClick={() => onRegularClick(paciente)}
-                  onAlta={
-                    titulo === 'Recuperação Cirúrgica'
-                      ? () => onAlta?.(paciente.leitoId)
-                      : undefined
-                  }
-                  onConcluir={onConcluir}
-                  onAlterar={onAlterar}
-                  onCancelar={onCancelar}
+                  onAlta={titulo === 'Recuperação Cirúrgica' ? () => onAlta?.(paciente.setorId!, paciente.leitoId!) : undefined}
                 />
               ))}
             </div>
