@@ -439,6 +439,31 @@ export const useSetores = () => {
     }
   };
 
+  const adicionarLeitosEmLote = async (setorId: string, novosLeitos: Leito[]) => {
+    setLoading(true);
+    try {
+      const setor = setores.find(s => s.id === setorId);
+      if (!setor) throw new Error('Setor não encontrado');
+
+      const setorRef = doc(db, 'setoresRegulaFacil', setorId);
+      await updateDoc(setorRef, { leitos: [...setor.leitos, ...novosLeitos] });
+      
+      toast({
+        title: "Sucesso",
+        description: `${novosLeitos.length} leito(s) adicionado(s) com sucesso`,
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar leitos em lote:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar leitos em lote",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const atualizarLeito = async (setorId: string, leitoIndex: string, data: LeitoFormData) => {
     setLoading(true);
     try {
@@ -1109,6 +1134,7 @@ export const useSetores = () => {
     atualizarSetor,
     excluirSetor,
     adicionarLeito,
+    adicionarLeitosEmLote,
     atualizarLeito,
     excluirLeito,
     moverPaciente,

@@ -22,6 +22,7 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
     atualizarSetor,
     excluirSetor,
     adicionarLeito,
+    adicionarLeitosEmLote,
     atualizarLeito,
     excluirLeito,
   } = useSetores();
@@ -56,14 +57,31 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
         .map(codigo => codigo.trim())
         .filter(codigo => codigo.length > 0);
       
-      // Create each bed sequentially
-      for (const codigoLeito of leitoCodigos) {
-        const leitoData = {
-          ...data,
-          codigoLeito
-        };
-        await adicionarLeito(setorId, leitoData);
+      if (leitoCodigos.length === 1) {
+        // Single bed creation
+        await adicionarLeito(setorId, data);
+      } else {
+        // Batch bed creation - create all beds at once to avoid concurrency issues
+        const setor = setores.find(s => s.id === setorId);
+        if (!setor) {
+          console.error('Setor não encontrado');
+          return;
+        }
+
+        const novosLeitos = leitoCodigos.map(codigoLeito => ({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Unique ID
+          codigoLeito,
+          statusLeito: 'Vago' as const,
+          leitoPCP: data.leitoPCP || false,
+          leitoIsolamento: data.leitoIsolamento || false,
+          dataAtualizacaoStatus: new Date().toISOString(),
+          dadosPaciente: null
+        }));
+
+        // Call the batch creation function
+        await adicionarLeitosEmLote(setorId, novosLeitos);
       }
+      
       // Reset the form after successful submission
       setEditingLeito(null);
     }
