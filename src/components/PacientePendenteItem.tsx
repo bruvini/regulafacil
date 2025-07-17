@@ -1,3 +1,4 @@
+
 // src/components/PacientePendenteItem.tsx
 
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +31,7 @@ import {
 } from 'lucide-react';
 
 import { formatarDuracao } from '@/lib/utils';
-import { Paciente } from '@/types/hospital'; // Ideal para usar um tipo correto
+import { Paciente } from '@/types/hospital';
 
 // Função auxiliar
 const calcularIdade = (dataNascimento: string): string => {
@@ -45,7 +46,14 @@ const calcularIdade = (dataNascimento: string): string => {
 };
 
 interface PacientePendenteItemProps {
-  paciente: Paciente;
+  paciente: Paciente & {
+    setorOrigem: string;
+    siglaSetorOrigem: string;
+    leitoCodigo: string;
+    leitoId: string;
+    statusLeito: string;
+    regulacao?: any;
+  };
   onRegularClick?: () => void;
   onAlta?: () => void;
   onConcluir?: (paciente: Paciente) => void;
@@ -62,16 +70,19 @@ export const PacientePendenteItem = ({
   onCancelar
 }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
+  
+  console.log('PacientePendenteItem - paciente:', paciente);
+  console.log('PacientePendenteItem - nomeCompleto:', paciente.nomeCompleto);
 
   return (
     <div className="flex items-start gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
       <div className="flex-grow">
         <div className="flex items-center gap-2">
           <p className="font-bold text-sm text-foreground">
-            {paciente.nomeCompleto ?? 'Nome não disponível'}
+            {paciente.nomeCompleto || 'Nome não disponível'}
           </p>
           <Badge variant="outline" className="text-xs">
-            {paciente.sexoPaciente?.charAt(0) ?? '?'} - {idade}a
+            {paciente.sexoPaciente?.charAt(0) || '?'} - {idade}a
           </Badge>
         </div>
 
@@ -80,8 +91,8 @@ export const PacientePendenteItem = ({
             <>
               <span className="font-semibold text-purple-600">Destino:</span>
               <span>
-                {paciente.regulacao?.paraSetorSigla ?? 'Setor desconhecido'} -{' '}
-                {paciente.regulacao?.paraLeito ?? 'Leito não informado'}
+                {paciente.regulacao?.paraSetorSigla || 'Setor desconhecido'} -{' '}
+                {paciente.regulacao?.paraLeito || 'Leito não informado'}
               </span>
               <span className="text-gray-400">•</span>
               <div className="flex items-center gap-1">

@@ -1,3 +1,4 @@
+
 // src/components/ListaPacientesPendentes.tsx
 
 import { Paciente } from '@/types/hospital';
@@ -44,6 +45,9 @@ export const ListaPacientesPendentes = ({
     return dataA.getTime() - dataB.getTime();
   });
 
+  console.log('ListaPacientesPendentes - pacientes recebidos:', pacientes);
+  console.log('ListaPacientesPendentes - pacientes ordenados:', pacientesOrdenados);
+
   return (
     <Card className="flex flex-col">
       <CardHeader className="flex-row items-center justify-between py-3 px-4">
@@ -54,9 +58,9 @@ export const ListaPacientesPendentes = ({
         {pacientes.length > 0 ? (
           <ScrollArea className="h-72 p-2">
             <div className="space-y-2">
-              {pacientesOrdenados.map((paciente, index) => (
+              {pacientesOrdenados.map((paciente) => (
                 <PacientePendenteItem
-                  key={paciente.id || `${paciente.nomeCompleto}-${index}`}
+                  key={`${paciente.id}-${paciente.leitoId}`}
                   paciente={paciente}
                   onRegularClick={() => onRegularClick(paciente)}
                   onAlta={

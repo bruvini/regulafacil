@@ -10,25 +10,6 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Download,
-  BedDouble,
-  Ambulance,
-  X,
-  Clock,
-  Settings,
-  CheckCircle,
-  Pencil,
-  XCircle,
-} from "lucide-react";
-import * as XLSX from "xlsx";
 import { useCirurgiasEletivas } from "@/hooks/useCirurgiasEletivas";
 import { useCirurgias } from "@/hooks/useCirurgias";
 import { useAlertasIsolamento } from "@/hooks/useAlertasIsolamento";
@@ -44,11 +25,7 @@ import {
   SyncSummary,
   PacienteDaPlanilha,
 } from "@/components/modals/ValidacaoImportacao";
-import { AguardandoUTIItem } from "@/components/AguardandoUTIItem";
-import { AguardandoTransferenciaItem } from "@/components/AguardandoTransferenciaItem";
-import { PacientePendenteItem } from "@/components/PacientePendenteItem";
 import { RemanejamentoPendenteItem } from "@/components/RemanejamentoPendenteItem";
-import { CirurgiaEletivaItem } from "@/components/CirurgiaEletivaItem";
 import { useToast } from "@/hooks/use-toast";
 import {
   collection,
@@ -70,6 +47,9 @@ import { useLeitos } from "@/hooks/useLeitos";
 import { usePacientes } from "@/hooks/usePacientes";
 import { Paciente, Leito, HistoricoMovimentacao } from "@/types/hospital";
 import { ListaPacientesPendentes } from "@/components/ListaPacientesPendentes";
+import { AcoesRapidas } from "@/components/AcoesRapidas";
+import { ListasLaterais } from "@/components/ListasLaterais";
+import * as XLSX from "xlsx";
 
 // Tipos locais para a sincronização
 interface PacienteDaPlanilha {
@@ -135,6 +115,10 @@ const RegulacaoLeitos = () => {
     const mapaSetores = new Map(setores.map((s) => [s.id, s]));
     const mapaLeitos = new Map(leitos.map((l) => [l.id, l]));
 
+    console.log('RegulacaoLeitos - pacientes raw:', pacientes);
+    console.log('RegulacaoLeitos - setores:', setores);
+    console.log('RegulacaoLeitos - leitos:', leitos);
+
     return pacientes.map((paciente) => {
       const leito = mapaLeitos.get(paciente.leitoId);
       const setor = leito ? mapaSetores.get(leito.setorId) : undefined;
@@ -153,7 +137,7 @@ const RegulacaoLeitos = () => {
         paraSetorSigla = setorDestino?.siglaSetor || "";
       }
 
-      return {
+      const pacienteCompleto = {
         ...paciente,
         leitoCodigo: leito?.codigoLeito || "N/A",
         setorOrigem: setor?.nomeSetor || "N/A",
@@ -163,6 +147,9 @@ const RegulacaoLeitos = () => {
           ? { ...historicoRecente.infoRegulacao, paraSetorSigla }
           : undefined,
       };
+
+      console.log('RegulacaoLeitos - paciente processado:', pacienteCompleto);
+      return pacienteCompleto;
     });
   }, [
     pacientes,
@@ -174,9 +161,18 @@ const RegulacaoLeitos = () => {
   ]);
 
   // --- Filtragem e Listas Derivadas ---
-  const { filteredPacientes, ...filtrosProps } = useFiltrosRegulacao(
-    pacientesComDadosCompletos
-  );
+  const { 
+    filteredPacientes,
+    filtros,
+    setFiltroSetor,
+    setFiltroEspecialidade,
+    setFiltroNome,
+    setFiltroDataInternacao,
+    setMostrarFiltrosAvancados,
+    mostrarFiltrosAvancados,
+    setoresFiltros,
+    especialidadesFiltros
+  } = useFiltrosRegulacao(pacientesComDadosCompletos);
 
   const pacientesAguardandoRegulacao = filteredPacientes.filter(
     (p) => p.statusLeito === "Ocupado"
@@ -670,7 +666,9 @@ const RegulacaoLeitos = () => {
         const transferencias = pacientesDaPlanilha
           .filter((p) => mapaPacientesSistema.has(p.nomeCompleto))
           .map((p) => {
-            const pacienteSistema = mapaPacientesSistema.get(p.nomeCompleto)!;
+            const pacienteSistema = pacientes.find(
+              (p) => p.nomeCompleto === paciente.nomeCompleto
+            )!;
             const leitoAntigo = mapaLeitosSistema.get(pacienteSistema.leitoId);
             return { paciente: p, leitoAntigo: leitoAntigo?.codigoLeito };
           })
@@ -816,6 +814,18 @@ const RegulacaoLeitos = () => {
     }
   };
 
+  const filtrosProps = {
+    filtros,
+    setFiltroSetor,
+    setFiltroEspecialidade,
+    setFiltroNome,
+    setFiltroDataInternacao,
+    setMostrarFiltrosAvancados,
+    mostrarFiltrosAvancados,
+    setoresFiltros,
+    especialidadesFiltros
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -841,113 +851,18 @@ const RegulacaoLeitos = () => {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <Card className="shadow-card border border-border/50">
-            <CardHeader className="pb-2 pt-4">
-              <CardTitle className="text-lg">Ações Rápidas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setImportModalOpen(true)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Importar pacientes MV</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </CardContent>
-          </Card>
-        </div>
+        <AcoesRapidas onImportarClick={() => setImportModalOpen(true)} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {pacientesAguardandoUTI.length > 0 && (
-            <Card className="shadow-card border border-border/50">
-              <CardHeader className="flex-row items-center justify-between py-3 px-4">
-                <CardTitle className="text-base font-semibold">
-                  Aguardando UTI
-                </CardTitle>
-                <Badge variant="secondary">
-                  {pacientesAguardandoUTI.length}
-                </Badge>
-              </CardHeader>
-              <CardContent className="p-2">
-                <div className="space-y-1 max-h-64 overflow-y-auto">
-                  {pacientesAguardandoUTI.map((p) => (
-                    <AguardandoUTIItem
-                      key={p.id}
-                      paciente={p}
-                      onCancel={() => cancelarPedidoUTI(p)}
-                      onTransfer={() => handleIniciarTransferenciaExterna(p)}
-                      onRegularUTI={() => handleOpenRegulacaoModal(p, "uti")}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {pacientesAguardandoTransferencia.length > 0 && (
-            <Card className="shadow-card border border-border/50">
-              <CardHeader className="flex-row items-center justify-between py-3 px-4">
-                <CardTitle className="text-base font-semibold">
-                  Aguardando Transferência
-                </CardTitle>
-                <Badge variant="secondary">
-                  {pacientesAguardandoTransferencia.length}
-                </Badge>
-              </CardHeader>
-              <CardContent className="p-2">
-                <div className="space-y-1 max-h-64 overflow-y-auto">
-                  {pacientesAguardandoTransferencia.map((p) => (
-                    <AguardandoTransferenciaItem
-                      key={p.id}
-                      paciente={p}
-                      onCancel={() => {
-                        const pacienteRef = doc(
-                          db,
-                          "pacientesRegulaFacil",
-                          p.id
-                        );
-                        updateDoc(pacienteRef, { transferirPaciente: false });
-                      }}
-                      onGerenciar={() => handleGerenciarTransferencia(p)}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {cirurgias.length > 0 && (
-            <Card className="shadow-card border border-border/50">
-              <CardHeader className="flex-row items-center justify-between py-3 px-4">
-                <CardTitle className="text-base font-semibold">
-                  Cirurgias Eletivas (Próx. 48h)
-                </CardTitle>
-                <Badge variant="secondary">{cirurgias.length}</Badge>
-              </CardHeader>
-              <CardContent className="p-2">
-                <div className="space-y-1 max-h-64 overflow-y-auto">
-                  {cirurgias.map((c) => (
-                    <CirurgiaEletivaItem
-                      key={c.id}
-                      cirurgia={c}
-                      onAlocarLeito={handleAlocarLeitoCirurgia}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        <ListasLaterais
+          pacientesAguardandoUTI={pacientesAguardandoUTI}
+          pacientesAguardandoTransferencia={pacientesAguardandoTransferencia}
+          cirurgias={cirurgias}
+          onCancelarUTI={cancelarPedidoUTI}
+          onTransferirExterna={handleIniciarTransferenciaExterna}
+          onRegularUTI={(p) => handleOpenRegulacaoModal(p, "uti")}
+          onGerenciarTransferencia={handleGerenciarTransferencia}
+          onAlocarCirurgia={handleAlocarLeitoCirurgia}
+        />
 
         <Accordion
           type="multiple"
