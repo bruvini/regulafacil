@@ -96,6 +96,27 @@ const HomePage = () => {
           </p>
         </div>
 
+        {/* BLOCO DE BOAS-VINDAS MOVIDO PARA CÁ */}
+        <div className="mb-12">
+          <Card className="bg-medical-primary/5 border-medical-primary/20">
+            <CardContent className="pt-8 pb-8">
+              <h2 className="text-2xl font-bold text-medical-primary mb-4">
+                Bem-vindo ao Hospital Municipal São José
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Utilize o menu lateral para navegar entre os módulos do sistema. 
+                Cada ferramenta foi desenvolvida para otimizar processos específicos 
+                da regulação hospitalar.
+              </p>
+              {userData && (
+                <p className="text-sm text-muted-foreground mt-4">
+                  Logado como: {userData.nomeCompleto} ({userData.tipoAcesso})
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {featuresVisiveis.map((feature) => {
             const IconComponent = feature.icon;
@@ -126,26 +147,6 @@ const HomePage = () => {
               </Card>
             );
           })}
-        </div>
-
-        <div className="mt-16 text-center">
-          <Card className="bg-medical-primary/5 border-medical-primary/20">
-            <CardContent className="pt-8 pb-8">
-              <h2 className="text-2xl font-bold text-medical-primary mb-4">
-                Bem-vindo ao Hospital Municipal São José
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Utilize o menu lateral para navegar entre os módulos do sistema. 
-                Cada ferramenta foi desenvolvida para otimizar processos específicos 
-                da regulação hospitalar.
-              </p>
-              {userData && (
-                <p className="text-sm text-muted-foreground mt-4">
-                  Logado como: {userData.nomeCompleto} ({userData.tipoAcesso})
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
