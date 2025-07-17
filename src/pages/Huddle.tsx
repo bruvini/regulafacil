@@ -20,7 +20,7 @@ const Huddle = () => {
   const [dataSelecionada] = useState(new Date());
   const [turno] = useState(() => {
     const hora = new Date().getHours();
-    return hora < 14 ? 'MANHA' : 'TARDE';
+    return hora < 14 ? 'Manhã' : 'Tarde';
   });
   
   const [huddleId, setHuddleId] = useState(`${format(dataSelecionada, 'yyyy-MM-dd')}-${turno}`);
@@ -44,7 +44,7 @@ const Huddle = () => {
   const handleGeneratePdf = () => {
     const doc = new jsPDF();
     const selectedHuddle = huddleList.find(h => h.id === huddleId);
-    const turnoLabel = selectedHuddle?.turno === 'MANHA' ? 'Manhã' : 'Tarde';
+    const turnoLabel = selectedHuddle?.turno === 'Manhã' ? 'Manhã' : 'Tarde';
     const dataFormatada = selectedHuddle ? format(selectedHuddle.data, 'dd/MM/yyyy') : format(dataSelecionada, 'dd/MM/yyyy');
     
     doc.setFontSize(16);
@@ -97,7 +97,7 @@ const Huddle = () => {
     setSelectedPendencia(pendencia);
   };
 
-  const turnoLabel = turno === 'MANHA' ? 'Manhã' : 'Tarde';
+  const turnoLabel = turno === 'Manhã' ? 'Manhã' : 'Tarde';
   const dataFormatada = format(dataSelecionada, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
   if (loading) {
@@ -140,7 +140,7 @@ const Huddle = () => {
               <SelectContent>
                 {huddleList.map(huddle => (
                   <SelectItem key={huddle.id} value={huddle.id}>
-                    {`${format(huddle.data, 'dd/MM/yyyy')} - ${huddle.turno === 'MANHA' ? 'Manhã' : 'Tarde'}`}
+                    {`${format(huddle.data, 'dd/MM/yyyy')} - ${huddle.turno === 'Manhã' ? 'Manhã' : 'Tarde'}`}
                   </SelectItem>
                 ))}
               </SelectContent>
