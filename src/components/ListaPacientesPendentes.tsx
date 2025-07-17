@@ -1,7 +1,12 @@
 // src/components/ListaPacientesPendentes.tsx
 
 import { Paciente } from '@/types/hospital';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PacientePendenteItem } from './PacientePendenteItem';
@@ -9,22 +14,29 @@ import { parse } from 'date-fns';
 
 interface ListaPacientesPendentesProps {
   titulo: string;
-  pacientes: (Paciente & { setorOrigem: string; siglaSetorOrigem: string; leitoCodigo: string; statusLeito: string; regulacao?: any })[];
-  onRegularClick: (paciente: any) => void;
+  pacientes: (Paciente & {
+    setorOrigem: string;
+    siglaSetorOrigem: string;
+    leitoCodigo: string;
+    leitoId: string;
+    statusLeito: string;
+    regulacao?: any;
+  })[];
+  onRegularClick: (paciente: Paciente) => void;
   onAlta?: (leitoId: string) => void;
-  onConcluir: (paciente: any) => void; // Prop Adicionada
-  onAlterar: (paciente: any) => void;  // Prop Adicionada
-  onCancelar: (paciente: any) => void; // Prop Adicionada
+  onConcluir: (paciente: Paciente) => void;
+  onAlterar: (paciente: Paciente) => void;
+  onCancelar: (paciente: Paciente) => void;
 }
 
-export const ListaPacientesPendentes = ({ 
-  titulo, 
-  pacientes, 
-  onRegularClick, 
+export const ListaPacientesPendentes = ({
+  titulo,
+  pacientes,
+  onRegularClick,
   onAlta,
   onConcluir,
   onAlterar,
-  onCancelar 
+  onCancelar
 }: ListaPacientesPendentesProps) => {
   const pacientesOrdenados = [...pacientes].sort((a, b) => {
     const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
@@ -42,12 +54,16 @@ export const ListaPacientesPendentes = ({
         {pacientes.length > 0 ? (
           <ScrollArea className="h-72 p-2">
             <div className="space-y-2">
-              {pacientesOrdenados.map(paciente => (
-                <PacientePendenteItem 
-                  key={paciente.id}
-                  paciente={paciente} 
+              {pacientesOrdenados.map((paciente, index) => (
+                <PacientePendenteItem
+                  key={paciente.id || `${paciente.nomeCompleto}-${index}`}
+                  paciente={paciente}
                   onRegularClick={() => onRegularClick(paciente)}
-                  onAlta={titulo === 'Recuperação Cirúrgica' ? () => onAlta?.(paciente.leitoId) : undefined}
+                  onAlta={
+                    titulo === 'Recuperação Cirúrgica'
+                      ? () => onAlta?.(paciente.leitoId)
+                      : undefined
+                  }
                   onConcluir={onConcluir}
                   onAlterar={onAlterar}
                   onCancelar={onCancelar}
