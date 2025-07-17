@@ -37,6 +37,7 @@ export const useSetores = () => {
   const criarSetor = async (data: SetorFormData) => {
     setLoading(true);
     try {
+      // CORREÇÃO: Passa apenas os dados do formulário, sem o array 'leitos'.
       await addDoc(collection(db, 'setoresRegulaFacil'), data);
       registrarLog(`Criou o setor "${data.nomeSetor}" (${data.siglaSetor}).`, 'Gestão de Setores');
       toast({

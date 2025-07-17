@@ -10,7 +10,8 @@ import {
   query,
   orderBy,
   arrayUnion,
-  writeBatch
+  writeBatch,
+  addDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Leito, LeitoFormData, HistoricoMovimentacao } from '@/types/hospital';

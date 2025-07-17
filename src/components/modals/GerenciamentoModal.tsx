@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useSetores } from '@/hooks/useSetores';
-import { useLeitos } from '@/hooks/useLeitos'; // <-- NOVO IMPORT
+import { useLeitos } from '@/hooks/useLeitos';
 import SetorForm from '../forms/SetorForm';
 import LeitoForm from '../forms/LeitoForm';
 import { SetorFormData, LeitoFormData, Leito, Setor } from '@/types/hospital';
@@ -19,7 +19,6 @@ interface GerenciamentoModalProps {
 }
 
 const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => {
-  // Hooks separados para cada responsabilidade
   const { setores, loading: setoresLoading, criarSetor, atualizarSetor, excluirSetor } = useSetores();
   const { leitos, loading: leitosLoading, adicionarLeito, atualizarLeito, excluirLeito } = useLeitos();
 
@@ -27,23 +26,19 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
   const [editingLeito, setEditingLeito] = useState<Leito | null>(null);
   const [selectedSetorForLeitos, setSelectedSetorForLeitos] = useState('');
 
-  // Lógica de submissão do setor CORRIGIDA
   const handleSetorSubmit = async (data: SetorFormData) => {
     if (editingSetor) {
       await atualizarSetor(editingSetor.id!, data);
     } else {
-      // CORREÇÃO: Não adiciona mais o array 'leitos'
       await criarSetor(data);
     }
     setEditingSetor(null);
   };
 
-  // Lógica de submissão do leito CORRIGIDA
   const handleLeitoSubmit = async (setorId: string, data: LeitoFormData) => {
     if (editingLeito) {
       await atualizarLeito(editingLeito.id!, data);
     } else {
-      // CORREÇÃO: Chama a função 'adicionarLeito' do hook correto 'useLeitos'
       await adicionarLeito(setorId, data);
     }
     setEditingLeito(null);
