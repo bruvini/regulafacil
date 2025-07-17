@@ -56,10 +56,22 @@ export const useLeitos = () => {
       const { codigoLeito, leitoPCP, leitoIsolamento } = data;
       const agora = new Date().toISOString();
 
+      // Verificar se é cadastro em lote (contém vírgulas)
       if (codigoLeito.includes(',')) {
+        console.log('Detectado cadastro em lote:', codigoLeito);
+        
         // --- LÓGICA DE CRIAÇÃO EM LOTE ---
         const batch = writeBatch(db);
-        const codigos = codigoLeito.split(',').map(c => c.trim()).filter(Boolean);
+        const codigos = codigoLeito
+          .split(',')
+          .map(c => c.trim())
+          .filter(codigo => codigo.length > 0); // Remove strings vazias
+
+        console.log('Códigos processados:', codigos);
+
+        if (codigos.length === 0) {
+          throw new Error('Nenhum código de leito válido encontrado');
+        }
 
         codigos.forEach(codigo => {
           const novoHistorico: HistoricoMovimentacao = {
@@ -78,13 +90,15 @@ export const useLeitos = () => {
         });
 
         await batch.commit();
-        registrarLog(`Adicionou ${codigos.length} leitos em lote ao setor ID ${setorId}.`, 'Gestão de Leitos');
+        registrarLog(`Adicionou ${codigos.length} leitos em lote ao setor ID ${setorId}: ${codigos.join(', ')}.`, 'Gestão de Leitos');
         toast({
           title: "Sucesso!",
           description: `${codigos.length} leitos adicionados com sucesso.`,
         });
 
       } else {
+        console.log('Detectado cadastro individual:', codigoLeito);
+        
         // --- LÓGICA DE CRIAÇÃO INDIVIDUAL ---
         const leitosCollectionRef = collection(db, 'leitosRegulaFacil');
         const novoHistorico: HistoricoMovimentacao = {
