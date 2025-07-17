@@ -1,3 +1,4 @@
+
 // src/pages/RegulacaoLeitos.tsx
 
 import { useState, useMemo, useEffect } from 'react';
@@ -749,7 +750,15 @@ return (
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 space-y-6">
-              <FiltrosRegulacao {...filtrosProps} />
+              <FiltrosRegulacao 
+                filtros={filtrosAvancados} 
+                setFiltros={setFiltrosAvancados} 
+                searchTerm={searchTerm} 
+                setSearchTerm={setSearchTerm} 
+                resetFiltros={resetFiltros} 
+                sortConfig={sortConfig} 
+                setSortConfig={setSortConfig} 
+              />
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                  <ListaPacientesPendentes
