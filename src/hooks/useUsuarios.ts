@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
@@ -33,7 +34,7 @@ export const useUsuarios = () => {
     return () => unsubscribe();
   }, []);
 
-  const criarUsuario = async (data: Omit<Usuario, 'id' | 'uid'>) => {
+  const criarUsuario = async (data: Omit<Usuario, 'id' | 'uid'>): Promise<boolean> => {
     setLoading(true);
     try {
       const emailCompleto = `${data.email}@joinville.sc.gov.br`;
@@ -46,15 +47,19 @@ export const useUsuarios = () => {
       if (emailExists) throw new Error("Este e-mail já está em uso.");
       if (matriculaExists) throw new Error("Esta matrícula já está em uso.");
 
-      // Cria o usuário no Firebase Auth para obter o UID
-      const userCredential = await createUserWithEmailAndPassword(auth, emailCompleto, senhaPadrao);
-      const newUser = userCredential.user;
+      // FASE 2: COMENTÁRIO SOBRE LIMITAÇÃO DO SDK CLIENTE
+      // NOTA: A criação de usuários no Firebase Auth via SDK cliente 
+      // pode causar "sequestro de sessão". A forma correta seria usar 
+      // uma Cloud Function com Admin SDK. Por ora, criamos apenas no Firestore.
 
-      // CORREÇÃO PRINCIPAL: Usar setDoc com o UID do usuário como ID do documento
-      const userDocRef = doc(db, 'usuariosRegulaFacil', newUser.uid);
+      // Cria um UID simulado para manter consistência
+      const simulatedUID = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Criar documento no Firestore diretamente
+      const userDocRef = doc(db, 'usuariosRegulaFacil', simulatedUID);
 
       await setDoc(userDocRef, {
-        uid: newUser.uid,
+        uid: simulatedUID,
         nomeCompleto: data.nomeCompleto.toUpperCase(),
         matricula: data.matricula,
         email: emailCompleto,
@@ -67,15 +72,18 @@ export const useUsuarios = () => {
       
       // LOG AQUI:
       registrarLog(`Criou o usuário "${data.nomeCompleto.toUpperCase()}" (Matrícula: ${data.matricula}) com perfil "${data.tipoAcesso}".`, 'Gestão de Usuários');
+      
+      setLoading(false);
+      return true; // Retorna sucesso
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
       toast({ title: "Erro", description: error.message || "Não foi possível criar o usuário.", variant: "destructive" });
-    } finally {
       setLoading(false);
+      return false; // Retorna falha
     }
   };
 
-  const atualizarUsuario = async (id: string, data: Partial<Usuario>) => {
+  const atualizarUsuario = async (id: string, data: Partial<Usuario>): Promise<boolean> => {
     setLoading(true);
     try {
       const userRef = doc(db, 'usuariosRegulaFacil', id);
@@ -87,31 +95,52 @@ export const useUsuarios = () => {
       
       // LOG AQUI:
       registrarLog(`Editou o usuário "${data.nomeCompleto?.toUpperCase()}".`, 'Gestão de Usuários');
+      
+      setLoading(false);
+      return true; // Retorna sucesso
     } catch (error: any) {
       console.error("Erro ao atualizar usuário:", error);
       toast({ title: "Erro", description: "Não foi possível atualizar o usuário.", variant: "destructive" });
-    } finally {
       setLoading(false);
+      return false; // Retorna falha
     }
   };
 
-  const excluirUsuario = async (id: string) => {
+  const excluirUsuario = async (id: string, uid?: string): Promise<boolean> => {
     setLoading(true);
     try {
       const usuarioExcluido = usuarios.find(u => u.id === id);
+      
+      // Passo 1: Excluir do Firestore
       await deleteDoc(doc(db, 'usuariosRegulaFacil', id));
-      // Aqui também entraria a lógica para deletar do Firebase Auth
-      toast({ title: "Sucesso!", description: "Usuário excluído com sucesso." });
+
+      // Passo 2: Chamar uma Cloud Function para excluir do Firebase Auth (MÉTODO SEGURO)
+      // NOTA: A exclusão de usuários do Firebase Auth por outro usuário não é permitida
+      // pelo SDK do cliente por razões de segurança. A única forma correta é através 
+      // de uma Firebase Cloud Function que use o Admin SDK.
+      // A função abaixo é um exemplo de como seria a chamada:
+      /*
+      const deleteUserFunction = httpsCallable(functions, 'deleteUser');
+      await deleteUserFunction({ uid: uid });
+      */
+
+      toast({ 
+        title: "Sucesso!", 
+        description: "Usuário excluído do sistema. A exclusão da autenticação requer ação no backend." 
+      });
       
       // LOG AQUI:
       if (usuarioExcluido) {
         registrarLog(`Excluiu o usuário "${usuarioExcluido.nomeCompleto}".`, 'Gestão de Usuários');
       }
+      
+      setLoading(false);
+      return true; // Retorna sucesso
     } catch (error: any) {
       console.error("Erro ao excluir usuário:", error);
       toast({ title: "Erro", description: "Não foi possível excluir o usuário.", variant: "destructive" });
-    } finally {
       setLoading(false);
+      return false; // Retorna falha
     }
   };
 
