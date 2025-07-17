@@ -1,5 +1,6 @@
+// src/components/PacientePendenteItem.tsx
 
-import { DadosPaciente } from '@/types/hospital';
+import { Paciente } from '@/types/hospital'; // Importa o tipo Paciente correto
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -22,7 +23,7 @@ const calcularIdade = (dataNascimento: string): string => {
 };
 
 interface PacientePendenteItemProps {
-  paciente: any;
+  paciente: any; // Mantido como 'any' por flexibilidade, mas agora se refere a `pacientesComDadosCompletos`
   onRegularClick?: () => void;
   onAlta?: () => void;
   onConcluir?: (paciente: any) => void;
@@ -44,7 +45,8 @@ export const PacientePendenteItem = ({
     <div className="flex items-start gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
       <div className="flex-grow">
         <div className="flex items-center gap-2">
-          <p className="font-bold text-sm text-foreground">{paciente.nomePaciente}</p>
+          {/* CORREÇÃO AQUI */}
+          <p className="font-bold text-sm text-foreground">{paciente.nomeCompleto}</p>
           <Badge variant="outline" className="text-xs">
             {paciente.sexoPaciente.charAt(0)} - {idade}a
           </Badge>

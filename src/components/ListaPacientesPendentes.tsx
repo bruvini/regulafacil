@@ -1,5 +1,6 @@
+// src/components/ListaPacientesPendentes.tsx
 
-import { DadosPaciente } from '@/types/hospital';
+import { Paciente } from '@/types/hospital'; // CORREÇÃO: Usa o tipo Paciente
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,7 +9,8 @@ import { parse } from 'date-fns';
 
 interface ListaPacientesPendentesProps {
   titulo: string;
-  pacientes: (DadosPaciente & { setorOrigem: string; setorId?: string; leitoId?: string })[];
+  // CORREÇÃO: O tipo agora é um array de Paciente com as propriedades extras
+  pacientes: (Paciente & { setorOrigem: string; siglaSetorOrigem: string; leitoCodigo: string; statusLeito: string; regulacao?: any })[];
   onRegularClick: (paciente: any) => void;
   onAlta?: (setorId: string, leitoId: string) => void;
 }
@@ -33,7 +35,7 @@ export const ListaPacientesPendentes = ({ titulo, pacientes, onRegularClick, onA
             <div className="space-y-2">
               {pacientesOrdenados.map(paciente => (
                 <PacientePendenteItem 
-                  key={paciente.nomePaciente} 
+                  key={paciente.id} // CORREÇÃO: Usa o ID único do paciente como chave
                   paciente={paciente} 
                   onRegularClick={() => onRegularClick(paciente)}
                   onAlta={titulo === 'Recuperação Cirúrgica' ? () => onAlta?.(paciente.setorId!, paciente.leitoId!) : undefined}
