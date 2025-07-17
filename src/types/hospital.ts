@@ -16,8 +16,7 @@ export interface HistoricoMovimentacao {
 }
 
 /**
- * Representa a nova coleção `setoresRegulaFacil`.
- * Armazena apenas informações sobre o setor em si.
+ * Representa a coleção `setoresRegulaFacil`.
  */
 export interface Setor {
   id?: string;
@@ -26,27 +25,24 @@ export interface Setor {
 }
 
 /**
- * Representa a nova coleção `leitosRegulaFacil`.
- * Contém os dados estáticos e o histórico de movimentação de cada leito.
+ * Representa a coleção `leitosRegulaFacil`.
  */
 export interface Leito {
-  id?: string;
-  setorId: string; // ID do setor ao qual pertence
+  id: string; // O ID do documento no Firestore
+  setorId: string;
   codigoLeito: string;
   leitoPCP: boolean;
   leitoIsolamento: boolean;
   historicoMovimentacao: HistoricoMovimentacao[];
-  // O status atual é o último item do array historicoMovimentacao.
 }
 
 /**
- * Representa a nova coleção `pacientesRegulaFacil`.
- * Armazena todos os dados dinâmicos dos pacientes.
+ * Representa a coleção `pacientesRegulaFacil`.
  */
 export interface Paciente {
-  id?: string;
-  leitoId: string; // ID do leito que o paciente ocupa atualmente
-  setorId: string; // ID do setor onde o leito está
+  id: string; // O ID do documento no Firestore
+  leitoId: string;
+  setorId: string;
   nomeCompleto: string;
   dataNascimento: string;
   sexoPaciente: 'Masculino' | 'Feminino';
@@ -77,8 +73,7 @@ export interface Paciente {
   };
 }
 
-// --- Tipos para Formulários ---
-
+// ... outros tipos (FormData, SolicitacaoCirurgica, etc.) permanecem os mesmos
 export interface SetorFormData {
   nomeSetor: string;
   siglaSetor: string;
@@ -89,8 +84,6 @@ export interface LeitoFormData {
   leitoPCP: boolean;
   leitoIsolamento: boolean;
 }
-
-// --- Outros Tipos (mantidos para outras funcionalidades) ---
 
 export interface SolicitacaoCirurgica {
   id?: string;
