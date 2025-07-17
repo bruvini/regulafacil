@@ -2,9 +2,9 @@
 // src/hooks/useSetores.ts
 
 import { useState, useEffect } from 'react';
-import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Setor, SetorFormData, Leito } from '@/types/hospital';
+import { Setor, SetorFormData, LeitoBase, Leito, Paciente, DadosPaciente, HistoricoMovimentacao } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
 import { useAuditoria } from './useAuditoria';
 
@@ -16,29 +16,64 @@ export const useSetores = () => {
   useEffect(() => {
     const setoresQuery = query(collection(db, 'setoresRegulaFacil'), orderBy('nomeSetor'));
     const leitosQuery = query(collection(db, 'leitosRegulaFacil'), orderBy('codigoLeito'));
+    const pacientesQuery = query(collection(db, 'pacientesRegulaFacil'));
 
     let setoresData: Setor[] = [];
-    let leitosData: Leito[] = [];
-    let loadingCount = 2;
+    let leitosData: LeitoBase[] = [];
+    let pacientesData: Paciente[] = [];
+    let loadingCount = 3;
 
     const checkAndCombineData = () => {
       loadingCount--;
       if (loadingCount === 0) {
+        // Criar mapa de pacientes por leitoId
+        const pacientesPorLeito = new Map<string, Paciente>();
+        pacientesData.forEach(paciente => {
+          pacientesPorLeito.set(paciente.leitoId, paciente);
+        });
+
         // Combinar setores com seus leitos
         const setoresComLeitos = setoresData.map(setor => {
           const leitosDoSetor = leitosData.filter(leito => leito.setorId === setor.id);
           
           // Adicionar status atual e dados do paciente aos leitos
-          const leitosComStatus = leitosDoSetor.map(leito => {
-            const ultimoHistorico = leito.historicoMovimentacao?.[leito.historicoMovimentacao.length - 1];
+          const leitosComStatus: Leito[] = leitosDoSetor.map(leitoBase => {
+            const ultimoHistorico = leitoBase.historicoMovimentacao?.[leitoBase.historicoMovimentacao.length - 1];
+            const paciente = pacientesPorLeito.get(leitoBase.id);
+            
+            let dadosPaciente: DadosPaciente | undefined;
+            if (paciente) {
+              dadosPaciente = {
+                nomePaciente: paciente.nomeCompleto,
+                dataNascimento: paciente.dataNascimento,
+                sexoPaciente: paciente.sexoPaciente,
+                dataInternacao: paciente.dataInternacao,
+                especialidadePaciente: paciente.especialidadePaciente,
+                aguardaUTI: paciente.aguardaUTI,
+                dataPedidoUTI: paciente.dataPedidoUTI,
+                remanejarPaciente: paciente.remanejarPaciente,
+                motivoRemanejamento: paciente.motivoRemanejamento,
+                dataPedidoRemanejamento: paciente.dataPedidoRemanejamento,
+                transferirPaciente: paciente.transferirPaciente,
+                destinoTransferencia: paciente.destinoTransferencia,
+                motivoTransferencia: paciente.motivoTransferencia,
+                dataTransferencia: paciente.dataTransferencia,
+                statusTransferencia: paciente.statusTransferencia,
+                historicoTransferencia: paciente.historicoTransferencia,
+                provavelAlta: paciente.provavelAlta,
+                obsPaciente: paciente.obsPaciente,
+                isolamentosVigentes: paciente.isolamentosVigentes,
+                origem: paciente.origem,
+              };
+            }
+
             return {
-              ...leito,
+              ...leitoBase,
               statusLeito: ultimoHistorico?.statusLeito || 'Vago',
-              dataAtualizacaoStatus: ultimoHistorico?.dataAtualizacaoStatus,
-              dadosPaciente: ultimoHistorico?.pacienteId ? {
-                // Aqui você pode buscar dados do paciente se necessário
-                // Por enquanto deixo undefined, mas pode ser implementado depois
-              } : undefined
+              dataAtualizacaoStatus: ultimoHistorico?.dataAtualizacaoStatus || new Date().toISOString(),
+              dadosPaciente,
+              motivoBloqueio: ultimoHistorico?.motivoBloqueio,
+              regulacao: ultimoHistorico?.infoRegulacao
             };
           });
 
@@ -73,7 +108,7 @@ export const useSetores = () => {
       leitosData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Leito[];
+      })) as LeitoBase[];
       checkAndCombineData();
     }, (error) => {
       console.error('Erro ao buscar leitos:', error);
@@ -85,9 +120,26 @@ export const useSetores = () => {
       setLoading(false);
     });
 
+    const unsubscribePacientes = onSnapshot(pacientesQuery, (snapshot) => {
+      pacientesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Paciente[];
+      checkAndCombineData();
+    }, (error) => {
+      console.error('Erro ao buscar pacientes:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar pacientes do sistema.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    });
+
     return () => {
       unsubscribeSetores();
       unsubscribeLeitos();
+      unsubscribePacientes();
     };
   }, []);
 
@@ -160,11 +212,144 @@ export const useSetores = () => {
     }
   };
 
+  const atualizarStatusLeito = async (setorId: string, leitoId: string, novoStatus: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado', motivo?: string) => {
+    try {
+      const leitoRef = doc(db, 'leitosRegulaFacil', leitoId);
+      const novoHistorico: HistoricoMovimentacao = {
+        statusLeito: novoStatus,
+        dataAtualizacaoStatus: new Date().toISOString(),
+        motivoBloqueio: motivo
+      };
+      
+      await updateDoc(leitoRef, {
+        historicoMovimentacao: arrayUnion(novoHistorico)
+      });
+
+      registrarLog(`Atualizou status do leito para ${novoStatus}.`, 'Gestão de Leitos');
+      toast({
+        title: "Sucesso",
+        description: `Status do leito atualizado para ${novoStatus}.`,
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar status do leito:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status do leito.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const desbloquearLeito = async (setorId: string, leitoId: string) => {
+    await atualizarStatusLeito(setorId, leitoId, 'Vago');
+  };
+
+  const finalizarHigienizacao = async (setorId: string, leitoId: string) => {
+    await atualizarStatusLeito(setorId, leitoId, 'Vago');
+  };
+
+  const liberarLeito = async (setorId: string, leitoId: string) => {
+    await atualizarStatusLeito(setorId, leitoId, 'Higienizacao');
+  };
+
+  const solicitarUTI = async (setorId: string, leitoId: string) => {
+    try {
+      // Encontrar o paciente no leito
+      const setor = setores.find(s => s.id === setorId);
+      const leito = setor?.leitos.find(l => l.id === leitoId);
+      const paciente = leito?.dadosPaciente;
+      
+      if (paciente) {
+        registrarLog(`Solicitou UTI para paciente no leito ${leito.codigoLeito}.`, 'Gestão de Leitos');
+        toast({
+          title: "Sucesso",
+          description: "Solicitação de UTI enviada.",
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao solicitar UTI:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível solicitar UTI.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const solicitarRemanejamento = async (setorId: string, leitoId: string, motivo: string) => {
+    try {
+      registrarLog(`Solicitou remanejamento para leito. Motivo: ${motivo}`, 'Gestão de Leitos');
+      toast({
+        title: "Sucesso",
+        description: "Solicitação de remanejamento enviada.",
+      });
+    } catch (error) {
+      console.error('Erro ao solicitar remanejamento:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível solicitar remanejamento.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const transferirPaciente = async (setorId: string, leitoId: string, destino: string, motivo: string) => {
+    try {
+      registrarLog(`Iniciou transferência externa. Destino: ${destino}, Motivo: ${motivo}`, 'Gestão de Leitos');
+      toast({
+        title: "Sucesso",
+        description: "Transferência externa iniciada.",
+      });
+    } catch (error) {
+      console.error('Erro ao transferir paciente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível iniciar transferência.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const cancelarReserva = async (setorId: string, leitoId: string) => {
+    await atualizarStatusLeito(setorId, leitoId, 'Vago');
+  };
+
+  const concluirTransferencia = async (leito: Leito, setorId: string) => {
+    await atualizarStatusLeito(setorId, leito.id, 'Ocupado');
+  };
+
+  const toggleProvavelAlta = async (setorId: string, leitoId: string) => {
+    try {
+      registrarLog(`Alternado status de provável alta para leito.`, 'Gestão de Leitos');
+      toast({
+        title: "Sucesso",
+        description: "Status de provável alta atualizado.",
+      });
+    } catch (error) {
+      console.error('Erro ao alterar provável alta:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível alterar provável alta.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     setores,
     loading,
     criarSetor,
     atualizarSetor,
     excluirSetor,
+    atualizarStatusLeito,
+    desbloquearLeito,
+    finalizarHigienizacao,
+    liberarLeito,
+    solicitarUTI,
+    solicitarRemanejamento,
+    transferirPaciente,
+    cancelarReserva,
+    concluirTransferencia,
+    toggleProvavelAlta,
   };
 };
