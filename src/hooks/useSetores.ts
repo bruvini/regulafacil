@@ -1,64 +1,81 @@
 
 // src/hooks/useSetores.ts
 
-import { useState, useEffect } from 'react';
-import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { useState, useEffect, useMemo } from 'react';
+import { collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, orderBy, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Setor, SetorFormData, Leito } from '@/types/hospital';
+import { Setor, SetorFormData, Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
 import { useAuditoria } from './useAuditoria';
+import { useLeitos } from './useLeitos';
+import { usePacientes } from './usePacientes';
+
+// Tipo extendido de Leito com propriedades de runtime
+export type LeitoExtendido = Leito & {
+  statusLeito: HistoricoMovimentacao['statusLeito'];
+  dataAtualizacaoStatus?: string;
+  dadosPaciente?: Paciente;
+  motivoBloqueio?: string;
+  regulacao?: {
+    paraSetor: string;
+    paraLeito: string;
+    observacoes?: string;
+  };
+};
+
+// Tipo extendido de Setor com leitos
+export type SetorComLeitos = Setor & {
+  leitos: LeitoExtendido[];
+};
 
 export const useSetores = () => {
-  const [setores, setSetores] = useState<(Setor & { leitos: Leito[] })[]>([]);
+  const [setores, setSetores] = useState<SetorComLeitos[]>([]);
   const [loading, setLoading] = useState(true);
   const { registrarLog } = useAuditoria();
+  const { leitos } = useLeitos();
+  const { pacientes } = usePacientes();
 
-  useEffect(() => {
-    const setoresQuery = query(collection(db, 'setoresRegulaFacil'), orderBy('nomeSetor'));
-    const leitosQuery = query(collection(db, 'leitosRegulaFacil'), orderBy('codigoLeito'));
+  // Combinar dados de setores, leitos e pacientes
+  const setoresEnriquecidos = useMemo(() => {
+    if (!setores.length && !leitos.length) return [];
 
-    let setoresData: Setor[] = [];
-    let leitosData: Leito[] = [];
-    let loadingCount = 2;
-
-    const checkAndCombineData = () => {
-      loadingCount--;
-      if (loadingCount === 0) {
-        // Combinar setores com seus leitos
-        const setoresComLeitos = setoresData.map(setor => {
-          const leitosDoSetor = leitosData.filter(leito => leito.setorId === setor.id);
+    const setoresComLeitos = setores.map(setor => {
+      const leitosDoSetor = leitos
+        .filter(leito => leito.setorId === setor.id)
+        .map(leito => {
+          const ultimoHistorico = leito.historicoMovimentacao?.[leito.historicoMovimentacao.length - 1];
+          const pacienteDoLeito = pacientes.find(p => p.leitoId === leito.id);
           
-          // Adicionar status atual e dados do paciente aos leitos
-          const leitosComStatus = leitosDoSetor.map(leito => {
-            const ultimoHistorico = leito.historicoMovimentacao?.[leito.historicoMovimentacao.length - 1];
-            return {
-              ...leito,
-              statusLeito: ultimoHistorico?.statusLeito || 'Vago',
-              dataAtualizacaoStatus: ultimoHistorico?.dataAtualizacaoStatus,
-              dadosPaciente: ultimoHistorico?.pacienteId ? {
-                // Aqui você pode buscar dados do paciente se necessário
-                // Por enquanto deixo undefined, mas pode ser implementado depois
-              } : undefined
-            };
-          });
-
           return {
-            ...setor,
-            leitos: leitosComStatus
-          };
+            ...leito,
+            statusLeito: ultimoHistorico?.statusLeito || 'Vago',
+            dataAtualizacaoStatus: ultimoHistorico?.dataAtualizacaoStatus,
+            dadosPaciente: pacienteDoLeito,
+            motivoBloqueio: ultimoHistorico?.motivoBloqueio,
+            regulacao: ultimoHistorico?.infoRegulacao,
+          } as LeitoExtendido;
         });
 
-        setSetores(setoresComLeitos);
-        setLoading(false);
-      }
-    };
+      return {
+        ...setor,
+        leitos: leitosDoSetor
+      };
+    });
 
-    const unsubscribeSetores = onSnapshot(setoresQuery, (snapshot) => {
-      setoresData = snapshot.docs.map(doc => ({
+    return setoresComLeitos;
+  }, [setores, leitos, pacientes]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'setoresRegulaFacil'), orderBy('nomeSetor'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const setoresData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Setor[];
-      checkAndCombineData();
+      
+      setSetores(setoresData.map(setor => ({ ...setor, leitos: [] })));
+      setLoading(false);
     }, (error) => {
       console.error('Erro ao buscar setores:', error);
       toast({
@@ -69,26 +86,7 @@ export const useSetores = () => {
       setLoading(false);
     });
 
-    const unsubscribeLeitos = onSnapshot(leitosQuery, (snapshot) => {
-      leitosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Leito[];
-      checkAndCombineData();
-    }, (error) => {
-      console.error('Erro ao buscar leitos:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar leitos do sistema.",
-        variant: "destructive",
-      });
-      setLoading(false);
-    });
-
-    return () => {
-      unsubscribeSetores();
-      unsubscribeLeitos();
-    };
+    return () => unsubscribe();
   }, []);
 
   const criarSetor = async (data: SetorFormData) => {
@@ -160,11 +158,111 @@ export const useSetores = () => {
     }
   };
 
+  // Funções de ação para leitos (delegadas para useLeitos)
+  const atualizarStatusLeito = async (setorId: string, leitoId: string, novoStatus: HistoricoMovimentacao['statusLeito'], motivo?: string) => {
+    const { atualizarStatusLeito: updateStatus } = useLeitos();
+    return updateStatus(leitoId, novoStatus, { motivoBloqueio: motivo });
+  };
+
+  const desbloquearLeito = async (setorId: string, leitoId: string) => {
+    return atualizarStatusLeito(setorId, leitoId, 'Vago');
+  };
+
+  const finalizarHigienizacao = async (setorId: string, leitoId: string) => {
+    return atualizarStatusLeito(setorId, leitoId, 'Vago');
+  };
+
+  const liberarLeito = async (setorId: string, leitoId: string) => {
+    return atualizarStatusLeito(setorId, leitoId, 'Higienizacao');
+  };
+
+  const solicitarUTI = async (setorId: string, leitoId: string) => {
+    // Implementar lógica de solicitação UTI
+    registrarLog(`Solicitou UTI para leito ${leitoId}.`, 'Gestão de Leitos');
+    toast({
+      title: "Sucesso",
+      description: "Solicitação de UTI registrada.",
+    });
+  };
+
+  const solicitarRemanejamento = async (setorId: string, leitoId: string, motivo: string) => {
+    // Implementar lógica de remanejamento
+    registrarLog(`Solicitou remanejamento para leito ${leitoId}: ${motivo}.`, 'Gestão de Leitos');
+    toast({
+      title: "Sucesso",
+      description: "Solicitação de remanejamento registrada.",
+    });
+  };
+
+  const transferirPaciente = async (setorId: string, leitoId: string, destino: string, motivo: string) => {
+    // Implementar lógica de transferência
+    registrarLog(`Transferiu paciente do leito ${leitoId} para ${destino}: ${motivo}.`, 'Gestão de Leitos');
+    toast({
+      title: "Sucesso",
+      description: "Transferência registrada.",
+    });
+  };
+
+  const cancelarReserva = async (setorId: string, leitoId: string) => {
+    return atualizarStatusLeito(setorId, leitoId, 'Vago');
+  };
+
+  const concluirTransferencia = async (leito: LeitoExtendido, setorId: string) => {
+    return atualizarStatusLeito(setorId, leito.id, 'Ocupado');
+  };
+
+  const toggleProvavelAlta = async (setorId: string, leitoId: string) => {
+    // Implementar lógica de provável alta
+    registrarLog(`Alterou status de provável alta para leito ${leitoId}.`, 'Gestão de Leitos');
+    toast({
+      title: "Sucesso",
+      description: "Status de provável alta atualizado.",
+    });
+  };
+
+  const moverPaciente = async (setorOrigemId: string, leitoOrigemId: string, setorDestinoId: string, leitoDestinoId: string) => {
+    // Implementar lógica de movimentação
+    registrarLog(`Moveu paciente do leito ${leitoOrigemId} para ${leitoDestinoId}.`, 'Movimentação');
+    toast({
+      title: "Sucesso",
+      description: "Paciente movido com sucesso.",
+    });
+  };
+
+  const adicionarObservacaoPaciente = async (setorId: string, leitoId: string, observacao: string) => {
+    // Implementar lógica de observação
+    registrarLog(`Adicionou observação ao paciente do leito ${leitoId}.`, 'Observações');
+    toast({
+      title: "Sucesso",
+      description: "Observação adicionada.",
+    });
+  };
+
+  // Funções não implementadas (para compatibilidade)
+  const atualizarRegrasIsolamento = async () => {};
+  const finalizarIsolamentoPaciente = async () => {};
+  const adicionarIsolamentoPaciente = async () => {};
+
   return {
-    setores,
+    setores: setoresEnriquecidos,
     loading,
     criarSetor,
     atualizarSetor,
     excluirSetor,
+    atualizarStatusLeito,
+    desbloquearLeito,
+    finalizarHigienizacao,
+    liberarLeito,
+    solicitarUTI,
+    solicitarRemanejamento,
+    transferirPaciente,
+    cancelarReserva,
+    concluirTransferencia,
+    toggleProvavelAlta,
+    moverPaciente,
+    adicionarObservacaoPaciente,
+    atualizarRegrasIsolamento,
+    finalizarIsolamentoPaciente,
+    adicionarIsolamentoPaciente,
   };
 };

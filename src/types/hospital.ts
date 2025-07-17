@@ -112,3 +112,9 @@ export interface SolicitacaoCirurgicaFormData {
   dataPrevisaCirurgia: Date;
   tipoLeitoNecessario: 'Enfermaria' | 'UTI';
 }
+
+/**
+ * Alias para compatibilidade com componentes existentes.
+ * DadosPaciente é essencialmente o mesmo que Paciente.
+ */
+export type DadosPaciente = Paciente;
