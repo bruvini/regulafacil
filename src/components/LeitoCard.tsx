@@ -101,7 +101,39 @@ const LeitoCard = ({
           <StatusBadge status={leito.statusLeito as any} />
         </div>
         <div className="flex-grow flex flex-col justify-center py-2">
-            {/* O conteúdo do card permanece o mesmo */}
+             {leito.statusLeito === 'Vago' && infoBloqueioIsolamento ? (
+              <LeitoStatusIsolamento isolamentos={infoBloqueioIsolamento.isolamentos} sexo={infoBloqueioIsolamento.sexo} />
+            ) : leito.statusLeito === 'Ocupado' && paciente ? (
+              <div className="text-left space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <p className="font-medium text-sm leading-tight truncate">{paciente.nomeCompleto}</p>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    {paciente.provavelAlta && (<TooltipProvider><Tooltip><TooltipTrigger><Bell className="h-4 w-4 text-green-500" /></TooltipTrigger><TooltipContent><p>Provável Alta</p></TooltipContent></Tooltip></TooltipProvider>)}
+                    {paciente.aguardaUTI && (<TooltipProvider><Tooltip><TooltipTrigger><AlertTriangle className="h-4 w-4 text-red-500" /></TooltipTrigger><TooltipContent><p>Aguardando UTI</p></TooltipContent></Tooltip></TooltipProvider>)}
+                    {paciente.remanejarPaciente && (<TooltipProvider><Tooltip><TooltipTrigger><ArrowRightLeft className="h-4 w-4 text-yellow-500" /></TooltipTrigger><TooltipContent><p>Remanejamento Solicitado</p></TooltipContent></Tooltip></TooltipProvider>)}
+                    {paciente.transferirPaciente && (<TooltipProvider><Tooltip><TooltipTrigger><Ambulance className="h-4 w-4 text-blue-500" /></TooltipTrigger><TooltipContent><p>Transferência Externa</p></TooltipContent></Tooltip></TooltipProvider>)}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">{calcularIdade(paciente.dataNascimento)} anos • {paciente.sexoPaciente?.charAt(0) || '?'}</p>
+                <div className="flex items-center gap-2"><Stethoscope className="h-4 w-4 text-muted-foreground flex-shrink-0" /><p className="text-xs text-muted-foreground truncate">{paciente.especialidadePaciente}</p></div>
+                {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {paciente.isolamentosVigentes.map((iso, idx) => (<Badge key={idx} variant="outline" className="text-xs px-1 py-0 bg-orange-50 border-orange-200 text-orange-800">{iso.sigla}</Badge>))}
+                  </div>
+                )}
+              </div>
+            ) : leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio ? (
+              <div className="text-center p-2 bg-yellow-50 border border-yellow-200 rounded-md"><Lock className="mx-auto h-4 w-4 text-yellow-600 mb-1" /><p className="text-xs font-bold text-yellow-700">BLOQUEADO</p><p className="text-xs text-yellow-600">{leito.motivoBloqueio}</p></div>
+            ) : leito.statusLeito === 'Higienizacao' ? (
+              <div className="text-center p-2 bg-blue-50 border border-blue-200 rounded-md"><Paintbrush className="mx-auto h-4 w-4 text-blue-600 mb-1" /><p className="text-xs font-bold text-blue-700">HIGIENIZAÇÃO</p><p className="text-xs text-blue-600">Em limpeza</p></div>
+            ) : leito.statusLeito === 'Regulado' && leito.regulacao ? (
+              <div className="text-center p-2 bg-purple-50 border border-purple-200 rounded-md"><Info className="mx-auto h-4 w-4 text-purple-600 mb-1" /><p className="text-xs font-bold text-purple-700">REGULADO PARA:</p><p className="text-sm font-medium text-purple-800">{leito.dadosPaciente?.nomeCompleto}</p><p className="text-sm text-purple-600">{leito.regulacao.paraSetor} - {leito.regulacao.paraLeito}</p></div>
+            ) : leito.statusLeito === 'Reservado' && leito.dadosPaciente ? (
+              <div className="text-center p-2 bg-teal-50 border border-teal-200 rounded-md"><Info className="mx-auto h-4 w-4 text-teal-600 mb-1" /><p className="text-xs font-bold text-teal-700">RESERVADO PARA:</p><p className="text-sm font-medium text-teal-800">{leito.dadosPaciente.nomeCompleto}</p>{leito.dadosPaciente.origem && <p className="text-xs text-teal-600">Vindo de: {leito.dadosPaciente.origem.deSetor} - {leito.dadosPaciente.origem.deLeito}</p>}</div>
+            ) : (<div className="h-full w-full"></div>)}
         </div>
         <div className="mt-auto pt-2 border-t border-border/30 space-y-2">
           <div className="text-center"><DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} /></div>
@@ -109,18 +141,24 @@ const LeitoCard = ({
             {leito.statusLeito === 'Ocupado' && paciente && (
               <div className="flex justify-center flex-wrap gap-1">
                 <AlertDialog>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild><AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><BedDouble /></Button></AlertDialogTrigger></TooltipTrigger>
-                            <TooltipContent><p>Liberar Leito</p></TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    <TooltipProvider><Tooltip><TooltipTrigger asChild><AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><BedDouble /></Button></AlertDialogTrigger></TooltipTrigger><TooltipContent><p>Liberar Leito</p></TooltipContent></Tooltip></TooltipProvider>
                     <AlertDialogContent>
                         <AlertDialogHeader><AlertDialogTitle>Liberar Leito</AlertDialogTitle><AlertDialogDescription>Confirmar a liberação do leito {leito.codigoLeito}? O paciente terá alta e o leito será enviado para higienização.</AlertDialogDescription></AlertDialogHeader>
                         <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => onLiberarLeito(leito.id, paciente.id)}>Liberar</AlertDialogAction></AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                {/* Outros botões... */}
+                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onMoverPaciente(leito)}><Move className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Mover Paciente</p></TooltipContent></Tooltip></TooltipProvider>
+                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onAbrirObs(leito)}><MessageSquarePlus className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Observações</p></TooltipContent></Tooltip></TooltipProvider>
+                <AlertDialog>
+                    <TooltipProvider><Tooltip><TooltipTrigger asChild><AlertDialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><AlertTriangle className="h-4 w-4" /></Button></AlertDialogTrigger></TooltipTrigger><TooltipContent><p>Solicitar UTI</p></TooltipContent></Tooltip></TooltipProvider>
+                    <AlertDialogContent>
+                        <AlertDialogHeader><AlertDialogTitle>Solicitar UTI</AlertDialogTitle><AlertDialogDescription>Confirmar a solicitação de vaga de UTI para o paciente {paciente?.nomeCompleto}?</AlertDialogDescription></AlertDialogHeader>
+                        <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => onSolicitarUTI(paciente.id)}>Solicitar</AlertDialogAction></AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRemanejamentoModalOpen(true)}><ArrowRightLeft className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Solicitar Remanejamento</p></TooltipContent></Tooltip></TooltipProvider>
+                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTransferenciaModalOpen(true)}><Ambulance className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Transferência Externa</p></TooltipContent></Tooltip></TooltipProvider>
+                <TooltipProvider><Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onToggleProvavelAlta(paciente.id, !!paciente.provavelAlta)}><LogOut className={`h-4 w-4 ${paciente?.provavelAlta ? 'text-green-500' : ''}`} /></Button></TooltipTrigger><TooltipContent><p>Sinalizar Provável Alta</p></TooltipContent></Tooltip></TooltipProvider>
               </div>
             )}
             {/* Outros status... */}
