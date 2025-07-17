@@ -161,17 +161,15 @@ const RegulacaoLeitos = () => {
   ]);
 
   // --- Filtragem e Listas Derivadas ---
-  const { 
+  const {
     filteredPacientes,
-    filtros,
-    setFiltroSetor,
-    setFiltroEspecialidade,
-    setFiltroNome,
-    setFiltroDataInternacao,
-    setMostrarFiltrosAvancados,
-    mostrarFiltrosAvancados,
-    setoresFiltros,
-    especialidadesFiltros
+    searchTerm,
+    setSearchTerm,
+    filtrosAvancados,
+    setFiltrosAvancados,
+    resetFiltros,
+    sortConfig,
+    setSortConfig
   } = useFiltrosRegulacao(pacientesComDadosCompletos);
 
   const pacientesAguardandoRegulacao = filteredPacientes.filter(
@@ -667,7 +665,7 @@ const RegulacaoLeitos = () => {
           .filter((p) => mapaPacientesSistema.has(p.nomeCompleto))
           .map((p) => {
             const pacienteSistema = pacientes.find(
-              (p) => p.nomeCompleto === paciente.nomeCompleto
+              (paciente) => paciente.nomeCompleto === p.nomeCompleto
             )!;
             const leitoAntigo = mapaLeitosSistema.get(pacienteSistema.leitoId);
             return { paciente: p, leitoAntigo: leitoAntigo?.codigoLeito };
@@ -814,18 +812,6 @@ const RegulacaoLeitos = () => {
     }
   };
 
-  const filtrosProps = {
-    filtros,
-    setFiltroSetor,
-    setFiltroEspecialidade,
-    setFiltroNome,
-    setFiltroDataInternacao,
-    setMostrarFiltrosAvancados,
-    mostrarFiltrosAvancados,
-    setoresFiltros,
-    especialidadesFiltros
-  };
-
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -882,7 +868,15 @@ const RegulacaoLeitos = () => {
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 space-y-6">
-              <FiltrosRegulacao {...filtrosProps} />
+              <FiltrosRegulacao 
+                filtrosAvancados={filtrosAvancados}
+                setFiltrosAvancados={setFiltrosAvancados}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                resetFiltros={resetFiltros}
+                sortConfig={sortConfig}
+                setSortConfig={setSortConfig}
+              />
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <ListaPacientesPendentes
                   titulo="Decisão Cirúrgica"
