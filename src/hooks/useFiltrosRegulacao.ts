@@ -30,6 +30,9 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
         if (!pacientes || pacientes.length === 0) return [];
         
         let pacientesFiltrados = pacientes.filter(paciente => {
+            // Verificar se o paciente existe e tem as propriedades necessárias
+            if (!paciente) return false;
+
             // Filtro por Nome
             if (searchTerm && !paciente.nomeCompleto?.toLowerCase().includes(searchTerm.toLowerCase())) {
                 return false;
@@ -42,12 +45,16 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
             if (filtrosAvancados.sexo && paciente.sexoPaciente !== filtrosAvancados.sexo) {
                 return false;
             }
-            const idade = calcularIdade(paciente.dataNascimento);
-            if (filtrosAvancados.idadeMin && idade < parseInt(filtrosAvancados.idadeMin)) {
-                return false;
-            }
-            if (filtrosAvancados.idadeMax && idade > parseInt(filtrosAvancados.idadeMax)) {
-                return false;
+            
+            // Verificar se dataNascimento existe antes de calcular idade
+            if (paciente.dataNascimento) {
+                const idade = calcularIdade(paciente.dataNascimento);
+                if (filtrosAvancados.idadeMin && idade < parseInt(filtrosAvancados.idadeMin)) {
+                    return false;
+                }
+                if (filtrosAvancados.idadeMax && idade > parseInt(filtrosAvancados.idadeMax)) {
+                    return false;
+                }
             }
 
             // Filtro por Tempo de Internação
@@ -77,8 +84,8 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
             if (sortConfig.key === 'nome') {
                 comparison = (a.nomeCompleto || '').localeCompare(b.nomeCompleto || '');
             } else if (sortConfig.key === 'idade') {
-                const idadeA = calcularIdade(a.dataNascimento);
-                const idadeB = calcularIdade(b.dataNascimento);
+                const idadeA = a.dataNascimento ? calcularIdade(a.dataNascimento) : 0;
+                const idadeB = b.dataNascimento ? calcularIdade(b.dataNascimento) : 0;
                 comparison = idadeA - idadeB;
             } else if (sortConfig.key === 'tempo') {
                 const dataA = a.dataInternacao ? parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
