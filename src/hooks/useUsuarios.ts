@@ -1,8 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { initializeApp, deleteApp } from 'firebase/app';
-import { db, firebaseConfig } from '@/lib/firebase';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuditoria } from './useAuditoria';
 
@@ -36,11 +36,6 @@ export const useUsuarios = () => {
 
   const criarUsuario = async (data: Omit<Usuario, 'id' | 'uid'>): Promise<boolean> => {
     setLoading(true);
-
-    // Crie uma instância secundária e temporária do Firebase App
-    const secondaryApp = initializeApp(firebaseConfig, `secondary-app-${Date.now()}`);
-    const secondaryAuth = getAuth(secondaryApp);
-
     try {
       const emailCompleto = `${data.email}@joinville.sc.gov.br`;
       const senhaPadrao = 'hmsj@123';
@@ -52,21 +47,21 @@ export const useUsuarios = () => {
       if (emailExists) throw new Error("Este e-mail já está em uso.");
       if (matriculaExists) throw new Error("Esta matrícula já está em uso.");
 
-      // Use a instância secundária para criar o usuário. Isso NÃO afetará a sessão do admin.
-      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, emailCompleto, senhaPadrao);
+      // ETAPA 1: Criar o usuário no Firebase Auth para obter o UID
+      const userCredential = await createUserWithEmailAndPassword(auth, emailCompleto, senhaPadrao);
       const newUser = userCredential.user;
 
-      // Crie o documento no Firestore com o UID do novo usuário como ID do documento
+      // ETAPA 2: Usar setDoc com o UID do Auth como ID do documento no Firestore
       const userDocRef = doc(db, 'usuariosRegulaFacil', newUser.uid);
 
       await setDoc(userDocRef, {
-        uid: newUser.uid,
+        uid: newUser.uid, // Armazena a referência para consistência
         nomeCompleto: data.nomeCompleto.toUpperCase(),
         matricula: data.matricula,
         email: emailCompleto,
         tipoAcesso: data.tipoAcesso,
         permissoes: data.tipoAcesso === 'Comum' ? data.permissoes || [] : [],
-        historicoAcessos: []
+        historicoAcessos: [] // Inicializa o histórico de acessos como um array vazio
       });
 
       toast({ title: "Sucesso!", description: "Usuário criado com sucesso." });
@@ -74,23 +69,17 @@ export const useUsuarios = () => {
       // LOG AQUI:
       registrarLog(`Criou o usuário "${data.nomeCompleto.toUpperCase()}" (Matrícula: ${data.matricula}) com perfil "${data.tipoAcesso}".`, 'Gestão de Usuários');
       
-      return true;
+      setLoading(false);
+      return true; // Retorna sucesso
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
+      // Este erro é importante para o admin, então mostre a mensagem do Firebase
       const mensagemErro = error.code === 'auth/email-already-in-use' 
           ? 'O e-mail fornecido já está em uso por outra conta.'
           : error.message || "Não foi possível criar o usuário.";
       toast({ title: "Erro", description: mensagemErro, variant: "destructive" });
-      return false;
-    } finally {
-      // Deslogue o usuário da instância secundária e destrua o app temporário
-      try {
-        await signOut(secondaryAuth);
-        await deleteApp(secondaryApp);
-      } catch (cleanupError) {
-        console.error("Erro ao limpar instância secundária:", cleanupError);
-      }
       setLoading(false);
+      return false; // Retorna falha
     }
   };
 
