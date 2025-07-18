@@ -27,39 +27,50 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
     const [sortConfig, setSortConfig] = useState({ key: 'tempo', direction: 'desc' });
 
     const filteredPacientes = useMemo(() => {
+        if (!pacientes || pacientes.length === 0) return [];
+        
         let pacientesFiltrados = pacientes.filter(paciente => {
+            // Verificar se o paciente existe e tem as propriedades necessárias
+            if (!paciente) return false;
+
             // Filtro por Nome
-            if (searchTerm && !paciente.nomePaciente.toLowerCase().includes(searchTerm.toLowerCase())) {
+            if (searchTerm && !paciente.nomeCompleto?.toLowerCase().includes(searchTerm.toLowerCase())) {
                 return false;
             }
 
-            // Filtros Avançados
-            if (filtrosAvancados.especialidade && paciente.especialidadePaciente !== filtrosAvancados.especialidade) {
+            // Filtros Avançados - Verificar se filtrosAvancados existe e tem a propriedade
+            if (filtrosAvancados?.especialidade && paciente.especialidadePaciente !== filtrosAvancados.especialidade) {
                 return false;
             }
-            if (filtrosAvancados.sexo && paciente.sexoPaciente !== filtrosAvancados.sexo) {
+            if (filtrosAvancados?.sexo && paciente.sexoPaciente !== filtrosAvancados.sexo) {
                 return false;
             }
-            const idade = calcularIdade(paciente.dataNascimento);
-            if (filtrosAvancados.idadeMin && idade < parseInt(filtrosAvancados.idadeMin)) {
-                return false;
-            }
-            if (filtrosAvancados.idadeMax && idade > parseInt(filtrosAvancados.idadeMax)) {
-                return false;
+            
+            // Verificar se dataNascimento existe antes de calcular idade
+            if (paciente.dataNascimento && filtrosAvancados) {
+                const idade = calcularIdade(paciente.dataNascimento);
+                if (filtrosAvancados.idadeMin && idade < parseInt(filtrosAvancados.idadeMin)) {
+                    return false;
+                }
+                if (filtrosAvancados.idadeMax && idade > parseInt(filtrosAvancados.idadeMax)) {
+                    return false;
+                }
             }
 
             // Filtro por Tempo de Internação
-            const dataEntrada = parse(paciente.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-            if (isValid(dataEntrada)) {
-                const tempo = filtrosAvancados.unidadeTempo === 'dias' 
-                    ? differenceInDays(new Date(), dataEntrada)
-                    : differenceInHours(new Date(), dataEntrada);
+            if (paciente.dataInternacao && filtrosAvancados) {
+                const dataEntrada = parse(paciente.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+                if (isValid(dataEntrada)) {
+                    const tempo = filtrosAvancados.unidadeTempo === 'dias' 
+                        ? differenceInDays(new Date(), dataEntrada)
+                        : differenceInHours(new Date(), dataEntrada);
 
-                if (filtrosAvancados.tempoInternacaoMin && tempo < parseInt(filtrosAvancados.tempoInternacaoMin)) {
-                    return false;
-                }
-                if (filtrosAvancados.tempoInternacaoMax && tempo > parseInt(filtrosAvancados.tempoInternacaoMax)) {
-                    return false;
+                    if (filtrosAvancados.tempoInternacaoMin && tempo < parseInt(filtrosAvancados.tempoInternacaoMin)) {
+                        return false;
+                    }
+                    if (filtrosAvancados.tempoInternacaoMax && tempo > parseInt(filtrosAvancados.tempoInternacaoMax)) {
+                        return false;
+                    }
                 }
             }
 
@@ -70,15 +81,15 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
         return [...pacientesFiltrados].sort((a, b) => {
             let comparison = 0;
             
-            if (sortConfig.key === 'nome') {
-                comparison = a.nomePaciente.localeCompare(b.nomePaciente);
-            } else if (sortConfig.key === 'idade') {
-                const idadeA = calcularIdade(a.dataNascimento);
-                const idadeB = calcularIdade(b.dataNascimento);
+            if (sortConfig?.key === 'nome') {
+                comparison = (a?.nomeCompleto || '').localeCompare(b?.nomeCompleto || '');
+            } else if (sortConfig?.key === 'idade') {
+                const idadeA = a?.dataNascimento ? calcularIdade(a.dataNascimento) : 0;
+                const idadeB = b?.dataNascimento ? calcularIdade(b.dataNascimento) : 0;
                 comparison = idadeA - idadeB;
-            } else if (sortConfig.key === 'tempo') {
-                const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-                const dataB = parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+            } else if (sortConfig?.key === 'tempo') {
+                const dataA = a?.dataInternacao ? parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
+                const dataB = b?.dataInternacao ? parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
                 if (isValid(dataA) && isValid(dataB)) {
                     const tempoA = differenceInHours(new Date(), dataA);
                     const tempoB = differenceInHours(new Date(), dataB);
@@ -86,7 +97,7 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
                 }
             }
 
-            return sortConfig.direction === 'desc' ? -comparison : comparison;
+            return sortConfig?.direction === 'desc' ? -comparison : comparison;
         });
     }, [pacientes, searchTerm, filtrosAvancados, sortConfig]);
 

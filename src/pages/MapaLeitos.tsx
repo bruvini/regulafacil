@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,7 +10,9 @@ import QuartoCard from '@/components/QuartoCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
 import { IndicadoresGerais } from '@/components/IndicadoresGerais';
-import { useSetores } from '@/hooks/useSetores';
+import { useSetores, LeitoExtendido, SetorComLeitos } from '@/hooks/useSetores';
+import { useLeitos } from '@/hooks/useLeitos';
+import { usePacientes } from '@/hooks/usePacientes';
 import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
@@ -27,9 +30,59 @@ const MapaLeitos = () => {
   const [obsModalOpen, setObsModalOpen] = useState(false);
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
-  const { setores, loading, moverPaciente, adicionarObservacaoPaciente } = useSetores();
+
+  // Buscar dados de todas as coleções
+  const { 
+    setores, 
+    loading: loadingSetores, 
+    moverPaciente, 
+    adicionarObservacaoPaciente,
+    atualizarStatusLeito,
+    desbloquearLeito,
+    finalizarHigienizacao,
+    liberarLeito,
+    solicitarUTI,
+    solicitarRemanejamento,
+    transferirPaciente,
+    cancelarReserva,
+    concluirTransferencia,
+    toggleProvavelAlta
+  } = useSetores();
   
-  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setores);
+  const { leitos, loading: loadingLeitos } = useLeitos();
+  const { pacientes, loading: loadingPacientes } = usePacientes();
+
+  // Combinar dados em memória para criar a estrutura enriquecida
+  const setoresEnriquecidos = useMemo((): SetorComLeitos[] => {
+    if (!setores.length || !leitos.length) return [];
+
+    return setores.map(setor => {
+      const leitosDoSetor = leitos
+        .filter(leito => leito.setorId === setor.id)
+        .map(leito => {
+          const ultimoHistorico = leito.historicoMovimentacao?.[leito.historicoMovimentacao.length - 1];
+          const pacienteDoLeito = pacientes.find(p => p.leitoId === leito.id);
+          
+          return {
+            ...leito,
+            statusLeito: ultimoHistorico?.statusLeito || 'Vago',
+            dataAtualizacaoStatus: ultimoHistorico?.dataAtualizacaoStatus,
+            dadosPaciente: pacienteDoLeito,
+            motivoBloqueio: ultimoHistorico?.motivoBloqueio,
+            regulacao: ultimoHistorico?.infoRegulacao,
+          } as LeitoExtendido;
+        });
+
+      return {
+        ...setor,
+        leitos: leitosDoSetor
+      };
+    });
+  }, [setores, leitos, pacientes]);
+
+  const loading = loadingSetores || loadingLeitos || loadingPacientes;
+  
+  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
 
   const { 
     searchTerm, setSearchTerm, 
@@ -38,9 +91,9 @@ const MapaLeitos = () => {
     filteredSetores,
     especialidades,
     todosStatus
-  } = useFiltrosMapaLeitos(setores);
+  } = useFiltrosMapaLeitos(setoresEnriquecidos);
 
-  const calcularTaxaOcupacao = (leitos: any[]) => {
+  const calcularTaxaOcupacao = (leitos: LeitoExtendido[]) => {
     if (leitos.length === 0) return 0;
     const leitosOcupados = leitos.filter(
       leito => !['Vago', 'Higienizacao', 'Bloqueado'].includes(leito.statusLeito)
@@ -48,18 +101,18 @@ const MapaLeitos = () => {
     return Math.round((leitosOcupados / leitos.length) * 100);
   };
 
-  const handleOpenMovimentacaoModal = (leito: any) => {
+  const handleOpenMovimentacaoModal = (leito: LeitoExtendido) => {
     setPacienteParaMover({
       dados: leito.dadosPaciente,
       leitoOrigemId: leito.id,
-      setorOrigemId: setores.find(s => s.leitos.some(l => l.id === leito.id))?.id
+      setorOrigemId: setoresEnriquecidos.find(s => s.leitos.some(l => l.id === leito.id))?.id
     });
     setMovimentacaoModalOpen(true);
   };
 
   const handleConfirmarMovimentacao = (leitoDestino: any) => {
     if (pacienteParaMover) {
-      const setorDestinoId = setores.find(s => s.leitos.some(l => l.id === leitoDestino.id))?.id;
+      const setorDestinoId = setoresEnriquecidos.find(s => s.leitos.some(l => l.id === leitoDestino.id))?.id;
       if (setorDestinoId) {
         moverPaciente(
           pacienteParaMover.setorOrigemId, 
@@ -73,8 +126,8 @@ const MapaLeitos = () => {
     setPacienteParaMover(null);
   };
 
-  const handleOpenObsModal = (leito: any) => {
-    setPacienteParaObs({ ...leito, setorId: setores.find(s => s.leitos.some(l => l.id === leito.id))?.id });
+  const handleOpenObsModal = (leito: LeitoExtendido) => {
+    setPacienteParaObs({ ...leito, setorId: setoresEnriquecidos.find(s => s.leitos.some(l => l.id === leito.id))?.id });
     setObsModalOpen(true);
   };
 
@@ -130,7 +183,7 @@ const MapaLeitos = () => {
             {/* Bloco de Filtros */}
             <div className="lg:col-span-2">
               <FiltrosMapaLeitos 
-                setores={setores}
+                setores={setoresEnriquecidos}
                 filtros={filtrosAvancados}
                 setFiltros={setFiltrosAvancados}
                 searchTerm={searchTerm}
@@ -202,7 +255,7 @@ const MapaLeitos = () => {
               ) : filteredSetores.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-2">
                   {filteredSetores.map((setor) => {
-                    const setorOriginal = setores.find(s => s.id === setor.id);
+                    const setorOriginal = setoresEnriquecidos.find(s => s.id === setor.id);
                     if (!setorOriginal) return null;
                     
                     const taxaOcupacao = calcularTaxaOcupacao(setor.leitos);
@@ -260,6 +313,16 @@ const MapaLeitos = () => {
                                               todosLeitosDoSetor={setorOriginal.leitos}
                                               onMoverPaciente={handleOpenMovimentacaoModal}
                                               onAbrirObs={handleOpenObsModal}
+                                              onAtualizarStatus={atualizarStatusLeito}
+                                              onDesbloquear={desbloquearLeito}
+                                              onFinalizarHigienizacao={finalizarHigienizacao}
+                                              onLiberarLeito={liberarLeito}
+                                              onSolicitarUTI={solicitarUTI}
+                                              onSolicitarRemanejamento={solicitarRemanejamento}
+                                              onTransferirPaciente={transferirPaciente}
+                                              onCancelarReserva={cancelarReserva}
+                                              onConcluirTransferencia={concluirTransferencia}
+                                              onToggleProvavelAlta={toggleProvavelAlta}
                                             />
                                           ))}
                                       </div>
@@ -282,9 +345,9 @@ const MapaLeitos = () => {
                 <div className="text-center py-12">
                   <div className="max-w-md mx-auto">
                     <p className="text-lg text-muted-foreground mb-4">
-                      {setores.length === 0 ? "Nenhum setor cadastrado ainda" : "Nenhum resultado encontrado para os filtros aplicados."}
+                      {setoresEnriquecidos.length === 0 ? "Nenhum setor cadastrado ainda" : "Nenhum resultado encontrado para os filtros aplicados."}
                     </p>
-                    {setores.length === 0 ? (
+                    {setoresEnriquecidos.length === 0 ? (
                       <>
                         <p className="text-sm text-muted-foreground mb-6">
                           Comece criando seu primeiro setor e adicionando leitos para visualizar o mapa hospitalar
@@ -320,7 +383,7 @@ const MapaLeitos = () => {
       <MovimentacaoModal
         open={movimentacaoModalOpen}
         onOpenChange={setMovimentacaoModalOpen}
-        pacienteNome={pacienteParaMover?.dados?.nomePaciente || ''}
+        pacienteNome={pacienteParaMover?.dados?.nomeCompleto || ''}
         onConfirm={handleConfirmarMovimentacao}
       />
 
@@ -337,8 +400,8 @@ const MapaLeitos = () => {
       <ObservacoesModal
         open={obsModalOpen}
         onOpenChange={setObsModalOpen}
-        pacienteNome={pacienteParaObs?.dadosPaciente?.nomePaciente || ''}
-        observacoes={pacienteParaObs?.dadosPaciente?.observacoes || []}
+        pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''}
+        observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []}
         onConfirm={handleConfirmObs}
       />
     </div>
