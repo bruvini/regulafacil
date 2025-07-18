@@ -2,6 +2,14 @@
 import { useState, useMemo } from 'react';
 import { differenceInDays, differenceInHours, parse, isValid } from 'date-fns';
 
+const parseDate = (value: string): Date | undefined => {
+    if (!value) return undefined;
+    const withTime = parse(value, 'dd/MM/yyyy HH:mm', new Date());
+    if (isValid(withTime)) return withTime;
+    const withoutTime = parse(value, 'dd/MM/yyyy', new Date());
+    return isValid(withoutTime) ? withoutTime : undefined;
+};
+
 const calcularIdade = (dataNascimento: string): number => {
     if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return 999;
     const [dia, mes, ano] = dataNascimento.split('/').map(Number);
@@ -68,8 +76,8 @@ export const useFiltrosRegulacao = (pacientes: Paciente[]) => {
 
             // Filtro por Tempo de Internação
             if (paciente.dataInternacao && filtrosAvancados) {
-                const dataEntrada = parse(paciente.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-                if (isValid(dataEntrada)) {
+                const dataEntrada = parseDate(paciente.dataInternacao);
+                if (dataEntrada) {
                     const tempo = filtrosAvancados.unidadeTempo === 'dias' 
                         ? differenceInDays(new Date(), dataEntrada)
                         : differenceInHours(new Date(), dataEntrada);
