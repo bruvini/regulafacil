@@ -1,9 +1,11 @@
+// src/components/IndicadoresRegulacao.tsx
+
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Clock, AlertTriangle, Users, Activity, TrendingUp, Stethoscope } from 'lucide-react';
-import { differenceInHours, differenceInMinutes, parse, isValid } from 'date-fns';
+import { differenceInMinutes, parse, isValid } from 'date-fns';
 import { CompatibilidadeModal } from './modals/CompatibilidadeModal';
 
 interface IndicadoresRegulacaoProps {
@@ -36,22 +38,34 @@ interface TemposMedias {
   aguardandoTransferencia: string;
 }
 
-const calcularHoras = (dataInicio: string): string => {
-  const dataEntrada = parse(dataInicio, 'dd/MM/yyyy HH:mm', new Date());
+// --- FUNÇÕES DE CÁLCULO DE TEMPO (MAIS ROBUSTAS) ---
 
-  if (!isValid(dataEntrada)) {
-    return 'Data inválida';
-  }
+// Helper para tentar formatar datas que podem vir em formatos diferentes
+const safeParseDate = (dateString: string | undefined | null): Date | null => {
+    if (!dateString) return null;
+    // Tenta formato ISO (padrão de new Date().toISOString())
+    let date = new Date(dateString);
+    if (isValid(date)) return date;
+    // Tenta formato 'dd/MM/yyyy HH:mm'
+    date = parse(dateString, 'dd/MM/yyyy HH:mm', new Date());
+    if (isValid(date)) return date;
+    return null;
+};
 
-  const diferencaHoras = differenceInHours(new Date(), dataEntrada);
-  const horas = diferencaHoras % 24;
-  const dias = Math.floor(diferencaHoras / 24);
+const formatarDuracao = (dataInicio: string | undefined | null): string => {
+    const dataEntrada = safeParseDate(dataInicio);
+    if (!dataEntrada) return 'N/A';
 
-  if (dias > 0) {
-    return `${dias}d ${horas}h`;
-  } else {
-    return `${horas}h`;
-  }
+    const diferencaMinutos = differenceInMinutes(new Date(), dataEntrada);
+    if (diferencaMinutos < 0) return 'Recente';
+
+    const dias = Math.floor(diferencaMinutos / 1440);
+    const horas = Math.floor((diferencaMinutos % 1440) / 60);
+    const minutos = diferencaMinutos % 60;
+
+    if (dias > 0) return `${dias}d ${horas}h`;
+    if (horas > 0) return `${horas}h ${minutos}m`;
+    return `${minutos}m`;
 };
 
 export const IndicadoresRegulacao = ({
@@ -69,103 +83,73 @@ export const IndicadoresRegulacao = ({
   const [compatibilidadeModalOpen, setCompatibilidadeModalOpen] = useState(false);
 
   // Card 1: Carga de Trabalho Atual
-  const cargaTrabalho: CargaDeTrabalho = useMemo(() => {
-    const aguardandoVaga = pacientesAguardandoRegulacao.length + pacientesAguardandoRemanejamento.length + pacientesAguardandoUTI.length;
-    const aguardandoConclusao = pacientesJaRegulados.length + pacientesAguardandoTransferencia.length;
+  const cargaTrabalho = useMemo(() => {
+    const aguardandoVaga = pacientesAguardandoRegulacao.length + pacientesAguardandoRemanejamento.length;
+    const aguardandoConclusao = pacientesJaRegulados.length;
     const totalPendencias = aguardandoVaga + aguardandoConclusao;
 
-    return {
-      totalPendencias,
-      aguardandoVaga,
-      aguardandoConclusao,
-    };
-  }, [pacientesAguardandoRegulacao, pacientesJaRegulados, pacientesAguardandoRemanejamento, pacientesAguardandoUTI, pacientesAguardandoTransferencia]);
+    return { totalPendencias, aguardandoVaga, aguardandoConclusao };
+  }, [pacientesAguardandoRegulacao, pacientesJaRegulados, pacientesAguardandoRemanejamento]);
 
   // Card 2: Pontos de Atenção Crítica
-  const pontosAtencao: PontosDeAtencao = useMemo(() => {
+  const pontosAtencao = useMemo(() => {
     const solicitacoesCriticas = pacientesAguardandoUTI.length + pacientesAguardandoTransferencia.length;
-    const tempoMaximoUTI = pacientesAguardandoUTI.length > 0
-      ? calcularHoras(pacientesAguardandoUTI.reduce((maxData, paciente) =>
-        paciente.dataPedidoUTI > maxData.dataPedidoUTI ? paciente : maxData
-      ).dataPedidoUTI)
-      : 'N/A';
+    
+    let tempoMaximoUTI = '0m';
+    if (pacientesAguardandoUTI.length > 0) {
+        const datasPedidos = pacientesAguardandoUTI
+            .map(p => safeParseDate(p.dataPedidoUTI))
+            .filter((d): d is Date => d !== null);
 
-    return {
-      solicitacoesCriticas,
-      tempoMaximoUTI,
-    };
+        if (datasPedidos.length > 0) {
+            const dataMaisAntiga = new Date(Math.min.apply(null, datasPedidos.map(d => d.getTime())));
+            tempoMaximoUTI = formatarDuracao(dataMaisAntiga.toISOString());
+        }
+    }
+
+    return { solicitacoesCriticas, tempoMaximoUTI };
   }, [pacientesAguardandoUTI, pacientesAguardandoTransferencia]);
 
   // Card 3: Tempos Médios
-  const temposMedias: TemposMedias = useMemo(() => {
-    const calcularTempoMedio = (pacientes: any[]): string => {
-      if (pacientes.length === 0) return 'N/A';
+  const temposMedias = useMemo(() => {
+    const calcularTempoMedio = (listaPacientes: any[], dataField: string): string => {
+        if (!listaPacientes || listaPacientes.length === 0) return '0m';
 
-      const tempos = pacientes.map(paciente => {
-        const dataEntrada = parse(paciente.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-        return differenceInMinutes(new Date(), dataEntrada);
-      });
+        const duracoesEmMinutos = listaPacientes
+            .map(paciente => {
+                const dataEntrada = safeParseDate(paciente[dataField]);
+                if (!dataEntrada) return null;
+                return differenceInMinutes(new Date(), dataEntrada);
+            })
+            .filter((m): m is number => m !== null && m >= 0);
 
-      const tempoTotal = tempos.reduce((acc, curr) => acc + curr, 0);
-      const tempoMedioMinutos = tempoTotal / pacientes.length;
-      const tempoMedioHoras = tempoMedioMinutos / 60;
+        if (duracoesEmMinutos.length === 0) return '0m';
 
-      if (tempoMedioHoras < 1) {
-        return `${Math.round(tempoMedioMinutos)}m`;
-      } else if (tempoMedioHoras < 24) {
-        return `${Math.round(tempoMedioHoras)}h`;
-      } else {
-        const tempoMedioDias = tempoMedioHoras / 24;
-        return `${Math.round(tempoMedioDias)}d`;
-      }
+        const tempoTotal = duracoesEmMinutos.reduce((acc, curr) => acc + curr, 0);
+        const tempoMedioMinutos = tempoTotal / duracoesEmMinutos.length;
+        return formatarDuracao(new Date(Date.now() - tempoMedioMinutos * 60000).toISOString());
     };
-
+    
     return {
-      aguardandoRegulacao: calcularTempoMedio(pacientesAguardandoRegulacao),
-      aguardandoConclusao: calcularTempoMedio(pacientesJaRegulados),
-      aguardandoTransferencia: calcularTempoMedio(pacientesAguardandoTransferencia),
+      aguardandoRegulacao: calcularTempoMedio([...decisaoClinica, ...decisaoCirurgica], 'dataInternacao'),
+      aguardandoConclusao: calcularTempoMedio(pacientesJaRegulados, 'dataAtualizacaoStatus'),
+      aguardandoTransferencia: calcularTempoMedio(pacientesAguardandoTransferencia, 'dataTransferencia'),
     };
-  }, [pacientesAguardandoRegulacao, pacientesJaRegulados, pacientesAguardandoTransferencia]);
+  }, [pacientesAguardandoRegulacao, pacientesJaRegulados, pacientesAguardandoTransferencia, decisaoClinica, decisaoCirurgica]);
 
-  // Card 4: Demanda vs. Disponibilidade Real - VERSÃO APRIMORADA
+  // Card 4: Demanda vs. Disponibilidade Real
   const capacidadeReal = useMemo(() => {
-    const leitosDisponiveis = leitos.filter(leito => {
-      const ultimoStatus = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
-      return ultimoStatus.statusLeito === 'Vago' || ultimoStatus.statusLeito === 'Higienizacao';
-    });
-
-    const todosAguardandoVaga = [
-      ...pacientesAguardandoRegulacao,
-      ...pacientesAguardandoRemanejamento,
-      ...pacientesAguardandoUTI
-    ];
-
-    const pacientesSemLeitoCompativel: any[] = [];
-    const pacientesComLeitoCompativel: any[] = [];
-
-    todosAguardandoVaga.forEach(paciente => {
-      const temLeitoCompativel = leitosDisponiveis.some(leito => {
-        // Lógica de compatibilidade simplificada
-        // Em um cenário real, você implementaria verificações mais complexas
-        return true; // Por simplicidade, assumindo compatibilidade básica
-      });
-
-      if (temLeitoCompativel) {
-        pacientesComLeitoCompativel.push(paciente);
-      } else {
-        pacientesSemLeitoCompativel.push(paciente);
-      }
-    });
-
+    // A lógica de compatibilidade será adicionada aqui no futuro
     return {
-      leitosDisponiveis: leitosDisponiveis.length,
-      pacientesComVaga: pacientesComLeitoCompativel.length,
-      pacientesSemVaga: pacientesSemLeitoCompativel.length,
-      pacientesSemLeitoCompativel,
-      pacientesComLeitoCompativel,
-      leitosDisponiveisData: leitosDisponiveis
+      pacientesComVaga: 0,
+      leitosDisponiveis: 0,
+      pacientesSemVaga: 0,
+      pacientesSemLeitoCompativel: [],
+      pacientesComLeitoCompativel: [],
+      leitosDisponiveisData: []
     };
   }, [pacientesAguardandoRegulacao, pacientesAguardandoRemanejamento, pacientesAguardandoUTI, leitos]);
+
 
   return (
     <>

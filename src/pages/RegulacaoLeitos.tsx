@@ -129,8 +129,9 @@ const RegulacaoLeitos = () => {
         setorOrigem: setor?.nomeSetor || "N/A",
         siglaSetorOrigem: setor?.siglaSetor || "N/A",
         statusLeito: historicoRecente?.statusLeito || "Vago",
+        dataAtualizacaoStatus: historicoRecente?.dataAtualizacaoStatus,
         regulacao: historicoRecente?.infoRegulacao
-          ? { ...historicoRecente.infoRegulacao, paraSetorSigla, dataAtualizacaoStatus: historicoRecente.dataAtualizacaoStatus }
+          ? { ...historicoRecente.infoRegulacao, paraSetorSigla }
           : undefined,
       };
 
