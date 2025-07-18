@@ -4,24 +4,18 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import LeitoCard from './LeitoCard';
 import QuartoCard from './QuartoCard';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
-import { Leito, Paciente, Setor } from '@/types/hospital';
+import { Leito, Paciente, Setor } from '@/types/hospital'; // CORREÇÃO: Importa os tipos base
+import { LeitoEnriquecido } from '@/pages/MapaLeitos'; // CORREÇÃO: Usa apenas o tipo importado
 
-// Tipo para os dados enriquecidos, agora alinhado com LeitoCard e QuartoCard
-type LeitoEnriquecido = Leito & {
-  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
-  dataAtualizacaoStatus: string;
-  motivoBloqueio?: string;
-  regulacao?: any;
-  dadosPaciente?: Paciente | null;
-};
+// A definição local de LeitoEnriquecido foi REMOVIDA para evitar conflitos.
 
-// Interface de props expandida para incluir todas as funções necessárias
+// Interface de props agora usa os tipos importados e corretos
 interface SetorCardProps {
   setor: Setor & { leitos: LeitoEnriquecido[] };
   onMoverPaciente: (leito: LeitoEnriquecido) => void;
   onAbrirObs: (leito: LeitoEnriquecido) => void;
   onLiberarLeito: (leitoId: string, pacienteId: string) => void;
-  onAtualizarStatus: (leitoId: string, novoStatus: any, motivo?: string) => void;
+  onAtualizarStatus: (leitoId: string, novoStatus: any, detalhes?: any) => void;
   onSolicitarUTI: (pacienteId: string) => void;
   onSolicitarRemanejamento: (pacienteId: string, motivo: string) => void;
   onTransferirPaciente: (pacienteId: string, destino: string, motivo: string) => void;
@@ -34,15 +28,13 @@ interface SetorCardProps {
 const SetorCard = (props: SetorCardProps) => {
   const { setor, ...leitoCardActions } = props; // Agrupa todas as ações para serem repassadas
 
-  const leitosVagos = setor.leitos.filter(leito => leito.statusLeito === 'Vago').length;
+  const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
   const totalLeitos = setor.leitos.length;
   const taxaOcupacao = totalLeitos > 0 ? Math.round(((totalLeitos - leitosVagos) / totalLeitos) * 100) : 0;
-
   const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
   const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
   return (
-    // O JSX do CardHeader permanece o mesmo
     <Card className="shadow-card hover:shadow-medical transition-all duration-200 border border-border/50">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
@@ -69,10 +61,8 @@ const SetorCard = (props: SetorCardProps) => {
                   key={nomeQuarto}
                   nomeQuarto={nomeQuarto}
                   leitos={leitosDoQuarto}
-                  setorId={setor.id!}
                   todosLeitosDoSetor={setor.leitos}
                   {...leitoCardActions}
-                  onFinalizarHigienizacao={props.onFinalizarHigienizacao}
                 />
             ))}
             {leitosSoltos.length > 0 && (
@@ -85,16 +75,13 @@ const SetorCard = (props: SetorCardProps) => {
                       leito={leito}
                       todosLeitosDoSetor={setor.leitos}
                       {...leitoCardActions}
-                      onFinalizarHigienizacao={props.onFinalizarHigienizacao}
                     />
                   ))}
               </div>
             )}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <p>Nenhum leito cadastrado neste setor</p>
-          </div>
+          <div className="text-center py-8 text-muted-foreground"><p>Nenhum leito cadastrado neste setor</p></div>
         )}
       </CardContent>
     </Card>

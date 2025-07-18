@@ -1,74 +1,55 @@
+// src/components/LeitoCard.tsx
 
 import { useState, useMemo } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, ArrowRightLeft as RemanejarIcon, Ambulance as TransferenciaIcon, AlertTriangle as UtiIcon, MessageSquarePlus } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, MessageSquarePlus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { LeitoExtendido } from '@/hooks/useSetores';
 import StatusBadge from './StatusBadge';
 import DurationDisplay from './DurationDisplay';
 import MotivoBloqueioModal from './modals/MotivoBloqueioModal';
 import { RemanejamentoModal } from './modals/RemanejamentoModal';
 import { TransferenciaModal } from './modals/TransferenciaModal';
-import { useIsolamentos } from '@/hooks/useIsolamentos';
 import { cn } from '@/lib/utils';
 import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
+import { LeitoEnriquecido } from '@/pages/MapaLeitos';
 
 interface LeitoCardProps {
-  leito: LeitoExtendido;
-  setorId: string;
-  todosLeitosDoSetor: LeitoExtendido[];
-  onMoverPaciente: (leito: LeitoExtendido) => void;
-  onAbrirObs: (leito: LeitoExtendido) => void;
-  // Funções de ação passadas via props
-  onAtualizarStatus: (setorId: string, leitoId: string, novoStatus: any, motivo?: string) => Promise<void>;
-  onDesbloquear: (setorId: string, leitoId: string) => Promise<void>;
+  leito: LeitoEnriquecido;
+  todosLeitosDoSetor: LeitoEnriquecido[];
+  onMoverPaciente: (leito: LeitoEnriquecido) => void;
+  onAbrirObs: (leito: LeitoEnriquecido) => void;
+  onLiberarLeito: (leitoId: string, pacienteId: string) => void;
+  onAtualizarStatus: (leitoId: string, novoStatus: any, detalhes?: any) => void;
+  onSolicitarUTI: (pacienteId: string) => void;
+  onSolicitarRemanejamento: (pacienteId: string, motivo: string) => void;
+  onTransferirPaciente: (pacienteId: string, destino: string, motivo: string) => void;
+  onCancelarReserva: (leitoId: string) => void;
+  onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
+  onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
   onFinalizarHigienizacao: (leitoId: string) => void;
-  onLiberarLeito: (setorId: string, leitoId: string) => Promise<void>;
-  onSolicitarUTI: (setorId: string, leitoId: string) => Promise<void>;
-  onSolicitarRemanejamento: (setorId: string, leitoId: string, motivo: string) => Promise<void>;
-  onTransferirPaciente: (setorId: string, leitoId: string, destino: string, motivo: string) => Promise<void>;
-  onCancelarReserva: (setorId: string, leitoId: string) => Promise<void>;
-  onConcluirTransferencia: (leito: LeitoExtendido, setorId: string) => Promise<void>;
-  onToggleProvavelAlta: (setorId: string, leitoId: string) => Promise<void>;
 }
 
 const calcularIdade = (dataNascimento: string): string => {
-  if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
-  const [dia, mes, ano] = dataNascimento.split('/').map(Number);
-  const hoje = new Date();
-  const nascimento = new Date(ano, mes - 1, dia);
-  let idade = hoje.getFullYear() - nascimento.getFullYear();
-  const m = hoje.getMonth() - nascimento.getMonth();
-  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
-  return idade.toString();
+    if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
+    const [dia, mes, ano] = dataNascimento.split('/').map(Number);
+    const hoje = new Date();
+    const nascimento = new Date(ano, mes - 1, dia);
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const m = hoje.getMonth() - nascimento.getMonth();
+    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
+    return idade.toString();
 };
 
-const LeitoCard = ({ 
-  leito, 
-  setorId, 
-  todosLeitosDoSetor, 
-  onMoverPaciente, 
-  onAbrirObs,
-  onAtualizarStatus,
-  onDesbloquear,
-  onFinalizarHigienizacao,
-  onLiberarLeito,
-  onSolicitarUTI,
-  onSolicitarRemanejamento,
-  onTransferirPaciente,
-  onCancelarReserva,
-  onConcluirTransferencia,
-  onToggleProvavelAlta
-}: LeitoCardProps) => {
-  const { isolamentos: tiposDeIsolamento } = useIsolamentos();
-  const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
-  const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
-  const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
+const LeitoCard = (props: LeitoCardProps) => {
+    const { leito, todosLeitosDoSetor, ...actions } = props;
+    const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
+    const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
+    const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
 
-  const paciente = leito.dadosPaciente;
+    const paciente = leito.dadosPaciente;
 
   const infoBloqueioIsolamento = useMemo(() => {
     if (leito.statusLeito !== 'Vago') return null;
@@ -278,30 +259,30 @@ const LeitoCard = ({
             {leito.statusLeito === 'Higienizacao' && (
               <div className="flex justify-center">
                 <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Finalizar Higienização</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Finalizar Higienização</AlertDialogTitle>
-                      <AlertDialogDescription>Confirmar a finalização da higienização do leito {leito.codigoLeito}?</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleFinalizarHigienizacao}>Finalizar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                        <CheckCircle className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                            </TooltipTrigger>
+                                            <TooltipContent><p>Finalizar Higienização</p></TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Finalizar Higienização</AlertDialogTitle>
+                                            <AlertDialogDescription>Confirmar a finalização da higienização do leito {leito.codigoLeito}?</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => actions.onFinalizarHigienizacao(leito.id)}>Finalizar</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+              </div> 
             )}
             
             {leito.statusLeito === 'Reservado' && (

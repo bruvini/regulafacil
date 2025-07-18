@@ -20,13 +20,13 @@ import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
-import { Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital'; // <-- HistoricoMovimentacao adicionado
+import { Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
-// CORREÇÃO: Tipo padronizado e mais específico
-type LeitoEnriquecido = Leito & {
+// Tipo padronizado que será usado por todos os componentes filhos
+export type LeitoEnriquecido = Leito & {
   statusLeito: HistoricoMovimentacao['statusLeito'];
   dataAtualizacaoStatus: string;
   motivoBloqueio?: string;
@@ -58,19 +58,16 @@ const MapaLeitos = () => {
     }
 
     const mapaPacientes = new Map(pacientes.map(p => [p.id, p]));
-
     const todosLeitosEnriquecidos: LeitoEnriquecido[] = leitos.map(leito => {
       const historicoRecente = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
       const pacienteId = historicoRecente?.pacienteId;
-      const paciente = pacienteId ? mapaPacientes.get(pacienteId) : null;
-      
       return {
         ...leito,
         statusLeito: historicoRecente.statusLeito,
         dataAtualizacaoStatus: historicoRecente.dataAtualizacaoStatus,
         motivoBloqueio: historicoRecente.motivoBloqueio,
         regulacao: historicoRecente.infoRegulacao,
-        dadosPaciente: paciente
+        dadosPaciente: pacienteId ? mapaPacientes.get(pacienteId) : null
       };
     });
 
@@ -89,7 +86,7 @@ const MapaLeitos = () => {
 
   const { setoresEnriquecidos } = dadosCombinados;
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
-  const { filteredSetores, searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, resetFiltros, especialidades, todosStatus } = useFiltrosMapaLeitos(setoresEnriquecidos);
+  const { filteredSetores, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
 
   // --- Funções de Ação Centralizadas ---
   const handleOpenMovimentacaoModal = (leito: LeitoEnriquecido) => {
@@ -103,57 +100,48 @@ const MapaLeitos = () => {
 
   const handleConfirmarMovimentacao = async (leitoDestino: Leito) => {
     if (pacienteParaMover && leitoDestino) {
-      await atualizarStatusLeito(pacienteParaMover.leitoOrigemId, 'Higienizacao');
-      await atualizarStatusLeito(leitoDestino.id, 'Ocupado', { pacienteId: pacienteParaMover.dados.id });
-      
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaMover.dados.id);
-      await updateDoc(pacienteRef, {
-        leitoId: leitoDestino.id,
-        setorId: leitoDestino.setorId,
-      });
-      toast({ title: "Sucesso!", description: "Paciente movido com sucesso." });
+        await atualizarStatusLeito(pacienteParaMover.leitoOrigemId, 'Higienizacao');
+        await atualizarStatusLeito(leitoDestino.id, 'Ocupado', { pacienteId: pacienteParaMover.dados.id });
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaMover.dados.id);
+        await updateDoc(pacienteRef, { leitoId: leitoDestino.id, setorId: leitoDestino.setorId });
+        toast({ title: "Sucesso!", description: "Paciente movido com sucesso." });
     }
     setMovimentacaoModalOpen(false);
     setPacienteParaMover(null);
   };
   
-  const handleOpenObsModal = (leito: LeitoEnriquecido) => {
-    setPacienteParaObs(leito);
-    setObsModalOpen(true);
-  };
-
+  const handleOpenObsModal = (leito: LeitoEnriquecido) => setPacienteParaObs(leito);
+  
   const handleConfirmObs = async (obs: string) => {
-    if (pacienteParaObs && pacienteParaObs.dadosPaciente) {
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaObs.dadosPaciente.id);
-      await updateDoc(pacienteRef, { obsPaciente: arrayUnion(obs) });
-      toast({ title: "Sucesso!", description: "Observação adicionada." });
+    if (pacienteParaObs?.dadosPaciente) {
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaObs.dadosPaciente.id);
+        await updateDoc(pacienteRef, { obsPaciente: arrayUnion(obs) });
+        toast({ title: "Sucesso!", description: "Observação adicionada." });
     }
     setObsModalOpen(false);
-    setPacienteParaObs(null);
   };
   
   const handleLiberarLeito = async (leitoId: string, pacienteId: string) => {
     await deleteDoc(doc(db, 'pacientesRegulaFacil', pacienteId));
     await atualizarStatusLeito(leitoId, 'Higienizacao');
-    toast({ title: "Sucesso!", description: "Paciente recebeu alta e o leito foi liberado." });
-  };
-
-  const handleFinalizarHigienizacao = async (leitoId: string) => {
-    await atualizarStatusLeito(leitoId, 'Vago');
-    toast({ title: "Sucesso!", description: "Leito liberado e pronto para uso." });
+    toast({ title: "Sucesso!", description: "Paciente recebeu alta." });
   };
   
-  // Demais funções de ação
-  const handleSolicitarUTI = async (pacienteId: string) => {
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      await updateDoc(pacienteRef, { aguardaUTI: true, dataPedidoUTI: new Date().toISOString() });
+  const handleFinalizarHigienizacao = async (leitoId: string) => {
+      await atualizarStatusLeito(leitoId, 'Vago');
+      toast({ title: "Sucesso!", description: "Leito liberado e pronto para uso." });
   };
   
   const handleToggleProvavelAlta = async (pacienteId: string, valorAtual: boolean) => {
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      await updateDoc(pacienteRef, { provavelAlta: !valorAtual });
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { provavelAlta: !valorAtual });
   };
-  // Adicione outras funções de ação (remanejamento, transferencia, etc.) aqui conforme necessário
+  
+  const onSolicitarUTI = async (pacienteId: string) => await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { aguardaUTI: true });
+  const onSolicitarRemanejamento = async (pacienteId: string, motivo: string) => await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { remanejarPaciente: true, motivoRemanejamento: motivo });
+  const onTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { transferirPaciente: true, destinoTransferencia: destino, motivoTransferencia: motivo });
+  const onCancelarReserva = async (leitoId: string) => await atualizarStatusLeito(leitoId, 'Vago');
+  const onConcluirTransferencia = async (leito: LeitoEnriquecido) => await atualizarStatusLeito(leito.id, 'Ocupado');
+
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -184,13 +172,7 @@ const MapaLeitos = () => {
             <div className="lg:col-span-2">
               <FiltrosMapaLeitos 
                 setores={setores} 
-                filtros={filtrosAvancados}
-                setFiltros={setFiltrosAvancados}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                resetFiltros={resetFiltros}
-                especialidades={especialidades}
-                todosStatus={todosStatus}
+                {...filtrosProps} 
               />
             </div>
             <div className="lg:col-span-1">
@@ -231,7 +213,7 @@ const MapaLeitos = () => {
                   {filteredSetores.map((setor) => (
                     <AccordionItem key={setor.id} value={setor.id!} className="border border-border/50 rounded-lg">
                       <AccordionTrigger className="hover:no-underline px-4">
-                        <div className="flex justify-between items-center w-full">
+                        <div className="flex justify-between items-center w-full pr-4">
                           <div className="flex flex-col items-start">
                             <h3 className="text-lg font-semibold text-foreground">{setor.nomeSetor}</h3>
                             <p className="text-sm text-muted-foreground font-mono">{setor.siglaSetor}</p>
@@ -240,31 +222,19 @@ const MapaLeitos = () => {
                       </AccordionTrigger>
                       <AccordionContent className="p-4">
                         <SetorCard 
-                          setor={setor}
-                          onMoverPaciente={handleOpenMovimentacaoModal}
-                          onAbrirObs={handleOpenObsModal}
-                          onLiberarLeito={handleLiberarLeito}
-                          // CORREÇÃO: A assinatura da função agora é compatível
-                          onAtualizarStatus={(leitoId, novoStatus, detalhes) => atualizarStatusLeito(leitoId, novoStatus, detalhes)}
-                          onSolicitarUTI={handleSolicitarUTI}
-                          onFinalizarHigienizacao={handleFinalizarHigienizacao}
-                          onToggleProvavelAlta={handleToggleProvavelAlta}
-                          // Funções de ação agora são passadas com a assinatura correta
-                          onSolicitarRemanejamento={async (pacienteId, motivo) => {
-                              const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-                              await updateDoc(pacienteRef, { remanejarPaciente: true, motivoRemanejamento: motivo });
-                          }}
-                          onTransferirPaciente={async (pacienteId, destino, motivo) => {
-                              const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-                              await updateDoc(pacienteRef, { transferirPaciente: true, destinoTransferencia: destino, motivoTransferencia: motivo });
-                          }}
-                          onCancelarReserva={async (leitoId) => {
-                              await atualizarStatusLeito(leitoId, 'Vago');
-                          }}
-                          onConcluirTransferencia={async (leito) => {
-                              await atualizarStatusLeito(leito.id, 'Ocupado');
-                          }}
-                      />
+                            setor={setor}
+                            onMoverPaciente={handleOpenMovimentacaoModal}
+                            onAbrirObs={handleOpenObsModal}
+                            onLiberarLeito={handleLiberarLeito}
+                            onAtualizarStatus={atualizarStatusLeito}
+                            onSolicitarUTI={onSolicitarUTI}
+                            onToggleProvavelAlta={handleToggleProvavelAlta}
+                            onSolicitarRemanejamento={onSolicitarRemanejamento}
+                            onTransferirPaciente={onTransferirPaciente}
+                            onCancelarReserva={onCancelarReserva}
+                            onConcluirTransferencia={onConcluirTransferencia}
+                            onFinalizarHigienizacao={handleFinalizarHigienizacao}
+                        />
                       </AccordionContent>
                     </AccordionItem>
                   ))}
