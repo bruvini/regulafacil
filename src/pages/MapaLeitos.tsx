@@ -156,7 +156,10 @@ const MapaLeitos = () => {
   
   const handleSolicitarUTI = async (pacienteId: string) => {
     try {
-      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { aguardaUTI: true });
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), {
+        aguardaUTI: true,
+        dataPedidoUTI: new Date().toISOString(),
+      });
       toast({ title: "Sucesso!", description: "Solicitação de UTI registrada." });
     } catch (error) {
       console.error('Erro ao solicitar UTI:', error);
@@ -179,10 +182,11 @@ const MapaLeitos = () => {
 
   const handleTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => {
     try {
-      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { 
-        transferirPaciente: true, 
-        destinoTransferencia: destino, 
-        motivoTransferencia: motivo 
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), {
+        transferirPaciente: true,
+        destinoTransferencia: destino,
+        motivoTransferencia: motivo,
+        dataTransferencia: new Date().toISOString(),
       });
       toast({ title: "Sucesso!", description: "Transferência registrada." });
     } catch (error) {
