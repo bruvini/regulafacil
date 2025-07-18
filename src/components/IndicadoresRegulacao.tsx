@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,9 +37,8 @@ export const IndicadoresRegulacao = ({
     
     let dataEntrada: Date;
     
-    if (dataISOouString instanceof Date) {
-      dataEntrada = dataISOouString;
-    } else {
+    // Corrigindo a verificação de tipo
+    if (typeof dataISOouString === 'string') {
       const dataPotencial = new Date(dataISOouString);
       if (isValid(dataPotencial)) {
         dataEntrada = dataPotencial;
@@ -52,6 +50,8 @@ export const IndicadoresRegulacao = ({
           return 0;
         }
       }
+    } else {
+      return 0;
     }
 
     const agora = new Date();
