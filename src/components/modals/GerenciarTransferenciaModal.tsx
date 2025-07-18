@@ -6,21 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
-import { useLeitos } from '@/hooks/useLeitos'; // Added
-import { useToast } from '@/hooks/use-toast'; // Added
-import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore'; // Added
-import { db } from '@/lib/firebase'; // Added
-import { Paciente } from '@/types/hospital'; // Added
+import { useLeitos } from '@/hooks/useLeitos';
+import { useToast } from '@/hooks/use-toast';
+import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Paciente } from '@/types/hospital';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  paciente: Paciente | null; // Typed correctly
+  paciente: Paciente | null;
 }
 
 export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Props) => {
   const { toast } = useToast();
-  const { atualizarStatusLeito } = useLeitos();
+  // CORREÇÃO: Importa também a lista de leitos
+  const { leitos, atualizarStatusLeito } = useLeitos();
   const [novaEtapa, setNovaEtapa] = useState('');
 
   if (!paciente) return null;
@@ -41,13 +42,15 @@ export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Pr
   };
 
   const handleConcluir = async () => {
-    // This action means the patient left the hospital.
-    // It deletes the patient record and sets the bed for cleaning.
     const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+    
+    // CORREÇÃO: Encontra o leito para obter o código antes de deletar o paciente
+    const leitoDoPaciente = leitos.find(l => l.id === paciente.leitoId);
+    
     await deleteDoc(pacienteRef);
     await atualizarStatusLeito(paciente.leitoId, 'Higienizacao');
     onOpenChange(false);
-    toast({ title: "Transferência Concluída", description: `O leito ${paciente.leitoCodigo} foi liberado para higienização.` });
+    toast({ title: "Transferência Concluída", description: `O leito ${leitoDoPaciente?.codigoLeito || ''} foi liberado para higienização.` });
   };
 
   const handleCancelar = async () => {
@@ -66,7 +69,6 @@ export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Pr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          {/* CORRECTION: Uses nomeCompleto */}
           <DialogTitle>Gerenciar Transferência de: {paciente.nomeCompleto}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -87,7 +89,6 @@ export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Pr
             <p className="text-sm font-medium">Histórico:</p>
             <ScrollArea className="h-48 border rounded-md p-2">
               {paciente.historicoTransferencia && paciente.historicoTransferencia.length > 0 ? (
-                // Sort to show the most recent first
                 [...paciente.historicoTransferencia].reverse().map((item: any, index: number) => (
                   <p key={index} className="text-sm border-b pb-1 mb-1">
                     <strong>{new Date(item.data).toLocaleString('pt-BR')}:</strong> {item.etapa}

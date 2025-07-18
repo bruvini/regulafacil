@@ -8,20 +8,19 @@ import { AlertTriangle } from 'lucide-react';
 import { Leito, Paciente } from '@/types/hospital';
 
 // Tipo para os dados enriquecidos que o card espera receber
-// (Este tipo espelha a estrutura criada no MapaLeitos.tsx)
+// Este tipo agora é idêntico ao que LeitoCard espera, resolvendo a incompatibilidade.
 type LeitoEnriquecido = Leito & {
-  statusLeito: string;
+  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
   dataAtualizacaoStatus: string;
   motivoBloqueio?: string;
   regulacao?: any;
   dadosPaciente?: Paciente | null;
 };
 
-// CORREÇÃO: A interface de props foi expandida para incluir todas as funções necessárias pelo LeitoCard
+// A interface de props foi expandida para incluir todas as funções necessárias pelo LeitoCard
 interface QuartoCardProps {
   nomeQuarto: string;
   leitos: LeitoEnriquecido[];
-  setorId: string;
   todosLeitosDoSetor: LeitoEnriquecido[];
   onMoverPaciente: (leito: LeitoEnriquecido) => void;
   onAbrirObs: (leito: LeitoEnriquecido) => void;
@@ -39,11 +38,8 @@ const QuartoCard = (props: QuartoCardProps) => {
   const { 
     nomeQuarto, 
     leitos, 
-    setorId, 
     todosLeitosDoSetor, 
-    onMoverPaciente, 
-    onAbrirObs,
-    ...leitoCardActions // Agrupa todas as outras funções de ação
+    ...leitoCardActions // Agrupa todas as funções de ação para repassar
   } = props;
 
   const hasMixedGenders = useMemo(() => {
@@ -86,9 +82,7 @@ const QuartoCard = (props: QuartoCardProps) => {
                 key={leito.id}
                 leito={leito}
                 todosLeitosDoSetor={todosLeitosDoSetor}
-                onMoverPaciente={onMoverPaciente}
-                onAbrirObs={onAbrirObs}
-                // CORREÇÃO: Repassando todas as funções de ação para o LeitoCard
+                // Repassando todas as funções de ação para o LeitoCard
                 {...leitoCardActions}
               />
             ))}

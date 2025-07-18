@@ -1,4 +1,3 @@
-
 // src/pages/MapaLeitos.tsx
 
 import { useState, useMemo } from 'react';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import SetorCard from '@/components/SetorCard'; // Importamos o SetorCard que renderizará os leitos
+import SetorCard from '@/components/SetorCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
 import { IndicadoresGerais } from '@/components/IndicadoresGerais';
@@ -21,14 +20,14 @@ import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
-import { Leito, Paciente } from '@/types/hospital';
+import { Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital'; // <-- HistoricoMovimentacao adicionado
 import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
-// Este tipo representa a estrutura de dados "enriquecida" que vamos criar
+// CORREÇÃO: Tipo padronizado e mais específico
 type LeitoEnriquecido = Leito & {
-  statusLeito: string;
+  statusLeito: HistoricoMovimentacao['statusLeito'];
   dataAtualizacaoStatus: string;
   motivoBloqueio?: string;
   regulacao?: any;
@@ -236,19 +235,30 @@ const MapaLeitos = () => {
                       </AccordionTrigger>
                       <AccordionContent className="p-4">
                         <SetorCard 
-                            setor={setor}
-                            onMoverPaciente={handleOpenMovimentacaoModal}
-                            onAbrirObs={handleOpenObsModal}
-                            onLiberarLeito={handleLiberarLeito}
-                            onAtualizarStatus={atualizarStatusLeito}
-                            onSolicitarUTI={handleSolicitarUTI}
-                            onToggleProvavelAlta={handleToggleProvavelAlta}
-                            // Adicione aqui as outras funções de ação que o SetorCard precisa passar adiante
-                            onSolicitarRemanejamento={async (pacienteId, motivo) => await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { remanejarPaciente: true, motivoRemanejamento: motivo })}
-                            onTransferirPaciente={async (pacienteId, destino, motivo) => await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { transferirPaciente: true, destinoTransferencia: destino, motivoTransferencia: motivo })}
-                            onCancelarReserva={async (leitoId) => await atualizarStatusLeito(leitoId, 'Vago')}
-                            onConcluirTransferencia={async (leito) => await atualizarStatusLeito(leito.id, 'Ocupado')}
-                        />
+                          setor={setor}
+                          onMoverPaciente={handleOpenMovimentacaoModal}
+                          onAbrirObs={handleOpenObsModal}
+                          onLiberarLeito={handleLiberarLeito}
+                          // CORREÇÃO: A assinatura da função agora é compatível
+                          onAtualizarStatus={(leitoId, novoStatus, detalhes) => atualizarStatusLeito(leitoId, novoStatus, detalhes)}
+                          onSolicitarUTI={handleSolicitarUTI}
+                          onToggleProvavelAlta={handleToggleProvavelAlta}
+                          // Funções de ação agora são passadas com a assinatura correta
+                          onSolicitarRemanejamento={async (pacienteId, motivo) => {
+                              const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+                              await updateDoc(pacienteRef, { remanejarPaciente: true, motivoRemanejamento: motivo });
+                          }}
+                          onTransferirPaciente={async (pacienteId, destino, motivo) => {
+                              const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+                              await updateDoc(pacienteRef, { transferirPaciente: true, destinoTransferencia: destino, motivoTransferencia: motivo });
+                          }}
+                          onCancelarReserva={async (leitoId) => {
+                              await atualizarStatusLeito(leitoId, 'Vago');
+                          }}
+                          onConcluirTransferencia={async (leito) => {
+                              await atualizarStatusLeito(leito.id, 'Ocupado');
+                          }}
+                      />
                       </AccordionContent>
                     </AccordionItem>
                   ))}

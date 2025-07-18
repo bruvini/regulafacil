@@ -6,16 +6,16 @@ import QuartoCard from './QuartoCard';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
 import { Leito, Paciente, Setor } from '@/types/hospital';
 
-// Type for the enriched data structure created in MapaLeitos.tsx
+// Tipo para os dados enriquecidos, agora alinhado com LeitoCard e QuartoCard
 type LeitoEnriquecido = Leito & {
-  statusLeito: string;
+  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
   dataAtualizacaoStatus: string;
   motivoBloqueio?: string;
   regulacao?: any;
   dadosPaciente?: Paciente | null;
 };
 
-// CORRECTION: The props interface now includes all actions for LeitoCard
+// Interface de props expandida para incluir todas as funções necessárias
 interface SetorCardProps {
   setor: Setor & { leitos: LeitoEnriquecido[] };
   onMoverPaciente: (leito: LeitoEnriquecido) => void;
@@ -31,7 +31,7 @@ interface SetorCardProps {
 }
 
 const SetorCard = (props: SetorCardProps) => {
-  const { setor, ...leitoCardActions } = props; // Group all actions to be passed down
+  const { setor, ...leitoCardActions } = props; // Agrupa todas as ações para serem repassadas
 
   const leitosVagos = setor.leitos.filter(leito => leito.statusLeito === 'Vago').length;
   const totalLeitos = setor.leitos.length;
@@ -41,6 +41,7 @@ const SetorCard = (props: SetorCardProps) => {
   const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
   return (
+    // O JSX do CardHeader permanece o mesmo
     <Card className="shadow-card hover:shadow-medical transition-all duration-200 border border-border/50">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
@@ -69,7 +70,6 @@ const SetorCard = (props: SetorCardProps) => {
                   leitos={leitosDoQuarto}
                   setorId={setor.id!}
                   todosLeitosDoSetor={setor.leitos}
-                  // CORRECTION: Pass all actions to QuartoCard
                   {...leitoCardActions}
                 />
             ))}
@@ -82,7 +82,6 @@ const SetorCard = (props: SetorCardProps) => {
                       key={leito.id}
                       leito={leito}
                       todosLeitosDoSetor={setor.leitos}
-                       // CORRECTION: Pass all actions to LeitoCard
                       {...leitoCardActions}
                     />
                   ))}

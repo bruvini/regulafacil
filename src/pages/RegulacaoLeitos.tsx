@@ -688,22 +688,27 @@ const RegulacaoLeitos = () => {
 
     try {
       // 1. Processar Altas
-      for (const { paciente, leitoAntigo } of syncSummary.altas) {
-        const leitoRef = doc(db, "leitosRegulaFacil", paciente.leitoId);
-        const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
+      for (const itemAlta of syncSummary.altas) {
+        // CORREÇÃO: Encontra o paciente completo usando o nome que temos no resumo
+        const pacienteParaAlta = pacientes.find(p => p.nomeCompleto === itemAlta.nomePaciente);
 
-        const historicoAlta: HistoricoMovimentacao = {
-          statusLeito: "Higienizacao",
-          dataAtualizacaoStatus: agora,
-        };
-        batch.update(leitoRef, {
-          historicoMovimentacao: arrayUnion(historicoAlta),
-        });
-        batch.delete(pacienteRef);
-        registrarLog(
-          `Alta (via importação) para ${paciente.nomeCompleto} do leito ${leitoAntigo}.`,
-          "Sincronização MV"
-        );
+        if (pacienteParaAlta) {
+          const leitoRef = doc(db, "leitosRegulaFacil", pacienteParaAlta.leitoId);
+          const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteParaAlta.id);
+
+          const historicoAlta: HistoricoMovimentacao = {
+            statusLeito: "Higienizacao",
+            dataAtualizacaoStatus: agora,
+          };
+          batch.update(leitoRef, {
+            historicoMovimentacao: arrayUnion(historicoAlta),
+          });
+          batch.delete(pacienteRef);
+          registrarLog(
+            `Alta (via importação) para ${pacienteParaAlta.nomeCompleto} do leito ${itemAlta.leitoAntigo}.`,
+            "Sincronização MV"
+          );
+        }
       }
 
       // 2. Processar Transferências
