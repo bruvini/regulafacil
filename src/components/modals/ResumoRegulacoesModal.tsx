@@ -32,7 +32,7 @@ export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }
 
     const gerarTextoOrigem = (pacientes: any[]) => {
         const listaPacientes = pacientes.map(p => 
-            `_${p.leitoCodigo}_ - *${p.nomePaciente}* / VAI PARA: *${p.regulacao.paraSetorSigla} - ${p.regulacao.paraLeito}*`
+            `_${p.leitoCodigo}_ - *${p.nomeCompleto}* / VAI PARA: *${p.regulacao.paraSetorSigla} - ${p.regulacao.paraLeito}*`
         ).join('\n');
 
         return `*REGULAÇÕES PENDENTES*
@@ -45,7 +45,7 @@ ${listaPacientes}
 
     const gerarTextoDestino = (pacientes: any[]) => {
         const listaPacientes = pacientes.map(p => 
-            `_${p.regulacao.paraLeito}_ - *${p.nomePaciente}* / VEM DE: *${p.siglaSetorOrigem} - ${p.leitoCodigo}*`
+            `_${p.regulacao.paraLeito}_ - *${p.nomeCompleto}* / VEM DE: *${p.siglaSetorOrigem} - ${p.leitoCodigo}*`
         ).join('\n');
 
         return `*REGULAÇÕES PENDENTES*

@@ -88,6 +88,7 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
                 const idadeB = b?.dataNascimento ? calcularIdade(b.dataNascimento) : 0;
                 comparison = idadeA - idadeB;
             } else if (sortConfig?.key === 'tempo') {
+                // Para tempo de internação, usa dataInternacao
                 const dataA = a?.dataInternacao ? parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
                 const dataB = b?.dataInternacao ? parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
                 if (isValid(dataA) && isValid(dataB)) {

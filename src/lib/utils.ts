@@ -21,15 +21,15 @@ export const formatarDuracao = (dataISOouString: string | Date | undefined | nul
     }
   } else {
     // Se é string, tenta fazer o parse
-    // Tenta o formato brasileiro primeiro, que é o mais comum no sistema
-    const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
-    if (isValid(dataParseada)) {
-      dataEntrada = dataParseada;
+    // Primeiro, tenta como ISO (formato padrão do JS)
+    const dataPotencial = new Date(dataISOouString);
+    if (isValid(dataPotencial)) {
+      dataEntrada = dataPotencial;
     } else {
-      // Tenta como ISO (formato padrão do JS) como fallback
-      const dataPotencial = new Date(dataISOouString);
-      if (isValid(dataPotencial)) {
-        dataEntrada = dataPotencial;
+      // Tenta o formato brasileiro como fallback
+      const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
+      if (isValid(dataParseada)) {
+        dataEntrada = dataParseada;
       } else {
         return 'Data Inválida';
       }
