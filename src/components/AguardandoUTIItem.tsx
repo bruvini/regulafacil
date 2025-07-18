@@ -19,7 +19,7 @@ export const AguardandoUTIItem = ({ paciente, onCancel, onTransfer, onRegularUTI
   return (
     <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
       <div>
-        <p className="font-bold text-sm">{paciente.nomePaciente}</p>
+        <p className="font-bold text-sm">{paciente.nomeCompleto}</p>
         <p className="text-xs text-muted-foreground">
           {paciente.setorOrigem} - {paciente.especialidadePaciente}
         </p>

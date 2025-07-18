@@ -13,13 +13,13 @@ interface Props {
 }
 
 export const PacienteReguladoItem = ({ paciente, onConcluir, onAlterar, onCancelar }: Props) => {
-  const tempoRegulado = formatarDuracao(paciente.regulacao.data); // Use 'data'
+  const tempoRegulado = formatarDuracao(paciente.regulacao?.dataAtualizacaoStatus || paciente.regulacao?.data);
   
   return (
     <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
-          <p className="font-semibold text-sm">{paciente.nomePaciente}</p>
+          <p className="font-semibold text-sm">{paciente.nomeCompleto}</p>
           <Badge variant="outline">{paciente.siglaSetorOrigem}</Badge>
           <p className="text-xs text-muted-foreground">→</p>
           <Badge variant="secondary">{paciente.regulacao?.paraSetorSigla || paciente.regulacao?.paraSetor}</Badge>

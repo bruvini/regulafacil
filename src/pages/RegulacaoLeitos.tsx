@@ -1,3 +1,4 @@
+
 // src/pages/RegulacaoLeitos.tsx
 
 import { useState, useEffect, useMemo } from "react";
@@ -52,8 +53,8 @@ import { ListaPacientesPendentes } from "@/components/ListaPacientesPendentes";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
 import { ListasLaterais } from "@/components/ListasLaterais";
 import * as XLSX from "xlsx";
-import { ScrollArea } from "@/components/ui/scroll-area"; // <-- IMPORT ADICIONADO
-import { PacientePendenteItem } from "@/components/PacientePendenteItem"; // <-- IMPORT ADICIONADO
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { PacientePendenteItem } from "@/components/PacientePendenteItem";
 
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading } = useSetores();
@@ -99,10 +100,6 @@ const RegulacaoLeitos = () => {
     const mapaSetores = new Map(setores.map((s) => [s.id, s]));
     const mapaLeitos = new Map(leitos.map((l) => [l.id, l]));
 
-    console.log("RegulacaoLeitos - pacientes raw:", pacientes);
-    console.log("RegulacaoLeitos - setores:", setores);
-    console.log("RegulacaoLeitos - leitos:", leitos);
-
     return pacientes.map((paciente) => {
       const leito = mapaLeitos.get(paciente.leitoId);
       const setor = leito ? mapaSetores.get(leito.setorId) : undefined;
@@ -128,11 +125,10 @@ const RegulacaoLeitos = () => {
         siglaSetorOrigem: setor?.siglaSetor || "N/A",
         statusLeito: historicoRecente?.statusLeito || "Vago",
         regulacao: historicoRecente?.infoRegulacao
-          ? { ...historicoRecente.infoRegulacao, paraSetorSigla }
+          ? { ...historicoRecente.infoRegulacao, paraSetorSigla, dataAtualizacaoStatus: historicoRecente.dataAtualizacaoStatus }
           : undefined,
       };
 
-      console.log("RegulacaoLeitos - paciente processado:", pacienteCompleto);
       return pacienteCompleto;
     });
   }, [
@@ -166,8 +162,9 @@ const RegulacaoLeitos = () => {
   const pacientesAguardandoTransferencia = filteredPacientes.filter(
     (p) => p.transferirPaciente
   );
+  // CORREÇÃO: Filtrar pacientes aguardando remanejamento que ainda não foram regulados
   const pacientesAguardandoRemanejamento = filteredPacientes.filter(
-    (p) => p.remanejarPaciente
+    (p) => p.remanejarPaciente && p.statusLeito !== 'Regulado'
   );
   const decisaoCirurgica = pacientesAguardandoRegulacao.filter(
     (p) => p.setorOrigem === "PS DECISÃO CIRURGICA"
@@ -178,7 +175,8 @@ const RegulacaoLeitos = () => {
   const recuperacaoCirurgica = pacientesAguardandoRegulacao.filter(
     (p) => p.setorOrigem === "CC - RECUPERAÇÃO"
   );
-  const totalPendentes = pacientesAguardandoRegulacao.length;
+  // CORREÇÃO: Contador correto baseado nos setores específicos
+  const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 
   // Combinação de todos os pacientes pendentes para o useEffect
   const todosPacientesPendentes = useMemo(
@@ -295,11 +293,12 @@ const RegulacaoLeitos = () => {
     setPacienteParaAcao(null);
   };
 
+  // CORREÇÃO: Usar null em vez de undefined para o Firestore
   const cancelarPedidoUTI = async (paciente: Paciente) => {
     const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
     await updateDoc(pacienteRef, {
       aguardaUTI: false,
-      dataPedidoUTI: undefined,
+      dataPedidoUTI: null,
     });
     registrarLog(
       `Cancelou pedido de UTI para ${paciente.nomeCompleto}.`,
@@ -308,12 +307,13 @@ const RegulacaoLeitos = () => {
     toast({ title: "Sucesso", description: "Pedido de UTI cancelado." });
   };
 
+  // CORREÇÃO: Usar null em vez de undefined para o Firestore
   const handleCancelarRemanejamento = async (paciente: Paciente) => {
     const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
     await updateDoc(pacienteRef, {
       remanejarPaciente: false,
-      motivoRemanejamento: undefined,
-      dataPedidoRemanejamento: undefined,
+      motivoRemanejamento: null,
+      dataPedidoRemanejamento: null,
     });
     registrarLog(
       `Cancelou solicitação de remanejamento para ${paciente.nomeCompleto}.`,
@@ -478,7 +478,6 @@ const RegulacaoLeitos = () => {
           (p) => p.nomeCompleto === nomePaciente
         );
         if (pacienteParaRemanejar) {
-          console.log(`Disparando remanejamento para: ${nomePaciente}`); // Log para depuração
           solicitarRemanejamento(
             pacienteParaRemanejar.setorId,
             pacienteParaRemanejar.leitoId,
@@ -492,7 +491,6 @@ const RegulacaoLeitos = () => {
     mapaRemanejamentoContaminacao.forEach((paciente, nomePaciente) => {
       // SÓ cancela se o paciente que estava em remanejamento NÃO ESTÁ MAIS na lista de alertas.
       if (!mapaAlertas.has(nomePaciente)) {
-        console.log(`Cancelando remanejamento para: ${nomePaciente}`); // Log para depuração
         cancelarPedidoRemanejamento(paciente.setorId, paciente.leitoId);
       }
     });

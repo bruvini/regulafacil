@@ -17,7 +17,7 @@ export const RemanejamentoPendenteItem = ({ paciente, onRemanejar, onCancelar }:
     return (
         <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
             <div>
-                <p className="font-bold text-sm">{paciente.nomePaciente} <Badge variant="outline">{paciente.sexoPaciente.charAt(0)}</Badge></p>
+                <p className="font-bold text-sm">{paciente.nomeCompleto} <Badge variant="outline">{paciente.sexoPaciente.charAt(0)}</Badge></p>
                 <p className="text-xs text-muted-foreground">{paciente.siglaSetorOrigem || paciente.setorOrigem} - {paciente.leitoCodigo}</p>
                 <p className="text-xs text-amber-600 mt-1">Motivo: {paciente.motivoRemanejamento}</p>
             </div>

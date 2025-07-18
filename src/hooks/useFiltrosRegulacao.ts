@@ -33,7 +33,7 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
             // Verificar se o paciente existe e tem as propriedades necessárias
             if (!paciente) return false;
 
-            // Filtro por Nome
+            // Filtro por Nome - usando nomeCompleto
             if (searchTerm && !paciente.nomeCompleto?.toLowerCase().includes(searchTerm.toLowerCase())) {
                 return false;
             }
@@ -77,7 +77,7 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
             return true;
         });
 
-        // NOVA LÓGICA DE ORDENAÇÃO
+        // LÓGICA DE ORDENAÇÃO IMPLEMENTADA
         return [...pacientesFiltrados].sort((a, b) => {
             let comparison = 0;
             

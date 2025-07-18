@@ -18,7 +18,7 @@ export const AguardandoTransferenciaItem = ({ paciente, onCancel, onGerenciar }:
   return (
     <div className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50">
       <div>
-        <p className="font-bold text-sm">{paciente.nomePaciente} → {paciente.destinoTransferencia}</p>
+        <p className="font-bold text-sm">{paciente.nomeCompleto} → {paciente.destinoTransferencia}</p>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-xs text-muted-foreground">Motivo: {paciente.motivoTransferencia}</p>
         </div>
