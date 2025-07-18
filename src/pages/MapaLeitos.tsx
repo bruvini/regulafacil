@@ -159,7 +159,7 @@ const MapaLeitos = () => {
     try {
       await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), {
         aguardaUTI: true,
-        dataPedidoUTI: format(new Date(), "dd/MM/yyyy HH:mm"),
+        dataPedidoUTI: new Date().toISOString(),
       });
       toast({ title: "Sucesso!", description: "Solicitação de UTI registrada." });
     } catch (error) {
@@ -187,7 +187,7 @@ const MapaLeitos = () => {
         transferirPaciente: true,
         destinoTransferencia: destino,
         motivoTransferencia: motivo,
-        dataTransferencia: format(new Date(), "dd/MM/yyyy HH:mm"),
+        dataTransferencia: new Date().toISOString(),
       });
       toast({ title: "Sucesso!", description: "Transferência registrada." });
     } catch (error) {
