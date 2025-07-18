@@ -18,15 +18,6 @@ import { Setor } from '@/types/hospital';
 
 interface FiltrosMapaLeitosProps {
   setores: Setor[];
-  filtros: {
-    especialidade: string;
-    setor: string;
-    sexo: string;
-    status: string;
-    provavelAlta: string;
-    aguardaUTI: string;
-    isolamentos: string[];
-  };
   filtrosAvancados: {
     especialidade: string;
     setor: string;
@@ -36,7 +27,7 @@ interface FiltrosMapaLeitosProps {
     aguardaUTI: string;
     isolamentos: string[];
   };
-  setFiltros: (filtros: any) => void;
+  setFiltrosAvancados: (filtros: any) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   resetFiltros: () => void;
@@ -46,9 +37,8 @@ interface FiltrosMapaLeitosProps {
 
 export const FiltrosMapaLeitos = ({ 
   setores, 
-  // CORREÇÃO: Usando filtrosAvancados como prop principal
-  filtrosAvancados = { especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', aguardaUTI: '', isolamentos: [] }, 
-  setFiltros, 
+  filtrosAvancados, 
+  setFiltrosAvancados, 
   searchTerm, 
   setSearchTerm, 
   resetFiltros, 
@@ -58,7 +48,6 @@ export const FiltrosMapaLeitos = ({
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
 
-  // CORREÇÃO: Usando filtrosAvancados em vez de filtros
   if (!filtrosAvancados) {
     return null; 
   }
@@ -68,9 +57,9 @@ export const FiltrosMapaLeitos = ({
     const isSelected = currentIsolamentos.includes(id);
 
     if (isSelected) {
-      setFiltros({ ...filtrosAvancados, isolamentos: currentIsolamentos.filter(isoId => isoId !== id) });
+      setFiltrosAvancados({ ...filtrosAvancados, isolamentos: currentIsolamentos.filter(isoId => isoId !== id) });
     } else {
-      setFiltros({ ...filtrosAvancados, isolamentos: [...currentIsolamentos, id] });
+      setFiltrosAvancados({ ...filtrosAvancados, isolamentos: [...currentIsolamentos, id] });
     }
   };
 
@@ -107,7 +96,7 @@ export const FiltrosMapaLeitos = ({
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4 p-4 border rounded-lg space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Select value={filtrosAvancados.especialidade} onValueChange={(v) => setFiltros({...filtrosAvancados, especialidade: v})}>
+              <Select value={filtrosAvancados.especialidade} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, especialidade: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Especialidade" />
                 </SelectTrigger>
@@ -118,7 +107,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
               
-              <Select value={filtrosAvancados.setor} onValueChange={(v) => setFiltros({...filtrosAvancados, setor: v})}>
+              <Select value={filtrosAvancados.setor} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, setor: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Setor" />
                 </SelectTrigger>
@@ -129,7 +118,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
               
-              <Select value={filtrosAvancados.sexo} onValueChange={(v) => setFiltros({...filtrosAvancados, sexo: v})}>
+              <Select value={filtrosAvancados.sexo} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, sexo: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sexo" />
                 </SelectTrigger>
@@ -139,7 +128,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
               
-              <Select value={filtrosAvancados.status} onValueChange={(v) => setFiltros({...filtrosAvancados, status: v})}>
+              <Select value={filtrosAvancados.status} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, status: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status do Leito" />
                 </SelectTrigger>
@@ -150,7 +139,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
 
-              <Select value={filtrosAvancados.provavelAlta} onValueChange={(v) => setFiltros({...filtrosAvancados, provavelAlta: v})}>
+              <Select value={filtrosAvancados.provavelAlta} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, provavelAlta: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Alta Provável" />
                 </SelectTrigger>
@@ -160,7 +149,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
 
-              <Select value={filtrosAvancados.aguardaUTI} onValueChange={(v) => setFiltros({...filtrosAvancados, aguardaUTI: v})}>
+              <Select value={filtrosAvancados.aguardaUTI} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, aguardaUTI: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Aguardando UTI" />
                 </SelectTrigger>

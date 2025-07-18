@@ -1,4 +1,3 @@
-
 // src/pages/MapaLeitos.tsx
 
 import { useState, useMemo } from 'react';
@@ -87,9 +86,8 @@ const MapaLeitos = () => {
 
   const { setoresEnriquecidos } = dadosCombinados;
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
-  const { filteredSetores, filtrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
+  const { filteredSetores, filtrosAvancados, setFiltrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
 
-  // --- Funções de Ação Centralizadas ---
   const handleOpenMovimentacaoModal = (leito: LeitoEnriquecido) => {
     setPacienteParaMover({
       dados: leito.dadosPaciente,
@@ -263,6 +261,7 @@ const MapaLeitos = () => {
               <FiltrosMapaLeitos 
                 setores={setores} 
                 filtrosAvancados={filtrosAvancados}
+                setFiltrosAvancados={setFiltrosAvancados}
                 {...filtrosProps} 
               />
             </div>
@@ -313,7 +312,7 @@ const MapaLeitos = () => {
                       </AccordionTrigger>
                       <AccordionContent className="p-4">
                         <SetorCard 
-                            setor={setor as any}
+                            setor={setor}
                             onMoverPaciente={handleOpenMovimentacaoModal}
                             onAbrirObs={handleOpenObsModal}
                             onLiberarLeito={handleLiberarLeito}
