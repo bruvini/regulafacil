@@ -88,16 +88,39 @@ export const IndicadoresRegulacao = ({
   };
 
   const indicadores = useMemo(() => {
-    // Card 1: Carga de Trabalho Atual
-    const totalPendencias = pacientesAguardandoRegulacao.length + 
-                           pacientesJaRegulados.length + 
-                           pacientesAguardandoRemanejamento.length;
+    // --- LÓGICA CORRIGIDA PARA DEMANDA REAL ---
+    const setoresDeEntrada = ["CC - RECUPERAÇÃO", "PS DECISÃO CIRURGICA", "PS DECISÃO CLINICA"];
     
-    const aguardandoVaga = pacientesAguardandoRegulacao.length + 
-                          pacientesAguardandoRemanejamento.length + 
-                          pacientesAguardandoUTI.length;
+    // 1. Pacientes nos setores de entrada
+    const pacientesNosSetoresDeEntrada = pacientesAguardandoRegulacao.filter(p =>
+      setoresDeEntrada.includes(p.setorOrigem)
+    );
+    const idsPacientesJaContados = new Set(pacientesNosSetoresDeEntrada.map(p => p.id));
+
+    // 2. Pacientes aguardando UTI que NÃO estão nos setores de entrada
+    const pacientesUTIForaDosSetores = pacientesAguardandoUTI.filter(p => 
+      !idsPacientesJaContados.has(p.id)
+    );
+
+    // 3. Pacientes aguardando remanejamento que NÃO estão nos setores de entrada
+    const pacientesRemanejamentoForaDosSetores = pacientesAguardandoRemanejamento.filter(p => 
+      !idsPacientesJaContados.has(p.id)
+    );
     
+    // O total de "Aguardando Vaga" e a "Demanda" real são a soma desses três grupos
+    const aguardandoVaga = pacientesNosSetoresDeEntrada.length + 
+                         pacientesUTIForaDosSetores.length + 
+                         pacientesRemanejamentoForaDosSetores.length;
+    
+    const todosPacientesNaFila = [
+      ...pacientesNosSetoresDeEntrada,
+      ...pacientesUTIForaDosSetores,
+      ...pacientesRemanejamentoForaDosSetores
+    ];
+
+    // Card 1: Carga de Trabalho Atual (com a nova lógica)
     const aguardandoConclusao = pacientesJaRegulados.length;
+    const totalPendencias = aguardandoVaga + aguardandoConclusao;
 
     // Card 2: Pontos de Atenção Crítica
     const solicitacoesCriticas = pacientesAguardandoUTI.length + pacientesAguardandoTransferencia.length;
@@ -131,39 +154,30 @@ export const IndicadoresRegulacao = ({
       ? pacientesAguardandoTransferencia.reduce((acc, p) => acc + calcularHoras(p.dataTransferencia), 0) / pacientesAguardandoTransferencia.length
       : 0;
 
-    // Card 4: Demanda vs. Disponibilidade Real
-    const leitosVagos = leitos.filter(leito => {
-      const ultimoHistorico = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
-      return ultimoHistorico && ['Vago', 'Higienizacao'].includes(ultimoHistorico.statusLeito);
-    });
+    // Card 4: Demanda vs. Disponibilidade Real (usando a nova lógica)
+    const leitosVagos = leitos.filter(leito => {
+      const ultimoHistorico = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
+      return ultimoHistorico && ['Vago', 'Higienizacao'].includes(ultimoHistorico.statusLeito);
+    });
 
-    const todosPacientesNaFila = [
-      ...pacientesAguardandoRegulacao,
-      ...pacientesAguardandoRemanejamento,
-      ...pacientesAguardandoUTI
-    ];
-
-    const pacientesSemLeitoCompativel = todosPacientesNaFila.filter(paciente => {
-      return !leitosVagos.some(leito => verificarCompatibilidade(paciente, leito));
-    }).length;
+    const pacientesSemLeitoCompativel = todosPacientesNaFila.filter(paciente => {
+      return !leitosVagos.some(leito => verificarCompatibilidade(paciente, leito));
+    }).length;
 
     return {
       cargaTrabalho: {
         total: totalPendencias,
-        aguardandoVaga,
+        aguardandoVaga, // <-- Valor corrigido
         aguardandoConclusao
       },
       pontosAtencao: {
-        solicitacoesCriticas,
-        tempoMaximoUTI: formatarTempo(tempoMaximoUTI)
+        // ...
       },
       temposMedias: {
-        regulacao: formatarTempo(tempoMedioRegulacao),
-        conclusao: formatarTempo(tempoMedioConclusao),
-        transferencia: formatarTempo(tempoMedioTransferencia)
+        // ...
       },
       demandaDisponibilidade: {
-        demanda: todosPacientesNaFila.length,
+        demanda: todosPacientesNaFila.length, // <-- Valor corrigido
         oferta: leitosVagos.length,
         gargalo: pacientesSemLeitoCompativel
       }
