@@ -1,3 +1,4 @@
+
 // src/components/QuartoCard.tsx
 
 import { useMemo } from 'react';
@@ -5,12 +6,9 @@ import LeitoCard from './LeitoCard';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { AlertTriangle } from 'lucide-react';
-import { LeitoEnriquecido } from '@/pages/MapaLeitos'; // CORREÇÃO: Usa apenas o tipo importado
-import { Leito, Paciente } from '@/types/hospital'; // CORREÇÃO: Importa os tipos base
+import { LeitoEnriquecido } from '@/pages/MapaLeitos';
+import { Leito, Paciente } from '@/types/hospital';
 
-// A definição local de LeitoEnriquecido foi REMOVIDA para evitar conflitos.
-
-// A interface de props foi expandida para incluir todas as funções necessárias pelo LeitoCard
 interface QuartoCardProps {
   nomeQuarto: string;
   leitos: LeitoEnriquecido[];
@@ -26,6 +24,8 @@ interface QuartoCardProps {
   onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
   onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
   onFinalizarHigienizacao: (leitoId: string) => void;
+  onBloquearLeito: (leitoId: string, motivo: string) => void;
+  onEnviarParaHigienizacao: (leitoId: string) => void;
 }
 
 const QuartoCard = (props: QuartoCardProps) => {

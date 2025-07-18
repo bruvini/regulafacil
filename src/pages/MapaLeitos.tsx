@@ -1,3 +1,4 @@
+
 // src/pages/MapaLeitos.tsx
 
 import { useState, useMemo } from 'react';
@@ -86,7 +87,7 @@ const MapaLeitos = () => {
 
   const { setoresEnriquecidos } = dadosCombinados;
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
-  const { filteredSetores, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
+  const { filteredSetores, filtrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
 
   // --- Funções de Ação Centralizadas ---
   const handleOpenMovimentacaoModal = (leito: LeitoEnriquecido) => {
@@ -110,7 +111,10 @@ const MapaLeitos = () => {
     setPacienteParaMover(null);
   };
   
-  const handleOpenObsModal = (leito: LeitoEnriquecido) => setPacienteParaObs(leito);
+  const handleOpenObsModal = (leito: LeitoEnriquecido) => {
+    setPacienteParaObs(leito);
+    setObsModalOpen(true);
+  };
   
   const handleConfirmObs = async (obs: string) => {
     if (pacienteParaObs?.dadosPaciente) {
@@ -122,26 +126,112 @@ const MapaLeitos = () => {
   };
   
   const handleLiberarLeito = async (leitoId: string, pacienteId: string) => {
-    await deleteDoc(doc(db, 'pacientesRegulaFacil', pacienteId));
-    await atualizarStatusLeito(leitoId, 'Higienizacao');
-    toast({ title: "Sucesso!", description: "Paciente recebeu alta." });
+    try {
+      await deleteDoc(doc(db, 'pacientesRegulaFacil', pacienteId));
+      await atualizarStatusLeito(leitoId, 'Higienizacao');
+      toast({ title: "Sucesso!", description: "Paciente recebeu alta." });
+    } catch (error) {
+      console.error('Erro ao liberar leito:', error);
+      toast({ title: "Erro", description: "Erro ao liberar leito.", variant: "destructive" });
+    }
   };
   
   const handleFinalizarHigienizacao = async (leitoId: string) => {
+    try {
       await atualizarStatusLeito(leitoId, 'Vago');
       toast({ title: "Sucesso!", description: "Leito liberado e pronto para uso." });
+    } catch (error) {
+      console.error('Erro ao finalizar higienização:', error);
+      toast({ title: "Erro", description: "Erro ao finalizar higienização.", variant: "destructive" });
+    }
   };
   
   const handleToggleProvavelAlta = async (pacienteId: string, valorAtual: boolean) => {
+    try {
       await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { provavelAlta: !valorAtual });
+      toast({ title: "Sucesso!", description: "Status de provável alta atualizado." });
+    } catch (error) {
+      console.error('Erro ao alterar provável alta:', error);
+      toast({ title: "Erro", description: "Erro ao alterar provável alta.", variant: "destructive" });
+    }
   };
   
-  const onSolicitarUTI = async (pacienteId: string) => await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { aguardaUTI: true });
-  const onSolicitarRemanejamento = async (pacienteId: string, motivo: string) => await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { remanejarPaciente: true, motivoRemanejamento: motivo });
-  const onTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { transferirPaciente: true, destinoTransferencia: destino, motivoTransferencia: motivo });
-  const onCancelarReserva = async (leitoId: string) => await atualizarStatusLeito(leitoId, 'Vago');
-  const onConcluirTransferencia = async (leito: LeitoEnriquecido) => await atualizarStatusLeito(leito.id, 'Ocupado');
+  const handleSolicitarUTI = async (pacienteId: string) => {
+    try {
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { aguardaUTI: true });
+      toast({ title: "Sucesso!", description: "Solicitação de UTI registrada." });
+    } catch (error) {
+      console.error('Erro ao solicitar UTI:', error);
+      toast({ title: "Erro", description: "Erro ao solicitar UTI.", variant: "destructive" });
+    }
+  };
 
+  const handleSolicitarRemanejamento = async (pacienteId: string, motivo: string) => {
+    try {
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { 
+        remanejarPaciente: true, 
+        motivoRemanejamento: motivo 
+      });
+      toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
+    } catch (error) {
+      console.error('Erro ao solicitar remanejamento:', error);
+      toast({ title: "Erro", description: "Erro ao solicitar remanejamento.", variant: "destructive" });
+    }
+  };
+
+  const handleTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => {
+    try {
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { 
+        transferirPaciente: true, 
+        destinoTransferencia: destino, 
+        motivoTransferencia: motivo 
+      });
+      toast({ title: "Sucesso!", description: "Transferência registrada." });
+    } catch (error) {
+      console.error('Erro ao transferir paciente:', error);
+      toast({ title: "Erro", description: "Erro ao transferir paciente.", variant: "destructive" });
+    }
+  };
+
+  const handleCancelarReserva = async (leitoId: string) => {
+    try {
+      await atualizarStatusLeito(leitoId, 'Vago');
+      toast({ title: "Sucesso!", description: "Reserva cancelada." });
+    } catch (error) {
+      console.error('Erro ao cancelar reserva:', error);
+      toast({ title: "Erro", description: "Erro ao cancelar reserva.", variant: "destructive" });
+    }
+  };
+
+  const handleConcluirTransferencia = async (leito: LeitoEnriquecido) => {
+    try {
+      await atualizarStatusLeito(leito.id, 'Ocupado');
+      toast({ title: "Sucesso!", description: "Transferência concluída." });
+    } catch (error) {
+      console.error('Erro ao concluir transferência:', error);
+      toast({ title: "Erro", description: "Erro ao concluir transferência.", variant: "destructive" });
+    }
+  };
+
+  const handleBloquearLeito = async (leitoId: string, motivo: string) => {
+    try {
+      await atualizarStatusLeito(leitoId, 'Bloqueado', { motivoBloqueio: motivo });
+      toast({ title: "Sucesso!", description: "Leito bloqueado." });
+    } catch (error) {
+      console.error('Erro ao bloquear leito:', error);
+      toast({ title: "Erro", description: "Erro ao bloquear leito.", variant: "destructive" });
+    }
+  };
+
+  const handleEnviarParaHigienizacao = async (leitoId: string) => {
+    try {
+      await atualizarStatusLeito(leitoId, 'Higienizacao');
+      toast({ title: "Sucesso!", description: "Leito enviado para higienização." });
+    } catch (error) {
+      console.error('Erro ao enviar para higienização:', error);
+      toast({ title: "Erro", description: "Erro ao enviar para higienização.", variant: "destructive" });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -172,6 +262,7 @@ const MapaLeitos = () => {
             <div className="lg:col-span-2">
               <FiltrosMapaLeitos 
                 setores={setores} 
+                filtrosAvancados={filtrosAvancados}
                 {...filtrosProps} 
               />
             </div>
@@ -227,13 +318,15 @@ const MapaLeitos = () => {
                             onAbrirObs={handleOpenObsModal}
                             onLiberarLeito={handleLiberarLeito}
                             onAtualizarStatus={atualizarStatusLeito}
-                            onSolicitarUTI={onSolicitarUTI}
+                            onSolicitarUTI={handleSolicitarUTI}
                             onToggleProvavelAlta={handleToggleProvavelAlta}
-                            onSolicitarRemanejamento={onSolicitarRemanejamento}
-                            onTransferirPaciente={onTransferirPaciente}
-                            onCancelarReserva={onCancelarReserva}
-                            onConcluirTransferencia={onConcluirTransferencia}
+                            onSolicitarRemanejamento={handleSolicitarRemanejamento}
+                            onTransferirPaciente={handleTransferirPaciente}
+                            onCancelarReserva={handleCancelarReserva}
+                            onConcluirTransferencia={handleConcluirTransferencia}
                             onFinalizarHigienizacao={handleFinalizarHigienizacao}
+                            onBloquearLeito={handleBloquearLeito}
+                            onEnviarParaHigienizacao={handleEnviarParaHigienizacao}
                         />
                       </AccordionContent>
                     </AccordionItem>

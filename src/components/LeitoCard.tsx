@@ -1,3 +1,4 @@
+
 // src/components/LeitoCard.tsx
 
 import { useState, useMemo } from 'react';
@@ -30,6 +31,8 @@ interface LeitoCardProps {
   onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
   onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
   onFinalizarHigienizacao: (leitoId: string) => void;
+  onBloquearLeito: (leitoId: string, motivo: string) => void;
+  onEnviarParaHigienizacao: (leitoId: string) => void;
 }
 
 const calcularIdade = (dataNascimento: string): string => {
@@ -69,17 +72,38 @@ const LeitoCard = (props: LeitoCardProps) => {
     return null;
   }, [leito, todosLeitosDoSetor]);
 
-  const handleBloquear = (motivo: string) => onAtualizarStatus(setorId, leito.id, 'Bloqueado', motivo);
-  const handleHigienizar = () => onAtualizarStatus(setorId, leito.id, 'Higienizacao');
-  const handleDesbloquear = () => onDesbloquear(setorId, leito.id);
-  const handleFinalizarHigienizacao = () => onFinalizarHigienizacao(leito.id);
-  const handleLiberarLeito = () => onLiberarLeito(setorId, leito.id);
-  const handleSolicitarUTI = () => onSolicitarUTI(setorId, leito.id);
-  const handleConfirmarRemanejamento = (motivo: string) => onSolicitarRemanejamento(setorId, leito.id, motivo);
-  const handleConfirmarTransferencia = (destino: string, motivo: string) => onTransferirPaciente(setorId, leito.id, destino, motivo);
-  const handleCancelarReserva = () => onCancelarReserva(setorId, leito.id);
-  const handleConfirmarTransferenciaInterna = () => onConcluirTransferencia(leito, setorId);
-  const handleToggleProvavelAlta = () => onToggleProvavelAlta(setorId, leito.id);
+  // Funções simplificadas que chamam diretamente as props recebidas
+  const handleBloquear = (motivo: string) => actions.onBloquearLeito(leito.id, motivo);
+  const handleHigienizar = () => actions.onEnviarParaHigienizacao(leito.id);
+  const handleDesbloquear = () => actions.onAtualizarStatus(leito.id, 'Vago');
+  const handleFinalizarHigienizacao = () => actions.onFinalizarHigienizacao(leito.id);
+  const handleLiberarLeito = () => {
+    if (paciente) {
+      actions.onLiberarLeito(leito.id, paciente.id);
+    }
+  };
+  const handleSolicitarUTI = () => {
+    if (paciente) {
+      actions.onSolicitarUTI(paciente.id);
+    }
+  };
+  const handleConfirmarRemanejamento = (motivo: string) => {
+    if (paciente) {
+      actions.onSolicitarRemanejamento(paciente.id, motivo);
+    }
+  };
+  const handleConfirmarTransferencia = (destino: string, motivo: string) => {
+    if (paciente) {
+      actions.onTransferirPaciente(paciente.id, destino, motivo);
+    }
+  };
+  const handleCancelarReserva = () => actions.onCancelarReserva(leito.id);
+  const handleConfirmarTransferenciaInterna = () => actions.onConcluirTransferencia(leito);
+  const handleToggleProvavelAlta = () => {
+    if (paciente) {
+      actions.onToggleProvavelAlta(paciente.id, paciente.provavelAlta || false);
+    }
+  };
 
   return (
     <>
@@ -126,7 +150,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <UtiIcon className="h-4 w-4 text-red-500" />
+                            <AlertTriangle className="h-4 w-4 text-red-500" />
                           </TooltipTrigger>
                           <TooltipContent><p>Aguardando UTI</p></TooltipContent>
                         </Tooltip>
@@ -136,7 +160,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <RemanejarIcon className="h-4 w-4 text-yellow-500" />
+                            <ArrowRightLeft className="h-4 w-4 text-yellow-500" />
                           </TooltipTrigger>
                           <TooltipContent><p>Remanejamento Solicitado</p></TooltipContent>
                         </Tooltip>
@@ -146,7 +170,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger>
-                            <TransferenciaIcon className="h-4 w-4 text-blue-500" />
+                            <Ambulance className="h-4 w-4 text-blue-500" />
                           </TooltipTrigger>
                           <TooltipContent><p>Transferência Externa</p></TooltipContent>
                         </Tooltip>
@@ -259,29 +283,29 @@ const LeitoCard = (props: LeitoCardProps) => {
             {leito.statusLeito === 'Higienizacao' && (
               <div className="flex justify-center">
                 <AlertDialog>
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <CheckCircle className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                            </TooltipTrigger>
-                                            <TooltipContent><p>Finalizar Higienização</p></TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Finalizar Higienização</AlertDialogTitle>
-                                            <AlertDialogDescription>Confirmar a finalização da higienização do leito {leito.codigoLeito}?</AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => actions.onFinalizarHigienizacao(leito.id)}>Finalizar</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Finalizar Higienização</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Finalizar Higienização</AlertDialogTitle>
+                      <AlertDialogDescription>Confirmar a finalização da higienização do leito {leito.codigoLeito}?</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleFinalizarHigienizacao}>Finalizar</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div> 
             )}
             
@@ -369,7 +393,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onMoverPaciente(leito)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onMoverPaciente(leito)}>
                         <Move className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -380,7 +404,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onAbrirObs(leito)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onAbrirObs(leito)}>
                         <MessageSquarePlus className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>

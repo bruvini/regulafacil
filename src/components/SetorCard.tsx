@@ -1,15 +1,13 @@
+
 // src/components/SetorCard.tsx
 
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import LeitoCard from './LeitoCard';
 import QuartoCard from './QuartoCard';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
-import { Leito, Paciente, Setor } from '@/types/hospital'; // CORREÇÃO: Importa os tipos base
-import { LeitoEnriquecido } from '@/pages/MapaLeitos'; // CORREÇÃO: Usa apenas o tipo importado
+import { Leito, Paciente, Setor } from '@/types/hospital';
+import { LeitoEnriquecido } from '@/pages/MapaLeitos';
 
-// A definição local de LeitoEnriquecido foi REMOVIDA para evitar conflitos.
-
-// Interface de props agora usa os tipos importados e corretos
 interface SetorCardProps {
   setor: Setor & { leitos: LeitoEnriquecido[] };
   onMoverPaciente: (leito: LeitoEnriquecido) => void;
@@ -23,10 +21,12 @@ interface SetorCardProps {
   onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
   onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
   onFinalizarHigienizacao: (leitoId: string) => void;
+  onBloquearLeito: (leitoId: string, motivo: string) => void;
+  onEnviarParaHigienizacao: (leitoId: string) => void;
 }
 
 const SetorCard = (props: SetorCardProps) => {
-  const { setor, ...leitoCardActions } = props; // Agrupa todas as ações para serem repassadas
+  const { setor, ...leitoCardActions } = props;
 
   const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
   const totalLeitos = setor.leitos.length;
