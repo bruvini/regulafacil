@@ -137,6 +137,11 @@ const MapaLeitos = () => {
     await atualizarStatusLeito(leitoId, 'Higienizacao');
     toast({ title: "Sucesso!", description: "Paciente recebeu alta e o leito foi liberado." });
   };
+
+  const handleFinalizarHigienizacao = async (leitoId: string) => {
+    await atualizarStatusLeito(leitoId, 'Vago');
+    toast({ title: "Sucesso!", description: "Leito liberado e pronto para uso." });
+  };
   
   // Demais funções de ação
   const handleSolicitarUTI = async (pacienteId: string) => {
@@ -242,6 +247,7 @@ const MapaLeitos = () => {
                           // CORREÇÃO: A assinatura da função agora é compatível
                           onAtualizarStatus={(leitoId, novoStatus, detalhes) => atualizarStatusLeito(leitoId, novoStatus, detalhes)}
                           onSolicitarUTI={handleSolicitarUTI}
+                          onFinalizarHigienizacao={handleFinalizarHigienizacao}
                           onToggleProvavelAlta={handleToggleProvavelAlta}
                           // Funções de ação agora são passadas com a assinatura correta
                           onSolicitarRemanejamento={async (pacienteId, motivo) => {

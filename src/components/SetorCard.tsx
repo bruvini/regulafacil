@@ -28,6 +28,7 @@ interface SetorCardProps {
   onCancelarReserva: (leitoId: string) => void;
   onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
   onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
+  onFinalizarHigienizacao: (leitoId: string) => void;
 }
 
 const SetorCard = (props: SetorCardProps) => {
@@ -71,6 +72,7 @@ const SetorCard = (props: SetorCardProps) => {
                   setorId={setor.id!}
                   todosLeitosDoSetor={setor.leitos}
                   {...leitoCardActions}
+                  onFinalizarHigienizacao={props.onFinalizarHigienizacao}
                 />
             ))}
             {leitosSoltos.length > 0 && (
@@ -83,6 +85,7 @@ const SetorCard = (props: SetorCardProps) => {
                       leito={leito}
                       todosLeitosDoSetor={setor.leitos}
                       {...leitoCardActions}
+                      onFinalizarHigienizacao={props.onFinalizarHigienizacao}
                     />
                   ))}
               </div>

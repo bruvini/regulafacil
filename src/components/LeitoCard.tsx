@@ -25,7 +25,7 @@ interface LeitoCardProps {
   // Funções de ação passadas via props
   onAtualizarStatus: (setorId: string, leitoId: string, novoStatus: any, motivo?: string) => Promise<void>;
   onDesbloquear: (setorId: string, leitoId: string) => Promise<void>;
-  onFinalizarHigienizacao: (setorId: string, leitoId: string) => Promise<void>;
+  onFinalizarHigienizacao: (leitoId: string) => void;
   onLiberarLeito: (setorId: string, leitoId: string) => Promise<void>;
   onSolicitarUTI: (setorId: string, leitoId: string) => Promise<void>;
   onSolicitarRemanejamento: (setorId: string, leitoId: string, motivo: string) => Promise<void>;
@@ -91,7 +91,7 @@ const LeitoCard = ({
   const handleBloquear = (motivo: string) => onAtualizarStatus(setorId, leito.id, 'Bloqueado', motivo);
   const handleHigienizar = () => onAtualizarStatus(setorId, leito.id, 'Higienizacao');
   const handleDesbloquear = () => onDesbloquear(setorId, leito.id);
-  const handleFinalizarHigienizacao = () => onFinalizarHigienizacao(setorId, leito.id);
+  const handleFinalizarHigienizacao = () => onFinalizarHigienizacao(leito.id);
   const handleLiberarLeito = () => onLiberarLeito(setorId, leito.id);
   const handleSolicitarUTI = () => onSolicitarUTI(setorId, leito.id);
   const handleConfirmarRemanejamento = (motivo: string) => onSolicitarRemanejamento(setorId, leito.id, motivo);

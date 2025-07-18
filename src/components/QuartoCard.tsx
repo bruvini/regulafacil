@@ -32,6 +32,7 @@ interface QuartoCardProps {
   onCancelarReserva: (leitoId: string) => void;
   onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
   onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
+  onFinalizarHigienizacao: (leitoId: string) => void;
 }
 
 const QuartoCard = (props: QuartoCardProps) => {
@@ -84,6 +85,7 @@ const QuartoCard = (props: QuartoCardProps) => {
                 todosLeitosDoSetor={todosLeitosDoSetor}
                 // Repassando todas as funções de ação para o LeitoCard
                 {...leitoCardActions}
+                onFinalizarHigienizacao={props.onFinalizarHigienizacao}
               />
             ))}
         </div>
