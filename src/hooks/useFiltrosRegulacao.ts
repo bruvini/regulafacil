@@ -108,19 +108,27 @@ export const useFiltrosRegulacao = (pacientes: Paciente[]) => {
                             );
                             break;
                         case 'idade': {
-                            const dataA = parseDate(a.paciente?.dataNascimento || '');
-                            const dataB = parseDate(b.paciente?.dataNascimento || '');
+                            const dataA = a.paciente?.dataNascimento
+                                ? parse(a.paciente.dataNascimento, 'dd/MM/yyyy', new Date())
+                                : new Date();
+                            const dataB = b.paciente?.dataNascimento
+                                ? parse(b.paciente.dataNascimento, 'dd/MM/yyyy', new Date())
+                                : new Date();
 
-                            if (dataA && dataB) {
+                            if (isValid(dataA) && isValid(dataB)) {
                                 comparison = dataA.getTime() - dataB.getTime();
                             }
                             break;
                         }
                         case 'tempo': {
-                            const dataA = parseDate(a.paciente?.dataInternacao || '');
-                            const dataB = parseDate(b.paciente?.dataInternacao || '');
+                            const dataA = a.paciente?.dataInternacao
+                                ? parse(a.paciente.dataInternacao, 'dd/MM/yyyy HH:mm', new Date())
+                                : new Date();
+                            const dataB = b.paciente?.dataInternacao
+                                ? parse(b.paciente.dataInternacao, 'dd/MM/yyyy HH:mm', new Date())
+                                : new Date();
 
-                            if (dataA && dataB) {
+                            if (isValid(dataA) && isValid(dataB)) {
                                 comparison = dataA.getTime() - dataB.getTime();
                             }
                             break;
