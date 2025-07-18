@@ -31,7 +31,25 @@ const SetorCard = (props: SetorCardProps) => {
   const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
   const totalLeitos = setor.leitos.length;
   const taxaOcupacao = totalLeitos > 0 ? Math.round(((totalLeitos - leitosVagos) / totalLeitos) * 100) : 0;
-  const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
+  
+  // Manually group leitos by quarto while preserving LeitoEnriquecido type
+  const { quartos, leitosSoltos } = setor.leitos.reduce((acc, leito) => {
+    const codigoLeito = leito.codigoLeito;
+    const matches = codigoLeito.match(/^(\d+)([A-Za-z])$/);
+    
+    if (matches) {
+      const [, numeroQuarto] = matches;
+      if (!acc.quartos[numeroQuarto]) {
+        acc.quartos[numeroQuarto] = [];
+      }
+      acc.quartos[numeroQuarto].push(leito);
+    } else {
+      acc.leitosSoltos.push(leito);
+    }
+    
+    return acc;
+  }, { quartos: {} as Record<string, LeitoEnriquecido[]>, leitosSoltos: [] as LeitoEnriquecido[] });
+
   const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
   return (
