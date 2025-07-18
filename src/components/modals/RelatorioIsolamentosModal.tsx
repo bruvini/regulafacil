@@ -1,9 +1,12 @@
+// src/components/modals/RelatorioIsolamentosModal.tsx
 
 import { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSetores } from '@/hooks/useSetores';
+import { useLeitos } from '@/hooks/useLeitos';   // NOVO
+import { usePacientes } from '@/hooks/usePacientes'; // NOVO
 
 interface Props {
   open: boolean;
@@ -11,29 +14,49 @@ interface Props {
 }
 
 export const RelatorioIsolamentosModal = ({ open, onOpenChange }: Props) => {
+  // CORREÇÃO: Busca os dados das três fontes separadas
   const { setores } = useSetores();
+  const { leitos } = useLeitos();
+  const { pacientes } = usePacientes();
 
+  // CORREÇÃO: Lógica de dados totalmente reescrita
   const pacientesEmIsolamento = useMemo(() => {
-    const agrupados: Record<string, any[]> = {};
-    setores.forEach(setor => {
-      const pacientesDoSetor = setor.leitos
-        .filter(l => l.statusLeito === 'Ocupado' && l.dadosPaciente?.isolamentosVigentes?.length)
-        .map(l => ({
-          leito: l.codigoLeito,
-          nome: l.dadosPaciente!.nomePaciente,
-          sexo: l.dadosPaciente!.sexoPaciente.charAt(0),
-          isolamentos: l.dadosPaciente!.isolamentosVigentes!.map(i => ({
-            sigla: i.sigla,
-            dataInicio: i.dataInicioVigilancia
-          }))
-        }));
+    const mapaLeitos = new Map(leitos.map(l => [l.id, l]));
+    const mapaSetores = new Map(setores.map(s => [s.id, s]));
 
-      if (pacientesDoSetor.length > 0) {
-        agrupados[setor.nomeSetor] = pacientesDoSetor;
+    // 1. Filtra primeiro os pacientes que têm isolamento
+    const pacientesFiltrados = pacientes.filter(
+      p => p.isolamentosVigentes && p.isolamentosVigentes.length > 0
+    );
+
+    // 2. Agrupa os pacientes filtrados por nome do setor
+    const agrupados: Record<string, any[]> = {};
+
+    pacientesFiltrados.forEach(paciente => {
+      const leito = mapaLeitos.get(paciente.leitoId);
+      if (!leito) return;
+      
+      const setor = mapaSetores.get(leito.setorId);
+      if (!setor) return;
+
+      const dadosPacienteParaRelatorio = {
+        leito: leito.codigoLeito,
+        nome: paciente.nomeCompleto, // CORREÇÃO: Usa nomeCompleto
+        sexo: paciente.sexoPaciente.charAt(0),
+        isolamentos: paciente.isolamentosVigentes!.map(i => ({
+          sigla: i.sigla,
+          dataInicio: i.dataInicioVigilancia
+        }))
+      };
+
+      if (!agrupados[setor.nomeSetor]) {
+        agrupados[setor.nomeSetor] = [];
       }
+      agrupados[setor.nomeSetor].push(dadosPacienteParaRelatorio);
     });
+
     return agrupados;
-  }, [setores]);
+  }, [pacientes, leitos, setores]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,15 +68,19 @@ export const RelatorioIsolamentosModal = ({ open, onOpenChange }: Props) => {
         <div className="flex-grow min-h-0">
             <ScrollArea className="h-full pr-4 -mr-4">
               <div className="space-y-4">
-                {Object.entries(pacientesEmIsolamento).length > 0 ? (
-                    Object.entries(pacientesEmIsolamento).map(([setorNome, pacientes]) => (
+                {Object.keys(pacientesEmIsolamento).length > 0 ? (
+                    Object.entries(pacientesEmIsolamento)
+                      .sort(([setorA], [setorB]) => setorA.localeCompare(setorB)) // Ordena por nome do setor
+                      .map(([setorNome, pacientesDoSetor]) => (
                       <Card key={setorNome}>
                         <CardHeader className="py-2 px-4">
                           <CardTitle className="text-base">{setorNome}</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 pt-0">
                           <div className="space-y-2">
-                            {pacientes.map(p => (
+                            {pacientesDoSetor
+                              .sort((a,b) => a.leito.localeCompare(b.leito, undefined, { numeric: true })) // Ordena por leito
+                              .map(p => (
                               <div key={p.leito} className="text-sm border-b pb-2 last:border-b-0">
                                 <p><strong>{p.leito}:</strong> {p.nome} ({p.sexo})</p>
                                 <ul className="list-disc list-inside pl-4 mt-1">

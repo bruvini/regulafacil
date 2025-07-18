@@ -20,6 +20,8 @@ import { RegulacaoModal } from "@/components/modals/RegulacaoModal";
 import { TransferenciaModal } from "@/components/modals/TransferenciaModal";
 import { AlocacaoCirurgiaModal } from "@/components/modals/AlocacaoCirurgiaModal";
 import { GerenciarTransferenciaModal } from "@/components/modals/GerenciarTransferenciaModal";
+// src/pages/RegulacaoLeitos.tsx
+
 import {
   ResultadoValidacao,
   SyncSummary,
@@ -50,26 +52,8 @@ import { ListaPacientesPendentes } from "@/components/ListaPacientesPendentes";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
 import { ListasLaterais } from "@/components/ListasLaterais";
 import * as XLSX from "xlsx";
-
-// Tipos locais para a sincronização
-interface PacienteDaPlanilha {
-  nomeCompleto: string;
-  dataNascimento: string;
-  sexo: "Masculino" | "Feminino";
-  dataInternacao: string;
-  setorNome: string;
-  leitoCodigo: string;
-  especialidade: string;
-}
-
-interface SyncSummary {
-  novasInternacoes: PacienteDaPlanilha[];
-  transferencias: {
-    paciente: PacienteDaPlanilha;
-    leitoAntigo: string | undefined;
-  }[];
-  altas: { paciente: Paciente; leitoAntigo: string | undefined }[];
-}
+import { ScrollArea } from "@/components/ui/scroll-area"; // <-- IMPORT ADICIONADO
+import { PacientePendenteItem } from "@/components/PacientePendenteItem"; // <-- IMPORT ADICIONADO
 
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading } = useSetores();
@@ -115,9 +99,9 @@ const RegulacaoLeitos = () => {
     const mapaSetores = new Map(setores.map((s) => [s.id, s]));
     const mapaLeitos = new Map(leitos.map((l) => [l.id, l]));
 
-    console.log('RegulacaoLeitos - pacientes raw:', pacientes);
-    console.log('RegulacaoLeitos - setores:', setores);
-    console.log('RegulacaoLeitos - leitos:', leitos);
+    console.log("RegulacaoLeitos - pacientes raw:", pacientes);
+    console.log("RegulacaoLeitos - setores:", setores);
+    console.log("RegulacaoLeitos - leitos:", leitos);
 
     return pacientes.map((paciente) => {
       const leito = mapaLeitos.get(paciente.leitoId);
@@ -148,7 +132,7 @@ const RegulacaoLeitos = () => {
           : undefined,
       };
 
-      console.log('RegulacaoLeitos - paciente processado:', pacienteCompleto);
+      console.log("RegulacaoLeitos - paciente processado:", pacienteCompleto);
       return pacienteCompleto;
     });
   }, [
@@ -169,7 +153,7 @@ const RegulacaoLeitos = () => {
     setFiltrosAvancados,
     resetFiltros,
     sortConfig,
-    setSortConfig
+    setSortConfig,
   } = useFiltrosRegulacao(pacientesComDadosCompletos);
 
   const pacientesAguardandoRegulacao = filteredPacientes.filter(
@@ -602,15 +586,19 @@ const RegulacaoLeitos = () => {
 
         const pacientesDaPlanilha: PacienteDaPlanilha[] = jsonData
           .slice(3)
-          .map((row: any) => ({
-            nomeCompleto: row[0]?.trim(),
-            dataNascimento: row[1]?.trim(),
-            sexo: row[2]?.trim() === "F" ? "Feminino" : "Masculino",
-            dataInternacao: row[3]?.trim(),
-            setorNome: row[4]?.trim(),
-            leitoCodigo: row[6]?.trim(),
-            especialidade: row[7]?.trim(),
-          }))
+          .map((row: any) => {
+            const sexo =
+              row[2]?.trim().toUpperCase() === "F" ? "Feminino" : "Masculino";
+            return {
+              nomeCompleto: row[0]?.trim(),
+              dataNascimento: row[1]?.trim(),
+              sexo: sexo as "Masculino" | "Feminino", // Type assertion
+              dataInternacao: row[3]?.trim(),
+              setorNome: row[4]?.trim(),
+              leitoCodigo: row[6]?.trim(),
+              especialidade: row[7]?.trim(),
+            };
+          })
           .filter((p) => p.nomeCompleto && p.leitoCodigo && p.setorNome);
 
         setDadosPlanilhaProcessados(pacientesDaPlanilha);
@@ -653,8 +641,9 @@ const RegulacaoLeitos = () => {
         const altas = pacientes
           .filter((p) => !mapaPacientesPlanilha.has(p.nomeCompleto))
           .map((p) => ({
-            paciente: p,
-            leitoAntigo: mapaLeitosSistema.get(p.leitoId)?.codigoLeito,
+            // CORREÇÃO: Passa o nome na propriedade esperada pelo modal
+            nomePaciente: p.nomeCompleto,
+            leitoAntigo: mapaLeitosSistema.get(p.leitoId)?.codigoLeito || "N/A",
           }));
 
         const novasInternacoes = pacientesDaPlanilha.filter(
@@ -868,7 +857,7 @@ const RegulacaoLeitos = () => {
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 space-y-6">
-              <FiltrosRegulacao 
+              <FiltrosRegulacao
                 filtrosAvancados={filtrosAvancados}
                 setFiltrosAvancados={setFiltrosAvancados}
                 searchTerm={searchTerm}

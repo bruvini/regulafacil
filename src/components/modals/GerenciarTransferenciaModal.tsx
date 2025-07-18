@@ -1,36 +1,73 @@
+// src/components/modals/GerenciarTransferenciaModal.tsx
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useSetores } from '@/hooks/useSetores';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { useLeitos } from '@/hooks/useLeitos'; // Added
+import { useToast } from '@/hooks/use-toast'; // Added
+import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore'; // Added
+import { db } from '@/lib/firebase'; // Added
+import { Paciente } from '@/types/hospital'; // Added
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  paciente: any;
+  paciente: Paciente | null; // Typed correctly
 }
 
 export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Props) => {
-  const { adicionarRegistroTransferencia, concluirTransferenciaExterna, cancelarTransferencia } = useSetores();
+  const { toast } = useToast();
+  const { atualizarStatusLeito } = useLeitos();
   const [novaEtapa, setNovaEtapa] = useState('');
 
   if (!paciente) return null;
 
   const handleAddEtapa = async () => {
     if (novaEtapa.trim()) {
-      await adicionarRegistroTransferencia(paciente.setorId, paciente.leitoId, novaEtapa);
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+      const novoRegistro = {
+        etapa: novaEtapa.trim(),
+        data: new Date().toISOString(),
+      };
+      await updateDoc(pacienteRef, {
+        historicoTransferencia: arrayUnion(novoRegistro)
+      });
       setNovaEtapa('');
+      toast({ title: "Sucesso", description: "Nova etapa registrada." });
     }
+  };
+
+  const handleConcluir = async () => {
+    // This action means the patient left the hospital.
+    // It deletes the patient record and sets the bed for cleaning.
+    const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+    await deleteDoc(pacienteRef);
+    await atualizarStatusLeito(paciente.leitoId, 'Higienizacao');
+    onOpenChange(false);
+    toast({ title: "Transferência Concluída", description: `O leito ${paciente.leitoCodigo} foi liberado para higienização.` });
+  };
+
+  const handleCancelar = async () => {
+    const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+    await updateDoc(pacienteRef, {
+      transferirPaciente: false,
+      destinoTransferencia: null,
+      motivoTransferencia: null,
+      historicoTransferencia: []
+    });
+    onOpenChange(false);
+    toast({ title: "Transferência Cancelada", description: "O paciente foi removido da fila de transferência.", variant: "destructive" });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Gerenciar Transferência de: {paciente.nomePaciente}</DialogTitle>
+          {/* CORRECTION: Uses nomeCompleto */}
+          <DialogTitle>Gerenciar Transferência de: {paciente.nomeCompleto}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div>
@@ -49,8 +86,9 @@ export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Pr
           <div className="space-y-2">
             <p className="text-sm font-medium">Histórico:</p>
             <ScrollArea className="h-48 border rounded-md p-2">
-              {paciente.historicoTransferencia?.length > 0 ? (
-                paciente.historicoTransferencia.map((item: any, index: number) => (
+              {paciente.historicoTransferencia && paciente.historicoTransferencia.length > 0 ? (
+                // Sort to show the most recent first
+                [...paciente.historicoTransferencia].reverse().map((item: any, index: number) => (
                   <p key={index} className="text-sm border-b pb-1 mb-1">
                     <strong>{new Date(item.data).toLocaleString('pt-BR')}:</strong> {item.etapa}
                   </p>
@@ -63,7 +101,7 @@ export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Pr
             </ScrollArea>
           </div>
         </div>
-        <DialogFooter className="flex justify-between">
+        <DialogFooter className="flex justify-between sm:justify-between">
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive">Cancelar Transferência</Button>
@@ -77,10 +115,7 @@ export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Pr
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Voltar</AlertDialogCancel>
-                <AlertDialogAction onClick={() => { 
-                  cancelarTransferencia(paciente.setorId, paciente.leitoId); 
-                  onOpenChange(false); 
-                }}>
+                <AlertDialogAction onClick={handleCancelar}>
                   Confirmar
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -99,10 +134,7 @@ export const GerenciarTransferenciaModal = ({ open, onOpenChange, paciente }: Pr
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Voltar</AlertDialogCancel>
-                <AlertDialogAction onClick={() => { 
-                  concluirTransferenciaExterna(paciente.setorId, paciente.leitoId); 
-                  onOpenChange(false); 
-                }}>
+                <AlertDialogAction onClick={handleConcluir}>
                   Confirmar
                 </AlertDialogAction>
               </AlertDialogFooter>

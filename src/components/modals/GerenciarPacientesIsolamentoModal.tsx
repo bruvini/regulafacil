@@ -1,4 +1,6 @@
-import { useState } from 'react';
+// src/components/modals/GerenciarPacientesIsolamentoModal.tsx
+
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
-import { useSetores } from '@/hooks/useSetores';
-import { useIsolamentos } from '@/hooks/useIsolamentos';
+import { Card } from '@/components/ui/card';
 import { UserPlus, ArrowRight, Search } from 'lucide-react';
+import { useSetores } from '@/hooks/useSetores';
+import { useLeitos } from '@/hooks/useLeitos'; // NOVO
+import { usePacientes } from '@/hooks/usePacientes'; // NOVO
+import { useIsolamentos } from '@/hooks/useIsolamentos';
+import { doc, updateDoc, arrayUnion } from 'firebase/firestore'; // NOVO
+import { db } from '@/lib/firebase'; // NOVO
+import { useToast } from '@/hooks/use-toast'; // NOVO
 
 interface GerenciarPacientesIsolamentoModalProps {
   open: boolean;
@@ -26,32 +33,35 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
   const [datasIsolamentos, setDatasIsolamentos] = useState<Record<string, string>>({});
   const [buscaIsolamento, setBuscaIsolamento] = useState('');
 
-  const { setores, adicionarIsolamentoPaciente } = useSetores();
+  // CORREÇÃO: Usando os hooks corretos
+  const { setores } = useSetores();
+  const { leitos } = useLeitos();
+  const { pacientes } = usePacientes();
   const { isolamentos } = useIsolamentos();
+  const { toast } = useToast();
 
-  // Todos os pacientes ocupando leitos (podem receber novos isolamentos)
-  const pacientesDisponiveis = setores
-    .flatMap(setor => 
-      setor.leitos
-        .filter(leito => 
-          leito.statusLeito === 'Ocupado' && 
-          leito.dadosPaciente
-        )
-        .map(leito => ({
-          ...leito.dadosPaciente!,
-          setorNome: setor.nomeSetor,
-          setorId: setor.id,
-          leitoId: leito.id,
-          leitoCodigo: leito.codigoLeito
-        }))
-    )
-    .filter(paciente => {
-      const matchBusca = paciente.nomePaciente.toLowerCase().includes(busca.toLowerCase());
-      const matchSetor = setorFiltro === 'todos' || paciente.setorNome === setorFiltro;
-      return matchBusca && matchSetor;
-    });
+  // CORREÇÃO: Lógica de dados refatorada para usar as coleções separadas
+  const pacientesDisponiveis = useMemo(() => {
+    const mapaLeitos = new Map(leitos.map(l => [l.id, l]));
+    const mapaSetores = new Map(setores.map(s => [s.id, s]));
 
-  // Filtrar isolamentos com base na busca
+    return pacientes
+      .map(paciente => {
+        const leito = mapaLeitos.get(paciente.leitoId);
+        const setor = leito ? mapaSetores.get(leito.setorId) : undefined;
+        return {
+          ...paciente,
+          setorNome: setor?.nomeSetor || 'N/A',
+          leitoCodigo: leito?.codigoLeito || 'N/A',
+        };
+      })
+      .filter(paciente => {
+        const matchBusca = paciente.nomeCompleto.toLowerCase().includes(busca.toLowerCase());
+        const matchSetor = setorFiltro === 'todos' || paciente.setorNome === setorFiltro;
+        return matchBusca && matchSetor;
+      });
+  }, [pacientes, leitos, setores, busca, setorFiltro]);
+
   const isolamentosFiltrados = isolamentos.filter(iso => 
     iso.nomeMicroorganismo.toLowerCase().includes(buscaIsolamento.toLowerCase()) ||
     iso.sigla.toLowerCase().includes(buscaIsolamento.toLowerCase())
@@ -61,46 +71,46 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
     setPacienteSelecionado(paciente);
     setEtapa('isolamentos');
   };
-
+  
+  // CORREÇÃO: Função de confirmação atualizada para usar updateDoc
   const handleConfirmarIsolamentos = async () => {
     if (!pacienteSelecionado || isolamentosSelecionados.length === 0) return;
 
-    // Verificar se todos os isolamentos selecionados têm data preenchida
     const temDatasCompletas = isolamentosSelecionados.every(isolamentoId => 
       datasIsolamentos[isolamentoId] && datasIsolamentos[isolamentoId].trim() !== ''
     );
 
-    if (!temDatasCompletas) return;
-
-    // Criar array de isolamentos para adicionar
-    const isolamentosParaAdicionar = [];
+    if (!temDatasCompletas) {
+        toast({ title: "Atenção", description: "Preencha a data de início para todos os isolamentos selecionados.", variant: "destructive" });
+        return;
+    }
     
-    for (const isolamentoId of isolamentosSelecionados) {
-      const tipoIsolamento = isolamentos.find(t => t.id === isolamentoId);
-      if (tipoIsolamento) {
-        const novoIsolamento = {
+    const isolamentosParaAdicionar = isolamentosSelecionados.map(isolamentoId => {
+        const tipoIsolamento = isolamentos.find(t => t.id === isolamentoId);
+        return {
           isolamentoId,
-          sigla: tipoIsolamento.sigla,
+          sigla: tipoIsolamento!.sigla,
           dataInicioVigilancia: datasIsolamentos[isolamentoId],
           regrasCumpridas: []
         };
-        isolamentosParaAdicionar.push(novoIsolamento);
-      }
-    }
+    });
 
-    // Uma única chamada para adicionar todos os isolamentos
-    if (isolamentosParaAdicionar.length > 0) {
-      await adicionarIsolamentoPaciente(pacienteSelecionado.setorId, pacienteSelecionado.leitoId, isolamentosParaAdicionar);
-    }
+    try {
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteSelecionado.id);
+        await updateDoc(pacienteRef, {
+            isolamentosVigentes: arrayUnion(...isolamentosParaAdicionar)
+        });
+        toast({ title: "Sucesso!", description: "Isolamentos adicionados ao paciente." });
 
-    // Reset do modal
-    setEtapa('lista');
-    setPacienteSelecionado(null);
-    setIsolamentosSelecionados([]);
-    setDatasIsolamentos({});
-    setBuscaIsolamento('');
-    onOpenChange(false);
+        // Reset do modal
+        voltarParaLista();
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Erro ao adicionar isolamento:", error);
+        toast({ title: "Erro", description: "Não foi possível adicionar os isolamentos.", variant: "destructive" });
+    }
   };
+
 
   const voltarParaLista = () => {
     setEtapa('lista');
@@ -115,7 +125,6 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
       setIsolamentosSelecionados([...isolamentosSelecionados, isolamentoId]);
     } else {
       setIsolamentosSelecionados(isolamentosSelecionados.filter(id => id !== isolamentoId));
-      // Remove a data quando desmarca o isolamento
       const novasDatas = { ...datasIsolamentos };
       delete novasDatas[isolamentoId];
       setDatasIsolamentos(novasDatas);
@@ -129,7 +138,6 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
     }));
   };
 
-  // Verificar se todos os isolamentos selecionados têm data preenchida
   const todasDatasPreenchidas = isolamentosSelecionados.length > 0 && 
     isolamentosSelecionados.every(isolamentoId => 
       datasIsolamentos[isolamentoId] && datasIsolamentos[isolamentoId].trim() !== ''
@@ -141,7 +149,8 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            {etapa === 'lista' ? 'Gerenciar Pacientes em Vigilância' : `Adicionar Isolamento - ${pacienteSelecionado?.nomePaciente}`}
+            {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
+            {etapa === 'lista' ? 'Gerenciar Pacientes em Vigilância' : `Adicionar Isolamento - ${pacienteSelecionado?.nomeCompleto}`}
           </DialogTitle>
           <DialogDescription>
             {etapa === 'lista' 
@@ -177,10 +186,11 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
             <ScrollArea className="h-96">
               <div className="space-y-2">
                 {pacientesDisponiveis.map(paciente => (
-                  <Card key={`${paciente.setorId}-${paciente.leitoId}`} className="p-4">
+                  <Card key={paciente.id} className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold">{paciente.nomePaciente}</p>
+                        {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
+                        <p className="font-semibold">{paciente.nomeCompleto}</p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Badge variant="outline">{paciente.sexoPaciente?.charAt(0)}</Badge>
                           <span>{paciente.setorNome}</span>
@@ -206,6 +216,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
             </ScrollArea>
           </div>
         ) : (
+          // O JSX da etapa 'isolamentos' permanece o mesmo, pois já está correto
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />

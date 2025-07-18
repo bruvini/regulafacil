@@ -1,3 +1,4 @@
+// src/components/modals/RegulacaoModal.tsx
 
 import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -7,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AlertTriangle, Copy, CheckCircle, BedDouble } from 'lucide-react';
-import { DadosPaciente } from '@/types/hospital';
+import { Paciente } from '@/types/hospital'; // CORREÇÃO: Importa o tipo correto
 import { useLeitoFinder } from '@/hooks/useLeitoFinder';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
@@ -16,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 interface RegulacaoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  paciente: DadosPaciente | null;
+  paciente: Paciente | null; // CORREÇÃO: Usa o tipo Paciente
   origem: { setor: string, leito: string };
   onConfirmRegulacao: (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => void;
   isAlteracao?: boolean;
@@ -91,7 +92,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
 
     if (isAlteracao) {
       return `⚠️ ALTERAÇÃO DE REGULAÇÃO ⚠️
-Paciente: ${paciente.nomePaciente} - ${paciente.sexoPaciente} - ${idade} anos
+Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
 Origem: ${origem.setor} - ${origem.leito}
 Regulação Prévia: ${(paciente as any).regulacao?.paraSetorSigla || 'N/A'} - ${(paciente as any).regulacao?.paraLeito || 'N/A'}
 Novo Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
@@ -100,7 +101,7 @@ Isolamento: ${isolamentos}${motivoAlt}${obs}
 Data e hora da alteração: ${new Date().toLocaleString('pt-BR')}`;
     } else {
       return `⚠️ LEITO REGULADO ⚠️
-Paciente: ${paciente.nomePaciente} - ${paciente.sexoPaciente} - ${idade} anos
+Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
 Origem: ${origem.setor} - ${origem.leito}
 Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
 Isolamento: ${isolamentos}${obs}
@@ -212,7 +213,8 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                 </div>
               )}
               <div className="p-4 bg-blue-50 dark:bg-blue-900/50 rounded-lg border border-blue-200">
-                  <p className="whitespace-pre-wrap font-mono text-xs">{getMensagemConfirmacao()}</p>
+                {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
+                <p className="whitespace-pre-wrap font-mono text-xs">{getMensagemConfirmacao()}</p>
               </div>
               <Textarea 
                 placeholder={isAlteracao ? "Descreva o motivo da alteração..." : "Adicionar observações do NIR (opcional)..."} 
@@ -242,7 +244,8 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {modo === 'uti' ? 'Regular Leito de UTI para' : isAlteracao ? 'Alterar Regulação para' : 'Regular Leito para'}: {paciente?.nomePaciente}
+            {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
+            {modo === 'uti' ? 'Regular Leito de UTI para' : isAlteracao ? 'Alterar Regulação para' : 'Regular Leito para'}: {paciente?.nomeCompleto}
           </DialogTitle>
         </DialogHeader>
         {renderContent()}

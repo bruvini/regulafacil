@@ -1,20 +1,51 @@
+// src/components/QuartoCard.tsx
 
 import { useMemo } from 'react';
-import { LeitoExtendido } from '@/hooks/useSetores';
 import LeitoCard from './LeitoCard';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { AlertTriangle } from 'lucide-react';
+import { Leito, Paciente } from '@/types/hospital';
 
+// Tipo para os dados enriquecidos que o card espera receber
+// (Este tipo espelha a estrutura criada no MapaLeitos.tsx)
+type LeitoEnriquecido = Leito & {
+  statusLeito: string;
+  dataAtualizacaoStatus: string;
+  motivoBloqueio?: string;
+  regulacao?: any;
+  dadosPaciente?: Paciente | null;
+};
+
+// CORREÇÃO: A interface de props foi expandida para incluir todas as funções necessárias pelo LeitoCard
 interface QuartoCardProps {
   nomeQuarto: string;
-  leitos: LeitoExtendido[];
+  leitos: LeitoEnriquecido[];
   setorId: string;
-  todosLeitosDoSetor: LeitoExtendido[];
-  onMoverPaciente: (leito: LeitoExtendido) => void;
+  todosLeitosDoSetor: LeitoEnriquecido[];
+  onMoverPaciente: (leito: LeitoEnriquecido) => void;
+  onAbrirObs: (leito: LeitoEnriquecido) => void;
+  onLiberarLeito: (leitoId: string, pacienteId: string) => void;
+  onAtualizarStatus: (leitoId: string, novoStatus: any, motivo?: string) => void;
+  onSolicitarUTI: (pacienteId: string) => void;
+  onSolicitarRemanejamento: (pacienteId: string, motivo: string) => void;
+  onTransferirPaciente: (pacienteId: string, destino: string, motivo: string) => void;
+  onCancelarReserva: (leitoId: string) => void;
+  onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
+  onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
 }
 
-const QuartoCard = ({ nomeQuarto, leitos, setorId, todosLeitosDoSetor, onMoverPaciente }: QuartoCardProps) => {
+const QuartoCard = (props: QuartoCardProps) => {
+  const { 
+    nomeQuarto, 
+    leitos, 
+    setorId, 
+    todosLeitosDoSetor, 
+    onMoverPaciente, 
+    onAbrirObs,
+    ...leitoCardActions // Agrupa todas as outras funções de ação
+  } = props;
+
   const hasMixedGenders = useMemo(() => {
     const genders = new Set(
       leitos
@@ -24,12 +55,6 @@ const QuartoCard = ({ nomeQuarto, leitos, setorId, todosLeitosDoSetor, onMoverPa
     );
     return genders.size > 1;
   }, [leitos]);
-
-  // Função stub para onAbrirObs (não implementada no QuartoCard)
-  const handleAbrirObs = (leito: LeitoExtendido) => {
-    // Esta função poderia ser implementada no futuro se necessário
-    console.log('Abrir observações para:', leito.codigoLeito);
-  };
 
   return (
     <Card className="bg-muted/30 border-2 border-dashed p-2">
@@ -60,10 +85,11 @@ const QuartoCard = ({ nomeQuarto, leitos, setorId, todosLeitosDoSetor, onMoverPa
               <LeitoCard
                 key={leito.id}
                 leito={leito}
-                setorId={setorId}
                 todosLeitosDoSetor={todosLeitosDoSetor}
                 onMoverPaciente={onMoverPaciente}
-                onAbrirObs={handleAbrirObs}
+                onAbrirObs={onAbrirObs}
+                // CORREÇÃO: Repassando todas as funções de ação para o LeitoCard
+                {...leitoCardActions}
               />
             ))}
         </div>
