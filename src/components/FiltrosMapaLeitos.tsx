@@ -1,3 +1,4 @@
+// src/components/FiltrosMapaLeitos.tsx
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +36,8 @@ interface FiltrosMapaLeitosProps {
 
 export const FiltrosMapaLeitos = ({ 
   setores, 
-  filtros, 
+  // CORREÇÃO: Adicionado um objeto padrão para a prop 'filtros'
+  filtros = { especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', aguardaUTI: '', isolamentos: [] }, 
   setFiltros, 
   searchTerm, 
   setSearchTerm, 
@@ -45,6 +47,11 @@ export const FiltrosMapaLeitos = ({
 }: FiltrosMapaLeitosProps) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
+
+  // CORREÇÃO: Camada extra de segurança para evitar renderização sem os filtros
+  if (!filtros) {
+    return null; 
+  }
 
   const handleMultiSelectChange = (id: string) => {
     const currentIsolamentos = filtros.isolamentos || [];
