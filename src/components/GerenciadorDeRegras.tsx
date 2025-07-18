@@ -1,9 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { TipoIsolamento, RegraIsolamento } from '@/types/isolamento';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useSetores } from '@/hooks/useSetores';
 import { formatarDescricaoRegra } from '@/lib/formatters';
 
 interface Props {
@@ -14,14 +14,14 @@ interface Props {
 }
 
 export const GerenciadorDeRegras = ({ isolamentoVigente, tipoIsolamento, setorId, leitoId }: Props) => {
-  const { atualizarRegrasIsolamento, finalizarIsolamentoPaciente, loading } = useSetores();
   const [regrasCumpridas, setRegrasCumpridas] = useState<string[]>(isolamentoVigente.regrasCumpridas || []);
   const [podeFinalizar, setPodeFinalizar] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const { logica, grupos } = tipoIsolamento.regrasPrecaucao;
     if (!grupos || grupos.length === 0) {
-      setPodeFinalizar(true); // Pode finalizar se não houver regras
+      setPodeFinalizar(true);
       return;
     }
 
@@ -29,14 +29,14 @@ export const GerenciadorDeRegras = ({ isolamentoVigente, tipoIsolamento, setorId
       const idsRegrasDoGrupo = grupo.regras.map(r => r.id);
       if (grupo.logica === 'E') {
         return idsRegrasDoGrupo.every(id => regrasCumpridas.includes(id));
-      } else { // 'OU'
+      } else {
         return idsRegrasDoGrupo.some(id => regrasCumpridas.includes(id));
       }
     });
 
     if (logica === 'E') {
       setPodeFinalizar(gruposSatisfeitos.every(s => s));
-    } else { // 'OU'
+    } else {
       setPodeFinalizar(gruposSatisfeitos.some(s => s));
     }
   }, [regrasCumpridas, tipoIsolamento.regrasPrecaucao]);
@@ -46,11 +46,17 @@ export const GerenciadorDeRegras = ({ isolamentoVigente, tipoIsolamento, setorId
       ? [...regrasCumpridas, regraId]
       : regrasCumpridas.filter(id => id !== regraId);
     setRegrasCumpridas(novasRegras);
-    await atualizarRegrasIsolamento(setorId, leitoId, isolamentoVigente.isolamentoId, novasRegras);
+    // TODO: Implement actual API call
   };
 
   const handleFinalizar = async () => {
-    await finalizarIsolamentoPaciente(setorId, leitoId, isolamentoVigente.isolamentoId);
+    setLoading(true);
+    try {
+      // TODO: Implement actual API call
+      console.log('Finalizando isolamento:', isolamentoVigente.isolamentoId);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

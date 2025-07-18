@@ -1,5 +1,6 @@
+
 import { useMemo } from 'react';
-import { Leito } from '@/types/hospital';
+import { LeitoExtendido } from '@/hooks/useSetores';
 import LeitoCard from './LeitoCard';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
@@ -7,10 +8,10 @@ import { AlertTriangle } from 'lucide-react';
 
 interface QuartoCardProps {
   nomeQuarto: string;
-  leitos: Leito[];
+  leitos: LeitoExtendido[];
   setorId: string;
-  todosLeitosDoSetor: Leito[];
-  onMoverPaciente: (leito: Leito) => void;
+  todosLeitosDoSetor: LeitoExtendido[];
+  onMoverPaciente: (leito: LeitoExtendido) => void;
 }
 
 const QuartoCard = ({ nomeQuarto, leitos, setorId, todosLeitosDoSetor, onMoverPaciente }: QuartoCardProps) => {
@@ -25,7 +26,7 @@ const QuartoCard = ({ nomeQuarto, leitos, setorId, todosLeitosDoSetor, onMoverPa
   }, [leitos]);
 
   // Função stub para onAbrirObs (não implementada no QuartoCard)
-  const handleAbrirObs = (leito: Leito) => {
+  const handleAbrirObs = (leito: LeitoExtendido) => {
     // Esta função poderia ser implementada no futuro se necessário
     console.log('Abrir observações para:', leito.codigoLeito);
   };

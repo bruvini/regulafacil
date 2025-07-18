@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { Setor } from '@/types/hospital';
 import { useSetores } from './useSetores';
 
 export interface AlertaIncompatibilidade {
@@ -59,8 +58,8 @@ export const useAlertasIsolamento = () => {
       if (temIncompatibilidade) {
         const motivo = `Risco de contaminação cruzada. Paciente com isolamento por [${isolamentosPaciente.join(', ')}]`;
         novosAlertas.push({
-            pacienteId: dadosPaciente.nomePaciente, // Usando nome como ID temporário
-            nomePaciente: dadosPaciente.nomePaciente,
+            pacienteId: dadosPaciente.nomeCompleto, // Usando nomeCompleto como ID temporário
+            nomePaciente: dadosPaciente.nomeCompleto,
             setorNome: leitoComIsolamento.setorNome,
             leitoCodigo: leitoComIsolamento.codigoLeito,
             isolamentos: isolamentosPaciente,

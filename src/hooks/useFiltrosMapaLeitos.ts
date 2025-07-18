@@ -1,6 +1,6 @@
 
 import { useState, useMemo } from 'react';
-import { Setor } from '@/types/hospital';
+import { SetorComLeitos } from './useSetores';
 
 const especialidades = [
   "CIRURGIA CABECA E PESCOCO", "CIRURGIA GERAL", "CIRURGIA TORACICA",
@@ -12,7 +12,7 @@ const especialidades = [
 
 const todosStatus = ['Vago', 'Ocupado', 'Bloqueado', 'Higienizacao', 'Regulado', 'Reservado'];
 
-export const useFiltrosMapaLeitos = (setores: Setor[]) => {
+export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filtrosAvancados, setFiltrosAvancados] = useState({
     especialidade: '',
@@ -41,7 +41,7 @@ export const useFiltrosMapaLeitos = (setores: Setor[]) => {
           const leitosFiltrados = setor.leitos.filter(
             leito =>
               leito.codigoLeito.toLowerCase().includes(lowerCaseSearch) ||
-              leito.dadosPaciente?.nomePaciente?.toLowerCase().includes(lowerCaseSearch)
+              leito.dadosPaciente?.nomeCompleto?.toLowerCase().includes(lowerCaseSearch)
           );
           return { ...setor, leitos: leitosFiltrados };
         })

@@ -1,12 +1,12 @@
 
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { Setor, Leito } from '@/types/hospital';
+import { SetorComLeitos, LeitoExtendido } from '@/hooks/useSetores';
 import LeitoCard from './LeitoCard';
 
 interface SetorCardProps {
-  setor: Setor;
-  onMoverPaciente: (leito: Leito) => void;
-  onAbrirObs: (leito: Leito) => void;
+  setor: SetorComLeitos;
+  onMoverPaciente: (leito: LeitoExtendido) => void;
+  onAbrirObs: (leito: LeitoExtendido) => void;
 }
 
 const SetorCard = ({ setor, onMoverPaciente, onAbrirObs }: SetorCardProps) => {
