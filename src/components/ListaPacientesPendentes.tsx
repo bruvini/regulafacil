@@ -11,6 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PacientePendenteItem } from './PacientePendenteItem';
+import { parse } from 'date-fns';
 
 interface ListaPacientesPendentesProps {
   titulo: string;
@@ -20,7 +21,7 @@ interface ListaPacientesPendentesProps {
     leitoCodigo: string;
     leitoId: string;
     statusLeito: string;
-    regulacao?: unknown;
+    regulacao?: any;
   })[];
   onRegularClick: (paciente: Paciente) => void;
   onAlta?: (leitoId: string) => void;
@@ -38,6 +39,14 @@ export const ListaPacientesPendentes = ({
   onAlterar,
   onCancelar
 }: ListaPacientesPendentesProps) => {
+  const pacientesOrdenados = [...pacientes].sort((a, b) => {
+    const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+    const dataB = parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+    return dataA.getTime() - dataB.getTime();
+  });
+
+  console.log('ListaPacientesPendentes - pacientes recebidos:', pacientes);
+  console.log('ListaPacientesPendentes - pacientes ordenados:', pacientesOrdenados);
 
   return (
     <Card className="flex flex-col">
@@ -49,7 +58,7 @@ export const ListaPacientesPendentes = ({
         {pacientes.length > 0 ? (
           <ScrollArea className="h-72 p-2">
             <div className="space-y-2">
-              {pacientes.map((paciente) => (
+              {pacientesOrdenados.map((paciente) => (
                 <PacientePendenteItem
                   key={`${paciente.id}-${paciente.leitoId}`}
                   paciente={paciente}
