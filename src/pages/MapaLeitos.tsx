@@ -1,3 +1,4 @@
+
 // src/pages/MapaLeitos.tsx
 
 import { useState, useMemo } from 'react';
@@ -89,7 +90,7 @@ const MapaLeitos = () => {
 
   const { setoresEnriquecidos } = dadosCombinados;
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
-  const { filteredSetores, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
+  const { filteredSetores, searchTerm, setSearchTerm, filtrosAvancados, setFiltrosAvancados, resetFiltros, especialidades, todosStatus } = useFiltrosMapaLeitos(setoresEnriquecidos);
 
   // --- Funções de Ação Centralizadas ---
   const handleOpenMovimentacaoModal = (leito: LeitoEnriquecido) => {
@@ -179,7 +180,13 @@ const MapaLeitos = () => {
             <div className="lg:col-span-2">
               <FiltrosMapaLeitos 
                 setores={setores} 
-                {...filtrosProps} 
+                filtros={filtrosAvancados}
+                setFiltros={setFiltrosAvancados}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                resetFiltros={resetFiltros}
+                especialidades={especialidades}
+                todosStatus={todosStatus}
               />
             </div>
             <div className="lg:col-span-1">
