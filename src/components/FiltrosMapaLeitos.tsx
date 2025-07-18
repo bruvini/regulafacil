@@ -1,3 +1,4 @@
+
 // src/components/FiltrosMapaLeitos.tsx
 
 import { useState } from 'react';
@@ -26,6 +27,15 @@ interface FiltrosMapaLeitosProps {
     aguardaUTI: string;
     isolamentos: string[];
   };
+  filtrosAvancados: {
+    especialidade: string;
+    setor: string;
+    sexo: string;
+    status: string;
+    provavelAlta: string;
+    aguardaUTI: string;
+    isolamentos: string[];
+  };
   setFiltros: (filtros: any) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -36,8 +46,8 @@ interface FiltrosMapaLeitosProps {
 
 export const FiltrosMapaLeitos = ({ 
   setores, 
-  // CORREÇÃO: Adicionado um objeto padrão para a prop 'filtros'
-  filtros = { especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', aguardaUTI: '', isolamentos: [] }, 
+  // CORREÇÃO: Usando filtrosAvancados como prop principal
+  filtrosAvancados = { especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', aguardaUTI: '', isolamentos: [] }, 
   setFiltros, 
   searchTerm, 
   setSearchTerm, 
@@ -48,19 +58,19 @@ export const FiltrosMapaLeitos = ({
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
 
-  // CORREÇÃO: Camada extra de segurança para evitar renderização sem os filtros
-  if (!filtros) {
+  // CORREÇÃO: Usando filtrosAvancados em vez de filtros
+  if (!filtrosAvancados) {
     return null; 
   }
 
   const handleMultiSelectChange = (id: string) => {
-    const currentIsolamentos = filtros.isolamentos || [];
+    const currentIsolamentos = filtrosAvancados.isolamentos || [];
     const isSelected = currentIsolamentos.includes(id);
 
     if (isSelected) {
-      setFiltros({ ...filtros, isolamentos: currentIsolamentos.filter(isoId => isoId !== id) });
+      setFiltros({ ...filtrosAvancados, isolamentos: currentIsolamentos.filter(isoId => isoId !== id) });
     } else {
-      setFiltros({ ...filtros, isolamentos: [...currentIsolamentos, id] });
+      setFiltros({ ...filtrosAvancados, isolamentos: [...currentIsolamentos, id] });
     }
   };
 
@@ -97,7 +107,7 @@ export const FiltrosMapaLeitos = ({
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4 p-4 border rounded-lg space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Select value={filtros.especialidade} onValueChange={(v) => setFiltros({...filtros, especialidade: v})}>
+              <Select value={filtrosAvancados.especialidade} onValueChange={(v) => setFiltros({...filtrosAvancados, especialidade: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Especialidade" />
                 </SelectTrigger>
@@ -108,7 +118,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
               
-              <Select value={filtros.setor} onValueChange={(v) => setFiltros({...filtros, setor: v})}>
+              <Select value={filtrosAvancados.setor} onValueChange={(v) => setFiltros({...filtrosAvancados, setor: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Setor" />
                 </SelectTrigger>
@@ -119,7 +129,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
               
-              <Select value={filtros.sexo} onValueChange={(v) => setFiltros({...filtros, sexo: v})}>
+              <Select value={filtrosAvancados.sexo} onValueChange={(v) => setFiltros({...filtrosAvancados, sexo: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sexo" />
                 </SelectTrigger>
@@ -129,7 +139,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
               
-              <Select value={filtros.status} onValueChange={(v) => setFiltros({...filtros, status: v})}>
+              <Select value={filtrosAvancados.status} onValueChange={(v) => setFiltros({...filtrosAvancados, status: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status do Leito" />
                 </SelectTrigger>
@@ -140,7 +150,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
 
-              <Select value={filtros.provavelAlta} onValueChange={(v) => setFiltros({...filtros, provavelAlta: v})}>
+              <Select value={filtrosAvancados.provavelAlta} onValueChange={(v) => setFiltros({...filtrosAvancados, provavelAlta: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Alta Provável" />
                 </SelectTrigger>
@@ -150,7 +160,7 @@ export const FiltrosMapaLeitos = ({
                 </SelectContent>
               </Select>
 
-              <Select value={filtros.aguardaUTI} onValueChange={(v) => setFiltros({...filtros, aguardaUTI: v})}>
+              <Select value={filtrosAvancados.aguardaUTI} onValueChange={(v) => setFiltros({...filtrosAvancados, aguardaUTI: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Aguardando UTI" />
                 </SelectTrigger>
@@ -166,8 +176,8 @@ export const FiltrosMapaLeitos = ({
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start font-normal mt-2">
-                    {filtros.isolamentos.length > 0
-                      ? `${filtros.isolamentos.length} selecionado(s)`
+                    {filtrosAvancados.isolamentos.length > 0
+                      ? `${filtrosAvancados.isolamentos.length} selecionado(s)`
                       : "Selecione um ou mais isolamentos"}
                   </Button>
                 </PopoverTrigger>
@@ -186,7 +196,7 @@ export const FiltrosMapaLeitos = ({
                             <div
                               className={cn(
                                 "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                filtros.isolamentos.includes(iso.id!)
+                                filtrosAvancados.isolamentos.includes(iso.id!)
                                   ? "bg-primary text-primary-foreground"
                                   : "opacity-50 [&_svg]:invisible"
                               )}

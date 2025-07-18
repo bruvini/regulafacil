@@ -26,10 +26,10 @@ import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 
-// Tipo padronizado que será usado por todos os componentes filhos
+// Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
 export type LeitoEnriquecido = Leito & {
   statusLeito: HistoricoMovimentacao['statusLeito'];
-  dataAtualizacaoStatus: string;
+  dataAtualizacaoStatus?: string;
   motivoBloqueio?: string;
   regulacao?: any;
   dadosPaciente?: Paciente | null;
@@ -313,7 +313,7 @@ const MapaLeitos = () => {
                       </AccordionTrigger>
                       <AccordionContent className="p-4">
                         <SetorCard 
-                            setor={setor}
+                            setor={setor as any}
                             onMoverPaciente={handleOpenMovimentacaoModal}
                             onAbrirObs={handleOpenObsModal}
                             onLiberarLeito={handleLiberarLeito}
