@@ -43,18 +43,16 @@ interface TemposMedias {
 // Helper para tentar formatar datas que podem vir em formatos diferentes
 const safeParseDate = (dateString: string | undefined | null): Date | null => {
     if (!dateString) return null;
-    // Tenta formato ISO (padrão de new Date().toISOString())
-    let date = new Date(dateString);
+    let date = new Date(dateString); // Tenta formato ISO
     if (isValid(date)) return date;
-    // Tenta formato 'dd/MM/yyyy HH:mm'
-    date = parse(dateString, 'dd/MM/yyyy HH:mm', new Date());
+    date = parse(dateString, 'dd/MM/yyyy HH:mm', new Date()); // Tenta formato BR
     if (isValid(date)) return date;
     return null;
 };
 
 const formatarDuracao = (dataInicio: string | undefined | null): string => {
     const dataEntrada = safeParseDate(dataInicio);
-    if (!dataEntrada) return 'N/A';
+    if (!dataEntrada) return 'N/A'; // Retorna 'N/A' se a data for inválida
 
     const diferencaMinutos = differenceInMinutes(new Date(), dataEntrada);
     if (diferencaMinutos < 0) return 'Recente';
@@ -127,6 +125,7 @@ export const IndicadoresRegulacao = ({
 
         const tempoTotal = duracoesEmMinutos.reduce((acc, curr) => acc + curr, 0);
         const tempoMedioMinutos = tempoTotal / duracoesEmMinutos.length;
+        // Reusa a função de formatação para consistência
         return formatarDuracao(new Date(Date.now() - tempoMedioMinutos * 60000).toISOString());
     };
     
@@ -135,7 +134,7 @@ export const IndicadoresRegulacao = ({
       aguardandoConclusao: calcularTempoMedio(pacientesJaRegulados, 'dataAtualizacaoStatus'),
       aguardandoTransferencia: calcularTempoMedio(pacientesAguardandoTransferencia, 'dataTransferencia'),
     };
-  }, [pacientesAguardandoRegulacao, pacientesJaRegulados, pacientesAguardandoTransferencia, decisaoClinica, decisaoCirurgica]);
+  }, [pacientesJaRegulados, pacientesAguardandoTransferencia, decisaoClinica, decisaoCirurgica]);
 
   // Card 4: Demanda vs. Disponibilidade Real
   const capacidadeReal = useMemo(() => {
