@@ -629,7 +629,7 @@ const RegulacaoLeitos = () => {
           return;
         }
 
-        // --- GERAÇÃO DE RESUMO CORRIGIDA ---
+        // --- GERAÇÃO DE RESUMO CORRIGIDA
         const mapaPacientesPlanilha = new Map(
           pacientesDaPlanilha.map((p) => [p.nomeCompleto, p])
         );
