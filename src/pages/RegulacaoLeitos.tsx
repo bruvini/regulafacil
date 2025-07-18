@@ -53,6 +53,13 @@ import { ListasLaterais } from "@/components/ListasLaterais";
 import * as XLSX from "xlsx";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PacientePendenteItem } from "@/components/PacientePendenteItem";
+import { Download, FileText } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const RegulacaoLeitos = () => {
   const { setores, loading: setoresLoading } = useSetores();
@@ -122,8 +129,9 @@ const RegulacaoLeitos = () => {
         setorOrigem: setor?.nomeSetor || "N/A",
         siglaSetorOrigem: setor?.siglaSetor || "N/A",
         statusLeito: historicoRecente?.statusLeito || "Vago",
+        dataAtualizacaoStatus: historicoRecente?.dataAtualizacaoStatus,
         regulacao: historicoRecente?.infoRegulacao
-          ? { ...historicoRecente.infoRegulacao, paraSetorSigla, dataAtualizacaoStatus: historicoRecente.dataAtualizacaoStatus }
+          ? { ...historicoRecente.infoRegulacao, paraSetorSigla }
           : undefined,
       };
 
@@ -138,7 +146,11 @@ const RegulacaoLeitos = () => {
     pacientesLoading,
   ]);
 
-  // --- Filtragem e Listas Derivadas ---
+  const pacientesAguardandoRegulacao = pacientesComDadosCompletos.filter(
+    (p) => p.statusLeito === "Ocupado"
+  );
+
+  // --- Filtragem com Escopo Corrigido ---
   const {
     filteredPacientes,
     searchTerm,
@@ -148,32 +160,31 @@ const RegulacaoLeitos = () => {
     resetFiltros,
     sortConfig,
     setSortConfig,
-  } = useFiltrosRegulacao(pacientesComDadosCompletos);
+  } = useFiltrosRegulacao(pacientesAguardandoRegulacao);
 
-  const pacientesAguardandoRegulacao = filteredPacientes.filter(
-    (p) => p.statusLeito === "Ocupado"
-  );
-  const pacientesJaRegulados = filteredPacientes.filter(
+  // --- Listas Derivadas (algumas do filtro, outras da fonte original) ---
+  const pacientesAguardandoRegulacaoFiltrados = filteredPacientes;
+  const pacientesJaRegulados = pacientesComDadosCompletos.filter(
     (p) => p.statusLeito === "Regulado"
   );
-  const pacientesAguardandoUTI = filteredPacientes.filter((p) => p.aguardaUTI);
-  const pacientesAguardandoTransferencia = filteredPacientes.filter(
+  const pacientesAguardandoUTI = pacientesComDadosCompletos.filter((p) => p.aguardaUTI);
+  const pacientesAguardandoTransferencia = pacientesComDadosCompletos.filter(
     (p) => p.transferirPaciente
   );
-  // CORREÇÃO: Filtrar pacientes aguardando remanejamento que ainda não foram regulados
-  const pacientesAguardandoRemanejamento = filteredPacientes.filter(
+  const pacientesAguardandoRemanejamento = pacientesComDadosCompletos.filter(
     (p) => p.remanejarPaciente && p.statusLeito !== 'Regulado'
   );
-  const decisaoCirurgica = pacientesAguardandoRegulacao.filter(
+  
+  // Derivadas dos pacientes filtrados (para ordenação)
+  const decisaoCirurgica = pacientesAguardandoRegulacaoFiltrados.filter(
     (p) => p.setorOrigem === "PS DECISÃO CIRURGICA"
   );
-  const decisaoClinica = pacientesAguardandoRegulacao.filter(
+  const decisaoClinica = pacientesAguardandoRegulacaoFiltrados.filter(
     (p) => p.setorOrigem === "PS DECISÃO CLINICA"
   );
-  const recuperacaoCirurgica = pacientesAguardandoRegulacao.filter(
+  const recuperacaoCirurgica = pacientesAguardandoRegulacaoFiltrados.filter(
     (p) => p.setorOrigem === "CC - RECUPERAÇÃO"
   );
-  // CORREÇÃO: Contador correto baseado nos setores específicos
   const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 
   // Combinação de todos os pacientes pendentes para o useEffect
@@ -291,7 +302,6 @@ const RegulacaoLeitos = () => {
     setPacienteParaAcao(null);
   };
 
-  // CORREÇÃO: Usar null em vez de undefined para o Firestore
   const cancelarPedidoUTI = async (paciente: Paciente) => {
     const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
     await updateDoc(pacienteRef, {
@@ -305,7 +315,6 @@ const RegulacaoLeitos = () => {
     toast({ title: "Sucesso", description: "Pedido de UTI cancelado." });
   };
 
-  // CORREÇÃO: Usar null em vez de undefined para o Firestore
   const handleCancelarRemanejamento = async (paciente: Paciente) => {
     const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
     await updateDoc(pacienteRef, {
@@ -805,15 +814,53 @@ const RegulacaoLeitos = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-medical-primary">
-            Central de Regulação
-          </h1>
-          <p className="text-muted-foreground">
-            Visão geral e controle das solicitações e pendências de leitos.
-          </p>
+        
+        {/* Header Redesenhado */}
+        <header className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-medical-primary">
+              Central de Regulação
+            </h1>
+            <p className="text-muted-foreground">
+              Visão geral e controle das solicitações e pendências de leitos.
+            </p>
+          </div>
+          
+          {/* Ações Rápidas movidas para o header */}
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setImportModalOpen(true)}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Importar pacientes MV</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Gerar Passagem de Plantão</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </header>
 
+        {/* Indicadores com novo componente */}
         <Card className="shadow-card border border-border/50">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-medical-primary">
@@ -822,7 +869,7 @@ const RegulacaoLeitos = () => {
           </CardHeader>
           <CardContent>
             <IndicadoresRegulacao
-              pacientesAguardandoRegulacao={pacientesAguardandoRegulacao}
+              pacientesAguardandoRegulacao={pacientesAguardandoRegulacaoFiltrados}
               pacientesJaRegulados={pacientesJaRegulados}
               pacientesAguardandoRemanejamento={pacientesAguardandoRemanejamento}
               pacientesAguardandoUTI={pacientesAguardandoUTI}
@@ -835,8 +882,6 @@ const RegulacaoLeitos = () => {
             />
           </CardContent>
         </Card>
-
-        <AcoesRapidas onImportarClick={() => setImportModalOpen(true)} />
 
         <ListasLaterais
           pacientesAguardandoUTI={pacientesAguardandoUTI}
