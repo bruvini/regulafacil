@@ -24,6 +24,7 @@ import { Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 // Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
 export type LeitoEnriquecido = Leito & {
@@ -156,7 +157,10 @@ const MapaLeitos = () => {
   
   const handleSolicitarUTI = async (pacienteId: string) => {
     try {
-      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { aguardaUTI: true });
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), {
+        aguardaUTI: true,
+        dataPedidoUTI: format(new Date(), "dd/MM/yyyy HH:mm"),
+      });
       toast({ title: "Sucesso!", description: "Solicitação de UTI registrada." });
     } catch (error) {
       console.error('Erro ao solicitar UTI:', error);
@@ -179,10 +183,11 @@ const MapaLeitos = () => {
 
   const handleTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => {
     try {
-      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { 
-        transferirPaciente: true, 
-        destinoTransferencia: destino, 
-        motivoTransferencia: motivo 
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), {
+        transferirPaciente: true,
+        destinoTransferencia: destino,
+        motivoTransferencia: motivo,
+        dataTransferencia: format(new Date(), "dd/MM/yyyy HH:mm"),
       });
       toast({ title: "Sucesso!", description: "Transferência registrada." });
     } catch (error) {
