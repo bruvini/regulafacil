@@ -93,17 +93,16 @@ export const IndicadoresRegulacao = ({
   const pontosAtencao = useMemo(() => {
     const solicitacoesCriticas = pacientesAguardandoUTI.length + pacientesAguardandoTransferencia.length;
     
-    let tempoMaximoUTI = '0m';
-    if (pacientesAguardandoUTI.length > 0) {
-        const datasPedidos = pacientesAguardandoUTI
-            .map(p => safeParseDate(p.dataPedidoUTI))
-            .filter((d): d is Date => d !== null);
+    const datasPedidos = pacientesAguardandoUTI
+        .map(p => safeParseDate(p.dataPedidoUTI))
+        .filter((d): d is Date => d !== null);
 
-        if (datasPedidos.length > 0) {
-            const dataMaisAntiga = new Date(Math.min.apply(null, datasPedidos.map(d => d.getTime())));
-            tempoMaximoUTI = formatarDuracao(dataMaisAntiga.toISOString());
-        }
-    }
+    const dataMaisAntiga =
+        datasPedidos.length > 0
+            ? new Date(Math.min(...datasPedidos.map(d => d.getTime())))
+            : null;
+
+    const tempoMaximoUTI = formatarDuracao(dataMaisAntiga?.toISOString());
 
     return { solicitacoesCriticas, tempoMaximoUTI };
   }, [pacientesAguardandoUTI, pacientesAguardandoTransferencia]);
