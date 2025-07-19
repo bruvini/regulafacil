@@ -135,7 +135,7 @@ const MapaLeitos = () => {
       await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { provavelAlta: !valorAtual });
   };
   
-  const onSolicitarUTI = async (pacienteId: string) => {
+  const handleSolicitarUTI = async (pacienteId: string) => {
     const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
     await updateDoc(pacienteRef, { 
         aguardaUTI: true, 
@@ -144,7 +144,7 @@ const MapaLeitos = () => {
     toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
   };
 
-  const onSolicitarRemanejamento = async (pacienteId: string, motivo: string) => {
+  const handleSolicitarRemanejamento = async (pacienteId: string, motivo: string) => {
     const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
     await updateDoc(pacienteRef, { 
         remanejarPaciente: true, 
@@ -154,7 +154,7 @@ const MapaLeitos = () => {
     toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
   };
 
-  const onTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => {
+  const handleTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => {
     const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
     await updateDoc(pacienteRef, { 
         transferirPaciente: true, 
@@ -303,10 +303,10 @@ const MapaLeitos = () => {
                               onAbrirObs={handleOpenObsModal}
                               onLiberarLeito={handleLiberarLeito}
                               onAtualizarStatus={atualizarStatusLeito}
-                              onSolicitarUTI={onSolicitarUTI}
+                              onSolicitarUTI={handleSolicitarUTI}
                               onToggleProvavelAlta={handleToggleProvavelAlta}
-                              onSolicitarRemanejamento={onSolicitarRemanejamento}
-                              onTransferirPaciente={onTransferirPaciente }
+                              onSolicitarRemanejamento={handleSolicitarRemanejamento}
+                              onTransferirPaciente={handleTransferirPaciente}
                               onCancelarReserva={handleCancelarReserva}
                               onConcluirTransferencia={handleConcluirTransferencia}
                               onFinalizarHigienizacao={handleFinalizarHigienizacao}
