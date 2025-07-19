@@ -117,7 +117,7 @@ const MapaLeitos = () => {
       const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
       await updateDoc(pacienteRef, { 
         aguardaUTI: true, 
-        dataPedidoUTI: new Date().toISOString()
+        dataPedidoUTI: new Date()
       });
       toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
     },
@@ -127,7 +127,7 @@ const MapaLeitos = () => {
       await updateDoc(pacienteRef, { 
         remanejarPaciente: true, 
         motivoRemanejamento: motivo,
-        dataPedidoRemanejamento: new Date().toISOString()
+        dataPedidoRemanejamento: new Date()
       });
       toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
     },
@@ -138,7 +138,7 @@ const MapaLeitos = () => {
         transferirPaciente: true, 
         destinoTransferencia: destino, 
         motivoTransferencia: motivo,
-        dataTransferencia: new Date().toISOString()
+        dataTransferencia: new Date()
       });
       toast({ title: "Sucesso!", description: "Solicitação de transferência externa registrada." });
     },
