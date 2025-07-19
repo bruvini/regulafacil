@@ -155,41 +155,34 @@ const MapaLeitos = () => {
   };
   
   const handleSolicitarUTI = async (pacienteId: string) => {
-    try {
-      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { aguardaUTI: true });
-      toast({ title: "Sucesso!", description: "Solicitação de UTI registrada." });
-    } catch (error) {
-      console.error('Erro ao solicitar UTI:', error);
-      toast({ title: "Erro", description: "Erro ao solicitar UTI.", variant: "destructive" });
-    }
-  };
+    const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+    await updateDoc(pacienteRef, { 
+        aguardaUTI: true, 
+        dataPedidoUTI: new Date().toISOString() // <-- CAMPO ADICIONADO
+    });
+    toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
+};
 
   const handleSolicitarRemanejamento = async (pacienteId: string, motivo: string) => {
-    try {
-      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { 
+    const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+    await updateDoc(pacienteRef, { 
         remanejarPaciente: true, 
-        motivoRemanejamento: motivo 
-      });
-      toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
-    } catch (error) {
-      console.error('Erro ao solicitar remanejamento:', error);
-      toast({ title: "Erro", description: "Erro ao solicitar remanejamento.", variant: "destructive" });
-    }
-  };
+        motivoRemanejamento: motivo,
+        dataPedidoRemanejamento: new Date().toISOString() // <-- CAMPO ADICIONADO
+    });
+    toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
+};
 
   const handleTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => {
-    try {
-      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { 
+    const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+    await updateDoc(pacienteRef, { 
         transferirPaciente: true, 
         destinoTransferencia: destino, 
-        motivoTransferencia: motivo 
-      });
-      toast({ title: "Sucesso!", description: "Transferência registrada." });
-    } catch (error) {
-      console.error('Erro ao transferir paciente:', error);
-      toast({ title: "Erro", description: "Erro ao transferir paciente.", variant: "destructive" });
-    }
-  };
+        motivoTransferencia: motivo,
+        dataTransferencia: new Date().toISOString() // <-- CAMPO ADICIONADO
+    });
+    toast({ title: "Sucesso!", description: "Solicitação de transferência externa registrada." });
+};
 
   const handleCancelarReserva = async (leitoId: string) => {
     try {
