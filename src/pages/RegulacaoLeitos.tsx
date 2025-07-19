@@ -140,9 +140,19 @@ const RegulacaoLeitos = () => {
     pacientesLoading,
   ]);
 
-  // --- Lógica Inteligente de Sugestões de Regulação ---
+  // --- Lógica Inteligente de Sugestões de Regulação Refinada ---
   const sugestoesDeRegulacao = useMemo(() => {
     if (setoresLoading || leitosLoading || pacientesLoading) return [];
+
+    // Setores permitidos para regulação
+    const setoresPermitidos = [
+      "UNID. CIRURGICA",
+      "UNID. CLINICA MEDICA", 
+      "UNID. INT. GERAL - UIG",
+      "UNID. JS ORTOPEDIA",
+      "UNID. NEFROLOGIA TRANSPLANTE",
+      "UNID. ONCOLOGIA"
+    ];
 
     // Filtrar pacientes relevantes dos setores de emergência
     const pacientesRelevantes = pacientesComDadosCompletos.filter(
@@ -152,16 +162,19 @@ const RegulacaoLeitos = () => {
         p.setorOrigem === "CC - RECUPERAÇÃO"
     );
 
-    // Filtrar leitos disponíveis
+    // Filtrar leitos disponíveis apenas dos setores permitidos
+    const mapaSetores = new Map(setores.map((s) => [s.id, s]));
     const leitosDisponiveis = leitos.filter((leito) => {
       const historicoRecente = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
-      return historicoRecente.statusLeito === 'Vago' || historicoRecente.statusLeito === 'Higienizacao';
+      const setor = mapaSetores.get(leito.setorId);
+      return (
+        (historicoRecente.statusLeito === 'Vago' || historicoRecente.statusLeito === 'Higienizacao') &&
+        setor && setoresPermitidos.includes(setor.nomeSetor)
+      );
     });
 
-    const mapaSetores = new Map(setores.map((s) => [s.id, s]));
-
     // Gerar sugestões para cada leito disponível
-    const sugestoes = leitosDisponiveis
+    const sugestoesPorLeito = leitosDisponiveis
       .map((leito) => {
         const setor = mapaSetores.get(leito.setorId);
         
@@ -211,8 +224,11 @@ const RegulacaoLeitos = () => {
           // Prioridade por especialidade compatível com o setor
           const especialidadesCompatíveis: Record<string, string[]> = {
             'UNID. CIRURGICA': ['CIRURGIA GERAL', 'ORTOPEDIA', 'UROLOGIA'],
-            'UNID. CLINICA': ['CLINICA MEDICA', 'CARDIOLOGIA', 'PNEUMOLOGIA'],
-            'UTI': ['UTI', 'MEDICINA INTENSIVA'],
+            'UNID. CLINICA MEDICA': ['CLINICA MEDICA', 'CARDIOLOGIA', 'PNEUMOLOGIA'],
+            'UNID. INT. GERAL - UIG': ['CLINICA MEDICA', 'MEDICINA INTERNA'],
+            'UNID. JS ORTOPEDIA': ['ORTOPEDIA', 'TRAUMATOLOGIA'],
+            'UNID. NEFROLOGIA TRANSPLANTE': ['NEFROLOGIA', 'UROLOGIA'],
+            'UNID. ONCOLOGIA': ['ONCOLOGIA', 'HEMATOLOGIA'],
           };
 
           const setorNome = setor?.nomeSetor || '';
@@ -229,17 +245,37 @@ const RegulacaoLeitos = () => {
         });
 
         return {
-          leito: {
-            ...leito,
-            setorNome: setor?.nomeSetor,
-            statusLeito: leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1].statusLeito,
-          },
-          pacientesElegiveis: pacientesOrdenados,
+          setor: setor?.nomeSetor || '',
+          sugestao: {
+            leito: {
+              ...leito,
+              setorNome: setor?.nomeSetor,
+              statusLeito: leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1].statusLeito,
+            },
+            pacientesElegiveis: pacientesOrdenados,
+          }
         };
       })
-      .filter((sugestao) => sugestao.pacientesElegiveis.length > 0);
+      .filter((item) => item.sugestao.pacientesElegiveis.length > 0);
 
-    return sugestoes;
+    // Agrupar por setor
+    const agrupamento = sugestoesPorLeito.reduce((acc, item) => {
+      const setorNome = item.setor;
+      const grupoExistente = acc.find(g => g.setorNome === setorNome);
+      
+      if (grupoExistente) {
+        grupoExistente.sugestoes.push(item.sugestao);
+      } else {
+        acc.push({
+          setorNome,
+          sugestoes: [item.sugestao]
+        });
+      }
+      
+      return acc;
+    }, [] as Array<{ setorNome: string; sugestoes: any[] }>);
+
+    return agrupamento;
   }, [
     pacientesComDadosCompletos,
     leitos,
@@ -939,6 +975,7 @@ const RegulacaoLeitos = () => {
             onPassagemClick={handlePassagemPlantao}
             onSugestoesClick={handleAbrirSugestoes}
             showAllButtons={true}
+            sugestoesDisponiveis={sugestoesDeRegulacao.length > 0}
           />
         </header>
 

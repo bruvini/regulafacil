@@ -1,3 +1,4 @@
+
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bed, Shield, Users, Lightbulb } from 'lucide-react';
 import { Leito, Paciente } from '@/types/hospital';
 
@@ -26,10 +28,15 @@ interface SugestaoRegulacao {
   })[];
 }
 
+interface SugestaoAgrupada {
+  setorNome: string;
+  sugestoes: SugestaoRegulacao[];
+}
+
 interface SugestoesRegulacaoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sugestoes: SugestaoRegulacao[];
+  sugestoes: SugestaoAgrupada[];
 }
 
 export const SugestoesRegulacaoModal = ({
@@ -37,9 +44,9 @@ export const SugestoesRegulacaoModal = ({
   onOpenChange,
   sugestoes,
 }: SugestoesRegulacaoModalProps) => {
-  const totalLeitos = sugestoes.length;
+  const totalLeitos = sugestoes.reduce((acc, grupo) => acc + grupo.sugestoes.length, 0);
   const totalPacientes = sugestoes.reduce(
-    (acc, s) => acc + s.pacientesElegiveis.length,
+    (acc, grupo) => acc + grupo.sugestoes.reduce((acc2, s) => acc2 + s.pacientesElegiveis.length, 0),
     0
   );
 
@@ -74,84 +81,97 @@ export const SugestoesRegulacaoModal = ({
           </div>
 
           {sugestoes.length > 0 ? (
-            <Accordion type="multiple" className="w-full">
-              {sugestoes.map((sugestao, index) => (
-                <AccordionItem key={sugestao.leito.id} value={`item-${index}`}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                          <Bed className="h-4 w-4 text-medical-primary" />
-                          <span className="font-semibold">
-                            {sugestao.leito.codigoLeito}
-                          </span>
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {sugestao.leito.setorNome}
-                        </span>
-                        <div className="flex gap-1">
-                          {sugestao.leito.leitoPCP && (
-                            <Badge variant="secondary" className="text-xs">
-                              PCP
-                            </Badge>
-                          )}
-                          {sugestao.leito.leitoIsolamento && (
-                            <Badge variant="outline" className="text-xs">
-                              <Shield className="h-3 w-3 mr-1" />
-                              Isolamento
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant="default">
-                        {sugestao.pacientesElegiveis.length} pacientes
+            <div className="space-y-6">
+              {sugestoes.map((grupo, grupoIndex) => (
+                <Card key={grupo.setorNome} className="shadow-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-medical-primary">
+                      {grupo.setorNome}
+                      <Badge variant="secondary" className="ml-2">
+                        {grupo.sugestoes.length} leitos
                       </Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pt-4">
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-muted-foreground">
-                        Pacientes Compatíveis (ordenados por prioridade):
-                      </h4>
-                      <div className="space-y-2">
-                        {sugestao.pacientesElegiveis.map((paciente, idx) => (
-                          <div
-                            key={paciente.id}
-                            className="flex items-center justify-between p-3 bg-card border rounded-lg"
-                          >
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium">
-                                  {paciente.nomeCompleto}
-                                </span>
-                                {idx === 0 && (
-                                  <Badge
-                                    variant="default"
-                                    className="text-xs bg-medical-success"
-                                  >
-                                    Prioridade
-                                  </Badge>
-                                )}
+                    </CardTitle>
+                  </CardHeader>
+                  <div className="px-6 pb-6">
+                    <Accordion type="multiple" className="w-full">
+                      {grupo.sugestoes.map((sugestao, index) => (
+                        <AccordionItem key={sugestao.leito.id} value={`${grupoIndex}-${index}`}>
+                          <AccordionTrigger className="hover:no-underline">
+                            <div className="flex items-center justify-between w-full pr-4">
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  <Bed className="h-4 w-4 text-medical-primary" />
+                                  <span className="font-semibold">
+                                    {sugestao.leito.codigoLeito}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  {sugestao.leito.leitoPCP && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      PCP
+                                    </Badge>
+                                  )}
+                                  {sugestao.leito.leitoIsolamento && (
+                                    <Badge variant="outline" className="text-xs">
+                                      <Shield className="h-3 w-3 mr-1" />
+                                      Isolamento
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <span>
-                                  Origem: {paciente.siglaSetorOrigem || 'N/A'}
-                                </span>
-                                <span>
-                                  Especialidade:{' '}
-                                  {paciente.especialidadePaciente || 'N/A'}
-                                </span>
-                                <span>Sexo: {paciente.sexoPaciente}</span>
+                              <Badge variant="default">
+                                {sugestao.pacientesElegiveis.length} pacientes
+                              </Badge>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pt-4">
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-medium text-muted-foreground">
+                                Pacientes Compatíveis (ordenados por prioridade):
+                              </h4>
+                              <div className="space-y-2">
+                                {sugestao.pacientesElegiveis.map((paciente, idx) => (
+                                  <div
+                                    key={paciente.id}
+                                    className="flex items-center justify-between p-3 bg-card border rounded-lg"
+                                  >
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="font-medium">
+                                          {paciente.nomeCompleto}
+                                        </span>
+                                        {idx === 0 && (
+                                          <Badge
+                                            variant="default"
+                                            className="text-xs bg-medical-success"
+                                          >
+                                            Prioridade
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                        <span>
+                                          Origem: {paciente.siglaSetorOrigem || 'N/A'}
+                                        </span>
+                                        <span>
+                                          Especialidade:{' '}
+                                          {paciente.especialidadePaciente || 'N/A'}
+                                        </span>
+                                        <span>Sexo: {paciente.sexoPaciente}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  </div>
+                </Card>
               ))}
-            </Accordion>
+            </div>
           ) : (
             <div className="text-center py-8">
               <div className="flex flex-col items-center gap-3">

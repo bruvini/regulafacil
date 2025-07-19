@@ -7,19 +7,22 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Download, FileText, Lightbulb } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AcoesRapidasProps {
   onImportarClick: () => void;
   onPassagemClick?: () => void;
   onSugestoesClick?: () => void;
   showAllButtons?: boolean;
+  sugestoesDisponiveis?: boolean;
 }
 
 export const AcoesRapidas = ({ 
   onImportarClick, 
   onPassagemClick, 
   onSugestoesClick,
-  showAllButtons = false 
+  showAllButtons = false,
+  sugestoesDisponiveis = false
 }: AcoesRapidasProps) => {
   return (
     <div className="flex items-center gap-2">
@@ -62,6 +65,10 @@ export const AcoesRapidas = ({
                   variant="outline"
                   size="icon"
                   onClick={onSugestoesClick}
+                  disabled={!sugestoesDisponiveis}
+                  className={cn(
+                    sugestoesDisponiveis && "animate-pulse bg-blue-100 dark:bg-blue-900/50 border-blue-300 dark:border-blue-700"
+                  )}
                 >
                   <Lightbulb className="h-4 w-4" />
                 </Button>
