@@ -1,6 +1,4 @@
 
-// src/components/SetorCard.tsx
-
 import { Card, CardContent } from '@/components/ui/card';
 import LeitoCard from './LeitoCard';
 import QuartoCard from './QuartoCard';

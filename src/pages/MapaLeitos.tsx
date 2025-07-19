@@ -134,7 +134,7 @@ const MapaLeitos = () => {
 
     onTransferirPaciente: async (pacienteId: string, destino: string, motivo: string) => {
       const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      await updateDoc(pacientRef, { 
+      await updateDoc(pacienteRef, { 
         transferirPaciente: true, 
         destinoTransferencia: destino, 
         motivoTransferencia: motivo,
