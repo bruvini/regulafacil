@@ -26,10 +26,14 @@ export const formatarDuracao = (dataISOouString: string | Date | undefined | nul
     if (isValid(dataPotencial)) {
       dataEntrada = dataPotencial;
     } else {
-      // Tenta o formato brasileiro como fallback
-      const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
-      if (isValid(dataParseada)) {
-        dataEntrada = dataParseada;
+      // Tenta o formato brasileiro como fallback - mas só se for string
+      if (typeof dataISOouString === 'string') {
+        const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
+        if (isValid(dataParseada)) {
+          dataEntrada = dataParseada;
+        } else {
+          return 'Data Inválida';
+        }
       } else {
         return 'Data Inválida';
       }
@@ -47,6 +51,7 @@ export const formatarDuracao = (dataISOouString: string | Date | undefined | nul
 
     return partes.join(' ');
   } catch (error) {
+    console.error('Error calculating duration:', error, 'Input was:', dataISOouString);
     return 'Erro de Cálculo';
   }
 };
