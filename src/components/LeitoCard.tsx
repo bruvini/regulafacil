@@ -1,7 +1,6 @@
 
 // src/components/LeitoCard.tsx
 
-
 import { useState, useMemo } from 'react';
 import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, MessageSquarePlus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -21,19 +20,7 @@ import { LeitoEnriquecido } from '@/pages/MapaLeitos';
 interface LeitoCardProps {
   leito: LeitoEnriquecido;
   todosLeitosDoSetor: LeitoEnriquecido[];
-  onMoverPaciente: (leito: LeitoEnriquecido) => void;
-  onAbrirObs: (leito: LeitoEnriquecido) => void;
-  onLiberarLeito: (leitoId: string, pacienteId: string) => void;
-  onAtualizarStatus: (leitoId: string, novoStatus: any, detalhes?: any) => void;
-  onSolicitarUTI: (pacienteId: string) => void;
-  onSolicitarRemanejamento: (pacienteId: string, motivo: string) => void;
-  onTransferirPaciente: (pacienteId: string, destino: string, motivo: string) => void;
-  onCancelarReserva: (leitoId: string) => void;
-  onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
-  onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
-  onFinalizarHigienizacao: (leitoId: string) => void;
-  onBloquearLeito: (leitoId: string, motivo: string) => void;
-  onEnviarParaHigienizacao: (leitoId: string) => void;
+  actions: any;
 }
 
 const calcularIdade = (dataNascimento: string): string => {
@@ -47,8 +34,7 @@ const calcularIdade = (dataNascimento: string): string => {
     return idade.toString();
 };
 
-const LeitoCard = (props: LeitoCardProps) => {
-    const { leito, todosLeitosDoSetor, ...actions } = props;
+const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
     const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
     const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
     const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
@@ -72,49 +58,6 @@ const LeitoCard = (props: LeitoCardProps) => {
     }
     return null;
   }, [leito, todosLeitosDoSetor]);
-
-  // Funções simplificadas que chamam diretamente as props recebidas
-  const handleBloquear = (motivo: string) => actions.onBloquearLeito(leito.id, motivo);
-  const handleHigienizar = () => actions.onEnviarParaHigienizacao(leito.id);
-  const handleDesbloquear = () => actions.onAtualizarStatus(leito.id, 'Vago');
-  const handleFinalizarHigienizacao = () => actions.onFinalizarHigienizacao(leito.id);
-  const handleLiberarLeito = () => {
-    if (paciente) {
-      actions.onLiberarLeito(leito.id, paciente.id);
-    }
-  };
-  const handleSolicitarUTI = () => {
-    console.log("Chamou handleSolicitarUTI");
-    if (paciente) {
-      actions.onSolicitarUTI(paciente.id);
-    }
-  };
-
-  const handleConfirmarRemanejamento = (motivo: string) => {
-  console.log("Chamou Remanejamento com:", motivo, paciente);
-  if (paciente) {
-    actions.onSolicitarRemanejamento(paciente.id, motivo);
-  } else {
-    console.warn("Paciente está undefined no handleConfirmarRemanejamento!");
-  }
-};
-
-  const handleConfirmarTransferencia = (destino: string, motivo: string) => {
-  console.log("Chamou Transferência com:", destino, motivo, paciente);
-  if (paciente) {
-    actions.onTransferirPaciente(paciente.id, destino, motivo);
-  } else {
-    console.warn("Paciente está undefined no handleConfirmarTransferencia!");
-  }
-};
-
-  const handleCancelarReserva = () => actions.onCancelarReserva(leito.id);
-  const handleConfirmarTransferenciaInterna = () => actions.onConcluirTransferencia(leito);
-  const handleToggleProvavelAlta = () => {
-    if (paciente) {
-      actions.onToggleProvavelAlta(paciente.id, paciente.provavelAlta || false);
-    }
-  };
 
   return (
     <>
@@ -252,7 +195,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleHigienizar}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onEnviarParaHigienizacao(leito.id)}>
                         <Paintbrush className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -284,7 +227,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDesbloquear}>Desbloquear</AlertDialogAction>
+                      <AlertDialogAction onClick={() => actions.onAtualizarStatus(leito.id, 'Vago')}>Desbloquear</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -313,7 +256,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleFinalizarHigienizacao}>Finalizar</AlertDialogAction>
+                      <AlertDialogAction onClick={() => actions.onFinalizarHigienizacao(leito.id)}>Finalizar</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -342,7 +285,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleConfirmarTransferenciaInterna}>Confirmar</AlertDialogAction>
+                      <AlertDialogAction onClick={() => actions.onConcluirTransferencia(leito)}>Confirmar</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -367,7 +310,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Não</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleCancelarReserva}>Cancelar Reserva</AlertDialogAction>
+                      <AlertDialogAction onClick={() => actions.onCancelarReserva(leito.id)}>Cancelar Reserva</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -396,7 +339,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleLiberarLeito}>Liberar</AlertDialogAction>
+                      <AlertDialogAction onClick={() => actions.onLiberarLeito(leito.id, paciente!.id)}>Liberar</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -443,7 +386,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleSolicitarUTI}>Solicitar</AlertDialogAction>
+                      <AlertDialogAction onClick={() => actions.onSolicitarUTI(paciente!.id)}>Solicitar</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -473,7 +416,7 @@ const LeitoCard = (props: LeitoCardProps) => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleToggleProvavelAlta}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onToggleProvavelAlta(paciente!.id, paciente?.provavelAlta || false)}>
                         <LogOut className={`h-4 w-4 ${paciente?.provavelAlta ? 'text-green-500' : ''}`} />
                       </Button>
                     </TooltipTrigger>
@@ -489,20 +432,20 @@ const LeitoCard = (props: LeitoCardProps) => {
       <MotivoBloqueioModal
         open={motivoBloqueioModalOpen}
         onOpenChange={setMotivoBloqueioModalOpen}
-        onConfirm={handleBloquear}
+        onConfirm={(motivo) => actions.onBloquearLeito(leito.id, motivo)}
         leitoCodigoLeito={leito.codigoLeito}
       />
 
       <RemanejamentoModal
         open={remanejamentoModalOpen}
         onOpenChange={setRemanejamentoModalOpen}
-        onConfirm={handleConfirmarRemanejamento}
+        onConfirm={(motivo) => actions.onSolicitarRemanejamento(paciente!.id, motivo)}
       />
 
       <TransferenciaModal
         open={transferenciaModalOpen}
         onOpenChange={setTransferenciaModalOpen}
-        onConfirm={handleConfirmarTransferencia}
+        onConfirm={(destino, motivo) => actions.onTransferirPaciente(paciente!.id, destino, motivo)}
       />
     </>
   );

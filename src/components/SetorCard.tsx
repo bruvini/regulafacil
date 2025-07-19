@@ -5,29 +5,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import LeitoCard from './LeitoCard';
 import QuartoCard from './QuartoCard';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
-import { Leito, Paciente, Setor } from '@/types/hospital';
+import { Setor } from '@/types/hospital';
 import { LeitoEnriquecido } from '@/pages/MapaLeitos';
 
 interface SetorCardProps {
   setor: Setor & { leitos: LeitoEnriquecido[] };
-  onMoverPaciente: (leito: LeitoEnriquecido) => void;
-  onAbrirObs: (leito: LeitoEnriquecido) => void;
-  onLiberarLeito: (leitoId: string, pacienteId: string) => void;
-  onAtualizarStatus: (leitoId: string, novoStatus: any, detalhes?: any) => void;
-  onSolicitarUTI: (pacienteId: string) => void;
-  onSolicitarRemanejamento: (pacienteId: string, motivo: string) => void;
-  onTransferirPaciente: (pacienteId: string, destino: string, motivo: string) => void;
-  onCancelarReserva: (leitoId: string) => void;
-  onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
-  onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
-  onFinalizarHigienizacao: (leitoId: string) => void;
-  onBloquearLeito: (leitoId: string, motivo: string) => void;
-  onEnviarParaHigienizacao: (leitoId: string) => void;
+  actions: any;
 }
 
-const SetorCard = (props: SetorCardProps) => {
-  const { setor, ...leitoCardActions } = props;
-
+const SetorCard = ({ setor, actions }: SetorCardProps) => {
   // Agrupar leitos usando a função utilitária
   const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
 
@@ -47,7 +33,7 @@ const SetorCard = (props: SetorCardProps) => {
                   nomeQuarto={nomeQuarto}
                   leitos={leitosDoQuarto}
                   todosLeitosDoSetor={setor.leitos}
-                  {...leitoCardActions}
+                  actions={actions}
                 />
             ))}
             
@@ -61,7 +47,7 @@ const SetorCard = (props: SetorCardProps) => {
                       key={leito.id}
                       leito={leito}
                       todosLeitosDoSetor={setor.leitos}
-                      {...leitoCardActions}
+                      actions={actions}
                     />
                   ))}
               </div>

@@ -7,30 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { AlertTriangle } from 'lucide-react';
 import { LeitoEnriquecido } from '@/pages/MapaLeitos';
-import { Leito, Paciente } from '@/types/hospital';
 
 interface QuartoCardProps {
   nomeQuarto: string;
   leitos: LeitoEnriquecido[];
   todosLeitosDoSetor: LeitoEnriquecido[];
-  onMoverPaciente: (leito: LeitoEnriquecido) => void;
-  onAbrirObs: (leito: LeitoEnriquecido) => void;
-  onLiberarLeito: (leitoId: string, pacienteId: string) => void;
-  onAtualizarStatus: (leitoId: string, novoStatus: any, detalhes?: any) => void;
-  onSolicitarUTI: (pacienteId: string) => void;
-  onSolicitarRemanejamento: (pacienteId: string, motivo: string) => void;
-  onTransferirPaciente: (pacienteId: string, destino: string, motivo: string) => void;
-  onCancelarReserva: (leitoId: string) => void;
-  onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
-  onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
-  onFinalizarHigienizacao: (leitoId: string) => void;
-  onBloquearLeito: (leitoId: string, motivo: string) => void;
-  onEnviarParaHigienizacao: (leitoId: string) => void;
+  actions: any;
 }
 
-const QuartoCard = (props: QuartoCardProps) => {
-  const { nomeQuarto, leitos, todosLeitosDoSetor, ...leitoCardActions } = props;
-
+const QuartoCard = ({ nomeQuarto, leitos, todosLeitosDoSetor, actions }: QuartoCardProps) => {
   const hasMixedGenders = useMemo(() => {
     const genders = new Set(leitos.filter(l => l.dadosPaciente).map(l => l.dadosPaciente?.sexoPaciente));
     return genders.size > 1;
@@ -64,7 +49,7 @@ const QuartoCard = (props: QuartoCardProps) => {
                 key={leito.id} 
                 leito={leito} 
                 todosLeitosDoSetor={todosLeitosDoSetor} 
-                {...leitoCardActions} 
+                actions={actions}
               />
           ))}
         </div>
