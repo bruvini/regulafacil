@@ -1,3 +1,4 @@
+
 // src/pages/RegulacaoLeitos.tsx
 
 import { useState, useEffect, useMemo } from "react";
@@ -20,7 +21,8 @@ import { RegulacaoModal } from "@/components/modals/RegulacaoModal";
 import { TransferenciaModal } from "@/components/modals/TransferenciaModal";
 import { AlocacaoCirurgiaModal } from "@/components/modals/AlocacaoCirurgiaModal";
 import { GerenciarTransferenciaModal } from "@/components/modals/GerenciarTransferenciaModal";
-import { IndicadoresRegulacao } from "@/components/IndicadoresRegulacao";
+// src/pages/RegulacaoLeitos.tsx
+
 import {
   ResultadoValidacao,
   SyncSummary,
@@ -817,22 +819,13 @@ const RegulacaoLeitos = () => {
         <Card className="shadow-card border border-border/50">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-medical-primary">
-              Indicadores Operacionais
+              Indicadores
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <IndicadoresRegulacao
-              pacientesAguardandoRegulacao={pacientesAguardandoRegulacao}
-              pacientesJaRegulados={pacientesJaRegulados}
-              pacientesAguardandoRemanejamento={pacientesAguardandoRemanejamento}
-              pacientesAguardandoUTI={pacientesAguardandoUTI}
-              pacientesAguardandoTransferencia={pacientesAguardandoTransferencia}
-              decisaoClinica={decisaoClinica}
-              decisaoCirurgica={decisaoCirurgica}
-              recuperacaoCirurgica={recuperacaoCirurgica}
-              leitos={leitos}
-              pacientes={pacientes}
-            />
+            <p className="text-sm text-muted-foreground italic">
+              Funcionalidade em desenvolvimento.
+            </p>
           </CardContent>
         </Card>
 
