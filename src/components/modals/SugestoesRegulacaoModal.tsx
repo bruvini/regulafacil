@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -13,7 +12,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
-import { Bed, Shield, Users } from 'lucide-react';
+import { Bed, Shield, Users, Lightbulb } from 'lucide-react';
 import { Leito, Paciente } from '@/types/hospital';
 
 interface SugestaoRegulacao {
