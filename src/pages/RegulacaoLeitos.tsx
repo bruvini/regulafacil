@@ -1,3 +1,4 @@
+
 // src/pages/RegulacaoLeitos.tsx
 
 import { useState, useEffect, useMemo } from "react";
@@ -61,7 +62,7 @@ const RegulacaoLeitos = () => {
   const { pacientes, loading: pacientesLoading } = usePacientes();
   const { registrarLog } = useAuditoria();
   const { toast } = useToast();
-  const { cirurgias, loading: cirurgiasLoading } = useCirurgiasEletivas();
+  const { cirurgias, loading: cirurgiasLoading } = useCirurgias();
   const { reservarLeitoParaCirurgia } = useCirurgias();
   const { alertas } = useAlertasIsolamento();
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -140,6 +141,11 @@ const RegulacaoLeitos = () => {
     pacientesLoading,
   ]);
 
+  // Função auxiliar para extrair o ID do quarto
+  const getQuartoId = (codigoLeito: string): string => {
+    return codigoLeito.split('-')[0];
+  };
+
   // --- Lógica Inteligente de Sugestões de Regulação Refinada ---
   const sugestoesDeRegulacao = useMemo(() => {
     if (setoresLoading || leitosLoading || pacientesLoading) return [];
@@ -179,8 +185,9 @@ const RegulacaoLeitos = () => {
         const setor = mapaSetores.get(leito.setorId);
         
         // Obter pacientes no mesmo quarto para verificar compatibilidade
+        const quartoId = getQuartoId(leito.codigoLeito);
         const leitosDoQuarto = leitos.filter(
-          (l) => l.setorId === leito.setorId && l.codigoLeito.split('-')[0] === leito.codigoLeito.split('-')[0]
+          (l) => l.setorId === leito.setorId && getQuartoId(l.codigoLeito) === quartoId
         );
         
         const pacientesDoQuarto = leitosDoQuarto
@@ -208,10 +215,12 @@ const RegulacaoLeitos = () => {
           // Regra 2: Compatibilidade de isolamento
           const pacientePrecisaIsolamento = paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0;
           
+          // Caso 1: Paciente precisa de isolamento mas leito não é de isolamento
           if (pacientePrecisaIsolamento && !leito.leitoIsolamento) {
             return false;
           }
 
+          // Caso 2: Quarto tem isolamento mas paciente não precisa
           if (temIsolamentoNoQuarto && !pacientePrecisaIsolamento) {
             return false;
           }

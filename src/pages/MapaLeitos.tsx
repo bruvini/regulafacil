@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,7 @@ import { Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { AcoesRapidas } from '@/components/AcoesRapidas';
 
 // Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
 export type LeitoEnriquecido = Leito & {
@@ -114,7 +116,7 @@ const MapaLeitos = () => {
       const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
       await updateDoc(pacienteRef, { 
         aguardaUTI: true, 
-        dataPedidoUTI: new Date()
+        dataPedidoUTI: new Date().toISOString()
       });
       toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
     },
@@ -124,7 +126,7 @@ const MapaLeitos = () => {
       await updateDoc(pacienteRef, { 
         remanejarPaciente: true, 
         motivoRemanejamento: motivo,
-        dataPedidoRemanejamento: new Date()
+        dataPedidoRemanejamento: new Date().toISOString()
       });
       toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
     },
@@ -135,7 +137,7 @@ const MapaLeitos = () => {
         transferirPaciente: true, 
         destinoTransferencia: destino, 
         motivoTransferencia: motivo,
-        dataTransferencia: new Date()
+        dataTransferencia: new Date().toISOString()
       });
       toast({ title: "Sucesso!", description: "Solicitação de transferência externa registrada." });
     },
@@ -220,6 +222,13 @@ const MapaLeitos = () => {
               <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
               <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
             </div>
+            <AcoesRapidas 
+              onImportarClick={() => setImportModalOpen(true)}
+              onPassagemClick={() => {}}
+              onSugestoesClick={() => {}}
+              showAllButtons={false}
+              sugestoesDisponiveis={false}
+            />
           </header>
 
           {loading ? (
