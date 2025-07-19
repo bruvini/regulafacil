@@ -13,19 +13,17 @@ export const formatarDuracao = (dataInput: any): string => {
 
   let dataEntrada: Date;
 
-  // CORREÇÃO: Verifica se o input é um objeto Timestamp do Firebase e o converte
+  // CORREÇÃO: Adiciona a capacidade de entender o objeto Timestamp do Firebase
   if (typeof dataInput === 'object' && dataInput !== null && typeof dataInput.toDate === 'function') {
     dataEntrada = dataInput.toDate();
   } else if (dataInput instanceof Date) {
     dataEntrada = dataInput;
   } else if (typeof dataInput === 'string') {
-    // Tenta como ISO
-    const dataPotencial = new Date(dataInput);
+    const dataPotencial = new Date(dataInput); // Tenta como ISO
     if (isValid(dataPotencial)) {
       dataEntrada = dataPotencial;
     } else {
-      // Tenta como formato brasileiro
-      const dataParseada = parse(dataInput, 'dd/MM/yyyy HH:mm', new Date());
+      const dataParseada = parse(dataInput, 'dd/MM/yyyy HH:mm', new Date()); // Tenta como BR
       if (isValid(dataParseada)) {
         dataEntrada = dataParseada;
       } else {
