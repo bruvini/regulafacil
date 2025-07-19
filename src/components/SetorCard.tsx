@@ -12,7 +12,7 @@ interface SetorCardProps {
 }
 
 const SetorCard = ({ setor, actions }: SetorCardProps) => {
-  // Agrupar leitos usando a função utilitária
+  // Agrupar leitos usando a função utilitária - garantindo o tipo correto
   const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
 
   const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
@@ -29,7 +29,7 @@ const SetorCard = ({ setor, actions }: SetorCardProps) => {
                 <QuartoCard
                   key={nomeQuarto}
                   nomeQuarto={nomeQuarto}
-                  leitos={leitosDoQuarto}
+                  leitos={leitosDoQuarto as LeitoEnriquecido[]}
                   todosLeitosDoSetor={setor.leitos}
                   actions={actions}
                 />
@@ -38,7 +38,7 @@ const SetorCard = ({ setor, actions }: SetorCardProps) => {
             {/* Renderizar leitos soltos */}
             {leitosSoltos.length > 0 && (
               <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
-                {leitosSoltos
+                {(leitosSoltos as LeitoEnriquecido[])
                   .sort((a, b) => comparadorNatural(a.codigoLeito, b.codigoLeito))
                   .map((leito) => (
                     <LeitoCard
