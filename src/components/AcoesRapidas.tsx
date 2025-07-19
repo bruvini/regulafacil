@@ -1,46 +1,78 @@
 
-// src/components/AcoesRapidas.tsx
-
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Download } from 'lucide-react';
+import { Download, FileText, Lightbulb } from 'lucide-react';
 
 interface AcoesRapidasProps {
   onImportarClick: () => void;
+  onPassagemClick?: () => void;
+  onSugestoesClick?: () => void;
+  showAllButtons?: boolean;
 }
 
-export const AcoesRapidas = ({ onImportarClick }: AcoesRapidasProps) => {
+export const AcoesRapidas = ({ 
+  onImportarClick, 
+  onPassagemClick, 
+  onSugestoesClick,
+  showAllButtons = false 
+}: AcoesRapidasProps) => {
   return (
-    <div className="flex justify-end">
-      <Card className="shadow-card border border-border/50">
-        <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-lg">Ações Rápidas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TooltipProvider>
+    <div className="flex items-center gap-2">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onImportarClick}
+            >
+              <Download className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Importar pacientes MV</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {showAllButtons && (
+          <>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={onImportarClick}
+                  onClick={onPassagemClick}
                 >
-                  <Download className="h-4 w-4" />
+                  <FileText className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Importar pacientes MV</p>
+                <p>Gerar Passagem de Plantão</p>
               </TooltipContent>
             </Tooltip>
-          </TooltipProvider>
-        </CardContent>
-      </Card>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={onSugestoesClick}
+                >
+                  <Lightbulb className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Ver Sugestões de Regulação</p>
+              </TooltipContent>
+            </Tooltip>
+          </>
+        )}
+      </TooltipProvider>
     </div>
   );
 };

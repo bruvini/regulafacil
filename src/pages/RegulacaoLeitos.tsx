@@ -1,4 +1,3 @@
-
 // src/pages/RegulacaoLeitos.tsx
 
 import { useState, useEffect, useMemo } from "react";
@@ -21,7 +20,7 @@ import { RegulacaoModal } from "@/components/modals/RegulacaoModal";
 import { TransferenciaModal } from "@/components/modals/TransferenciaModal";
 import { AlocacaoCirurgiaModal } from "@/components/modals/AlocacaoCirurgiaModal";
 import { GerenciarTransferenciaModal } from "@/components/modals/GerenciarTransferenciaModal";
-// src/pages/RegulacaoLeitos.tsx
+import { SugestoesRegulacaoModal } from '@/components/modals/SugestoesRegulacaoModal';
 
 import {
   ResultadoValidacao,
@@ -93,6 +92,7 @@ const RegulacaoLeitos = () => {
   const [resumoModalOpen, setResumoModalOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [sugestoesModalOpen, setSugestoesModalOpen] = useState(false);
 
   // --- Lógica de Combinação de Dados ---
   const pacientesComDadosCompletos = useMemo(() => {
@@ -133,6 +133,115 @@ const RegulacaoLeitos = () => {
     });
   }, [
     pacientes,
+    leitos,
+    setores,
+    setoresLoading,
+    leitosLoading,
+    pacientesLoading,
+  ]);
+
+  // --- Lógica Inteligente de Sugestões de Regulação ---
+  const sugestoesDeRegulacao = useMemo(() => {
+    if (setoresLoading || leitosLoading || pacientesLoading) return [];
+
+    // Filtrar pacientes relevantes dos setores de emergência
+    const pacientesRelevantes = pacientesComDadosCompletos.filter(
+      (p) =>
+        p.setorOrigem === "PS DECISÃO CIRURGICA" ||
+        p.setorOrigem === "PS DECISÃO CLINICA" ||
+        p.setorOrigem === "CC - RECUPERAÇÃO"
+    );
+
+    // Filtrar leitos disponíveis
+    const leitosDisponiveis = leitos.filter((leito) => {
+      const historicoRecente = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
+      return historicoRecente.statusLeito === 'Vago' || historicoRecente.statusLeito === 'Higienizacao';
+    });
+
+    const mapaSetores = new Map(setores.map((s) => [s.id, s]));
+
+    // Gerar sugestões para cada leito disponível
+    const sugestoes = leitosDisponiveis
+      .map((leito) => {
+        const setor = mapaSetores.get(leito.setorId);
+        
+        // Obter pacientes no mesmo quarto para verificar compatibilidade
+        const leitosDoQuarto = leitos.filter(
+          (l) => l.setorId === leito.setorId && l.codigoLeito.split('-')[0] === leito.codigoLeito.split('-')[0]
+        );
+        
+        const pacientesDoQuarto = leitosDoQuarto
+          .map((l) => {
+            const historico = l.historicoMovimentacao[l.historicoMovimentacao.length - 1];
+            return historico.statusLeito === 'Ocupado' ? pacientesComDadosCompletos.find(p => p.id === historico.pacienteId) : null;
+          })
+          .filter(Boolean);
+
+        // Verificar se há pacientes em isolamento no quarto
+        const temIsolamentoNoQuarto = pacientesDoQuarto.some(p => 
+          p?.isolamentosVigentes && p.isolamentosVigentes.length > 0
+        );
+
+        // Aplicar regras de compatibilidade
+        const pacientesElegiveis = pacientesRelevantes.filter((paciente) => {
+          // Regra 1: Compatibilidade de sexo
+          if (pacientesDoQuarto.length > 0) {
+            const sexoDoQuarto = pacientesDoQuarto[0]?.sexoPaciente;
+            if (sexoDoQuarto && paciente.sexoPaciente !== sexoDoQuarto) {
+              return false;
+            }
+          }
+
+          // Regra 2: Compatibilidade de isolamento
+          const pacientePrecisaIsolamento = paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0;
+          
+          if (pacientePrecisaIsolamento && !leito.leitoIsolamento) {
+            return false;
+          }
+
+          if (temIsolamentoNoQuarto && !pacientePrecisaIsolamento) {
+            return false;
+          }
+
+          return true;
+        });
+
+        // Aplicar regras de preferência (ordenação por prioridade)
+        const pacientesOrdenados = pacientesElegiveis.sort((a, b) => {
+          // Prioridade por especialidade compatível com o setor
+          const especialidadesCompatíveis: Record<string, string[]> = {
+            'UNID. CIRURGICA': ['CIRURGIA GERAL', 'ORTOPEDIA', 'UROLOGIA'],
+            'UNID. CLINICA': ['CLINICA MEDICA', 'CARDIOLOGIA', 'PNEUMOLOGIA'],
+            'UTI': ['UTI', 'MEDICINA INTENSIVA'],
+          };
+
+          const setorNome = setor?.nomeSetor || '';
+          const compatíveisSetor = especialidadesCompatíveis[setorNome] || [];
+          
+          const aCompatível = compatíveisSetor.includes(a.especialidadePaciente || '');
+          const bCompatível = compatíveisSetor.includes(b.especialidadePaciente || '');
+
+          if (aCompatível && !bCompatível) return -1;
+          if (!aCompatível && bCompatível) return 1;
+
+          // Prioridade por tempo de espera (mais antigo primeiro)
+          return new Date(a.dataInternacao).getTime() - new Date(b.dataInternacao).getTime();
+        });
+
+        return {
+          leito: {
+            ...leito,
+            setorNome: setor?.nomeSetor,
+            statusLeito: leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1].statusLeito,
+          },
+          pacientesElegiveis: pacientesOrdenados,
+        };
+      })
+      .filter((sugestao) => sugestao.pacientesElegiveis.length > 0);
+
+    return sugestoes;
+  }, [
+    pacientesComDadosCompletos,
     leitos,
     setores,
     setoresLoading,
@@ -503,6 +612,15 @@ const RegulacaoLeitos = () => {
     cancelarPedidoRemanejamento,
   ]);
 
+  const handlePassagemPlantao = () => {
+    // Função para implementar futuramente
+    console.log('Gerar passagem de plantão');
+  };
+
+  const handleAbrirSugestoes = () => {
+    setSugestoesModalOpen(true);
+  };
+
   const renderListaComAgrupamento = (
     titulo: string,
     pacientes: any[],
@@ -807,13 +925,21 @@ const RegulacaoLeitos = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-medical-primary">
-            Central de Regulação
-          </h1>
-          <p className="text-muted-foreground">
-            Visão geral e controle das solicitações e pendências de leitos.
-          </p>
+        <header className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-medical-primary">
+              Central de Regulação
+            </h1>
+            <p className="text-muted-foreground">
+              Visão geral e controle das solicitações e pendências de leitos.
+            </p>
+          </div>
+          <AcoesRapidas 
+            onImportarClick={() => setImportModalOpen(true)}
+            onPassagemClick={handlePassagemPlantao}
+            onSugestoesClick={handleAbrirSugestoes}
+            showAllButtons={true}
+          />
         </header>
 
         <Card className="shadow-card border border-border/50">
@@ -828,8 +954,6 @@ const RegulacaoLeitos = () => {
             </p>
           </CardContent>
         </Card>
-
-        <AcoesRapidas onImportarClick={() => setImportModalOpen(true)} />
 
         <ListasLaterais
           pacientesAguardandoUTI={pacientesAguardandoUTI}
@@ -1014,6 +1138,12 @@ const RegulacaoLeitos = () => {
           onOpenChange={setAlocacaoCirurgiaModalOpen}
           cirurgia={cirurgiaParaAlocar}
           onAlocarLeito={handleConfirmarAlocacaoCirurgia}
+        />
+
+        <SugestoesRegulacaoModal
+          open={sugestoesModalOpen}
+          onOpenChange={setSugestoesModalOpen}
+          sugestoes={sugestoesDeRegulacao}
         />
 
         {pacienteParaRegular && (

@@ -1,6 +1,3 @@
-
-// src/pages/MapaLeitos.tsx
-
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -218,12 +215,12 @@ const MapaLeitos = () => {
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col space-y-8">
-          <div className="flex items-center justify-between">
+          <header className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
               <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
             </div>
-          </div>
+          </header>
 
           {loading ? (
              <Card className="shadow-card border border-border/50">
