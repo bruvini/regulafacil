@@ -213,6 +213,11 @@ const MapaLeitos = () => {
             <div>
               <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
               <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
+            
+            <Button onClick={() => handleSolicitarUTI('ID_DO_PACIENTE_AQUI')}>
+              Teste UTI
+            </Button>
+
             </div>
           </div>
 

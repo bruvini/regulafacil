@@ -83,20 +83,30 @@ const LeitoCard = (props: LeitoCardProps) => {
     }
   };
   const handleSolicitarUTI = () => {
+    console.log("Chamou handleSolicitarUTI");
     if (paciente) {
       actions.onSolicitarUTI(paciente.id);
     }
   };
+
   const handleConfirmarRemanejamento = (motivo: string) => {
-    if (paciente) {
-      actions.onSolicitarRemanejamento(paciente.id, motivo);
-    }
-  };
+  console.log("Chamou Remanejamento com:", motivo, paciente);
+  if (paciente) {
+    actions.onSolicitarRemanejamento(paciente.id, motivo);
+  } else {
+    console.warn("Paciente está undefined no handleConfirmarRemanejamento!");
+  }
+};
+
   const handleConfirmarTransferencia = (destino: string, motivo: string) => {
-    if (paciente) {
-      actions.onTransferirPaciente(paciente.id, destino, motivo);
-    }
-  };
+  console.log("Chamou Transferência com:", destino, motivo, paciente);
+  if (paciente) {
+    actions.onTransferirPaciente(paciente.id, destino, motivo);
+  } else {
+    console.warn("Paciente está undefined no handleConfirmarTransferencia!");
+  }
+};
+
   const handleCancelarReserva = () => actions.onCancelarReserva(leito.id);
   const handleConfirmarTransferenciaInterna = () => actions.onConcluirTransferencia(leito);
   const handleToggleProvavelAlta = () => {
