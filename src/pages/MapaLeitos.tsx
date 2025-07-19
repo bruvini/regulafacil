@@ -109,10 +109,7 @@ const MapaLeitos = () => {
     setPacienteParaMover(null);
   };
   
-  const handleOpenObsModal = (leito: LeitoEnriquecido) => {
-    setPacienteParaObs(leito);
-    setObsModalOpen(true);
-  };
+  const handleOpenObsModal = (leito: LeitoEnriquecido) => setPacienteParaObs(leito);
   
   const handleConfirmObs = async (obs: string) => {
     if (pacienteParaObs?.dadosPaciente) {
@@ -124,65 +121,49 @@ const MapaLeitos = () => {
   };
   
   const handleLiberarLeito = async (leitoId: string, pacienteId: string) => {
-    try {
-      await deleteDoc(doc(db, 'pacientesRegulaFacil', pacienteId));
-      await atualizarStatusLeito(leitoId, 'Higienizacao');
-      toast({ title: "Sucesso!", description: "Paciente recebeu alta." });
-    } catch (error) {
-      console.error('Erro ao liberar leito:', error);
-      toast({ title: "Erro", description: "Erro ao liberar leito.", variant: "destructive" });
-    }
+    await deleteDoc(doc(db, 'pacientesRegulaFacil', pacienteId));
+    await atualizarStatusLeito(leitoId, 'Higienizacao');
+    toast({ title: "Sucesso!", description: "Paciente recebeu alta." });
   };
   
   const handleFinalizarHigienizacao = async (leitoId: string) => {
-    try {
       await atualizarStatusLeito(leitoId, 'Vago');
       toast({ title: "Sucesso!", description: "Leito liberado e pronto para uso." });
-    } catch (error) {
-      console.error('Erro ao finalizar higienização:', error);
-      toast({ title: "Erro", description: "Erro ao finalizar higienização.", variant: "destructive" });
-    }
   };
   
   const handleToggleProvavelAlta = async (pacienteId: string, valorAtual: boolean) => {
-    try {
       await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { provavelAlta: !valorAtual });
-      toast({ title: "Sucesso!", description: "Status de provável alta atualizado." });
-    } catch (error) {
-      console.error('Erro ao alterar provável alta:', error);
-      toast({ title: "Erro", description: "Erro ao alterar provável alta.", variant: "destructive" });
-    }
   };
   
-  const handleSolicitarUTI = async (pacienteId: string) => {
+  const onSolicitarUTI = async (pacienteId: string) => {
     const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
     await updateDoc(pacienteRef, { 
         aguardaUTI: true, 
-        dataPedidoUTI: new Date().toISOString() // <-- CAMPO ADICIONADO
+        dataPedidoUTI: new Date().toISOString() // <-- GARANTA QUE ESTA LINHA ESTEJA AQUI
     });
     toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
-};
+  };
 
-  const handleSolicitarRemanejamento = async (pacienteId: string, motivo: string) => {
+  const onSolicitarRemanejamento = async (pacienteId: string, motivo: string) => {
     const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
     await updateDoc(pacienteRef, { 
         remanejarPaciente: true, 
         motivoRemanejamento: motivo,
-        dataPedidoRemanejamento: new Date().toISOString() // <-- CAMPO ADICIONADO
+        dataPedidoRemanejamento: new Date().toISOString() // <-- GARANTA QUE ESTA LINHA ESTEJA AQUI
     });
     toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
-};
+  };
 
-  const handleTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => {
+  const onTransferirPaciente = async (pacienteId: string, destino: string, motivo: string) => {
     const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
     await updateDoc(pacienteRef, { 
         transferirPaciente: true, 
         destinoTransferencia: destino, 
         motivoTransferencia: motivo,
-        dataTransferencia: new Date().toISOString() // <-- CAMPO ADICIONADO
+        dataTransferencia: new Date().toISOString() // <-- GARANTA QUE ESTA LINHA ESTEJA AQUI
     });
     toast({ title: "Sucesso!", description: "Solicitação de transferência externa registrada." });
-};
+  };
 
   const handleCancelarReserva = async (leitoId: string) => {
     try {
@@ -322,10 +303,10 @@ const MapaLeitos = () => {
                               onAbrirObs={handleOpenObsModal}
                               onLiberarLeito={handleLiberarLeito}
                               onAtualizarStatus={atualizarStatusLeito}
-                              onSolicitarUTI={handleSolicitarUTI}
+                              onSolicitarUTI={onSolicitarUTI}
                               onToggleProvavelAlta={handleToggleProvavelAlta}
-                              onSolicitarRemanejamento={handleSolicitarRemanejamento}
-                              onTransferirPaciente={handleTransferirPaciente}
+                              onSolicitarRemanejamento={onSolicitarRemanejamento}
+                              onTransferirPaciente={onTransferirPaciente }
                               onCancelarReserva={handleCancelarReserva}
                               onConcluirTransferencia={handleConcluirTransferencia}
                               onFinalizarHigienizacao={handleFinalizarHigienizacao}
