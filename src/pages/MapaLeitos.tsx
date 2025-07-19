@@ -139,8 +139,8 @@ const MapaLeitos = () => {
     const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
     await updateDoc(pacienteRef, { 
         aguardaUTI: true, 
-        dataPedidoUTI: new Date().toISOString() // <-- GARANTA QUE ESTA LINHA ESTEJA AQUI
-    }); console.log('Data de pedido de UTI salva:', new Date().toISOString());
+        dataPedidoUTI: new Date() // CORREÇÃO: Passa o objeto Date diretamente
+    });
     toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
   };
 
@@ -149,8 +149,8 @@ const MapaLeitos = () => {
     await updateDoc(pacienteRef, { 
         remanejarPaciente: true, 
         motivoRemanejamento: motivo,
-        dataPedidoRemanejamento: new Date().toISOString() // <-- GARANTA QUE ESTA LINHA ESTEJA AQUI
-    }); console.log('Data de Remanejamento salva:', new Date().toISOString());
+        dataPedidoRemanejamento: new Date() // CORREÇÃO: Passa o objeto Date diretamente
+    });
     toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
   };
 
@@ -160,8 +160,8 @@ const MapaLeitos = () => {
         transferirPaciente: true, 
         destinoTransferencia: destino, 
         motivoTransferencia: motivo,
-        dataTransferencia: new Date().toISOString() // <-- GARANTA QUE ESTA LINHA ESTEJA AQUI
-    }); console.log('Data de transferência salva:', new Date().toISOString());
+        dataTransferencia: new Date() // CORREÇÃO: Passa o objeto Date diretamente
+    });
     toast({ title: "Sucesso!", description: "Solicitação de transferência externa registrada." });
   };
 

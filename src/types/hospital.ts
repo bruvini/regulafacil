@@ -49,14 +49,14 @@ export interface Paciente {
   dataInternacao: string;
   especialidadePaciente: string;
   aguardaUTI?: boolean;
-  dataPedidoUTI?: string;
+  dataPedidoUTI?: Date;
   remanejarPaciente?: boolean;
   motivoRemanejamento?: string;
-  dataPedidoRemanejamento?: string;
+  dataPedidoRemanejamento?: Date;
   transferirPaciente?: boolean;
   destinoTransferencia?: string;
   motivoTransferencia?: string;
-  dataTransferencia?: string;
+  dataTransferencia?: Date;
   statusTransferencia?: 'Organizar' | 'Pendente' | 'Concluída';
   historicoTransferencia?: { etapa: string; data: string; usuario?: string; }[];
   provavelAlta?: boolean;
