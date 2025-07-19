@@ -300,36 +300,49 @@ const MapaLeitos = () => {
                 <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
               ) : filteredSetores.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={filteredSetores[0]?.id}>
-                  {filteredSetores.map((setor) => (
-                    <AccordionItem key={setor.id} value={setor.id!} className="border border-border/50 rounded-lg">
-                      <AccordionTrigger className="hover:no-underline px-4">
-                        <div className="flex justify-between items-center w-full pr-4">
-                          <div className="flex flex-col items-start">
-                            <h3 className="text-lg font-semibold text-foreground">{setor.nomeSetor}</h3>
-                            <p className="text-sm text-muted-foreground font-mono">{setor.siglaSetor}</p>
+                  {filteredSetores.map((setor) => {
+                    // Calcular indicadores do setor aqui
+                    const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
+                    const totalLeitos = setor.leitos.length;
+                    const taxaOcupacao = totalLeitos > 0 ? Math.round(((totalLeitos - leitosVagos) / totalLeitos) * 100) : 0;
+                    
+                    return (
+                      <AccordionItem key={setor.id} value={setor.id!} className="border border-border/50 rounded-lg">
+                        <AccordionTrigger className="hover:no-underline px-4">
+                          <div className="flex justify-between items-center w-full pr-4">
+                            <div className="flex flex-col items-start">
+                              <h3 className="text-lg font-semibold text-foreground">{setor.nomeSetor}</h3>
+                              <p className="text-sm text-muted-foreground font-mono">{setor.siglaSetor}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-medical-primary">
+                                {taxaOcupacao}%
+                              </div>
+                              <p className="text-xs text-muted-foreground">{leitosVagos}/{totalLeitos} Vagos</p>
+                            </div>
                           </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="p-4">
-                        <SetorCard 
-                            setor={setor}
-                            onMoverPaciente={handleOpenMovimentacaoModal}
-                            onAbrirObs={handleOpenObsModal}
-                            onLiberarLeito={handleLiberarLeito}
-                            onAtualizarStatus={atualizarStatusLeito}
-                            onSolicitarUTI={handleSolicitarUTI}
-                            onToggleProvavelAlta={handleToggleProvavelAlta}
-                            onSolicitarRemanejamento={handleSolicitarRemanejamento}
-                            onTransferirPaciente={handleTransferirPaciente}
-                            onCancelarReserva={handleCancelarReserva}
-                            onConcluirTransferencia={handleConcluirTransferencia}
-                            onFinalizarHigienizacao={handleFinalizarHigienizacao}
-                            onBloquearLeito={handleBloquearLeito}
-                            onEnviarParaHigienizacao={handleEnviarParaHigienizacao}
-                        />
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4">
+                          <SetorCard 
+                              setor={setor}
+                              onMoverPaciente={handleOpenMovimentacaoModal}
+                              onAbrirObs={handleOpenObsModal}
+                              onLiberarLeito={handleLiberarLeito}
+                              onAtualizarStatus={atualizarStatusLeito}
+                              onSolicitarUTI={handleSolicitarUTI}
+                              onToggleProvavelAlta={handleToggleProvavelAlta}
+                              onSolicitarRemanejamento={handleSolicitarRemanejamento}
+                              onTransferirPaciente={handleTransferirPaciente}
+                              onCancelarReserva={handleCancelarReserva}
+                              onConcluirTransferencia={handleConcluirTransferencia}
+                              onFinalizarHigienizacao={handleFinalizarHigienizacao}
+                              onBloquearLeito={handleBloquearLeito}
+                              onEnviarParaHigienizacao={handleEnviarParaHigienizacao}
+                          />
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
                 </Accordion>
               ) : (
                  <div className="text-center py-12"><p className="text-lg text-muted-foreground">Nenhum resultado encontrado.</p></div>
@@ -339,7 +352,6 @@ const MapaLeitos = () => {
         </div>
       </div>
 
-      {/* Modais */}
       <GerenciamentoModal open={modalOpen} onOpenChange={setModalOpen} />
       <MovimentacaoModal open={movimentacaoModalOpen} onOpenChange={setMovimentacaoModalOpen} pacienteNome={pacienteParaMover?.dados?.nomeCompleto || ''} onConfirm={handleConfirmarMovimentacao}/>
       <RelatorioIsolamentosModal open={relatorioIsolamentoOpen} onOpenChange={setRelatorioIsolamentoOpen}/>

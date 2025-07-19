@@ -1,7 +1,7 @@
 
 // src/components/SetorCard.tsx
 
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import LeitoCard from './LeitoCard';
 import QuartoCard from './QuartoCard';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
@@ -28,50 +28,17 @@ interface SetorCardProps {
 const SetorCard = (props: SetorCardProps) => {
   const { setor, ...leitoCardActions } = props;
 
-  const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
-  const totalLeitos = setor.leitos.length;
-  const taxaOcupacao = totalLeitos > 0 ? Math.round(((totalLeitos - leitosVagos) / totalLeitos) * 100) : 0;
-  
-  // Manually group leitos by quarto while preserving LeitoEnriquecido type
-  const { quartos, leitosSoltos } = setor.leitos.reduce((acc, leito) => {
-    const codigoLeito = leito.codigoLeito;
-    const matches = codigoLeito.match(/^(\d+)([A-Za-z])$/);
-    
-    if (matches) {
-      const [, numeroQuarto] = matches;
-      if (!acc.quartos[numeroQuarto]) {
-        acc.quartos[numeroQuarto] = [];
-      }
-      acc.quartos[numeroQuarto].push(leito);
-    } else {
-      acc.leitosSoltos.push(leito);
-    }
-    
-    return acc;
-  }, { quartos: {} as Record<string, LeitoEnriquecido[]>, leitosSoltos: [] as LeitoEnriquecido[] });
+  // Agrupar leitos usando a função utilitária
+  const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
 
   const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
   return (
     <Card className="shadow-card hover:shadow-medical transition-all duration-200 border border-border/50">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">{setor.nomeSetor}</h3>
-            <p className="text-sm text-muted-foreground font-mono">{setor.siglaSetor}</p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-medical-primary">
-              {taxaOcupacao}%
-            </div>
-            <p className="text-xs text-muted-foreground">{leitosVagos}/{totalLeitos} Vagos</p>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent>
+      <CardContent className="pt-6">
         {setor.leitos.length > 0 ? (
           <div className="space-y-4">
+            {/* Renderizar quartos agrupados */}
             {Object.entries(quartos)
               .sort(([nomeQuartoA], [nomeQuartoB]) => comparadorNatural(nomeQuartoA, nomeQuartoB))
               .map(([nomeQuarto, leitosDoQuarto]) => (
@@ -83,6 +50,8 @@ const SetorCard = (props: SetorCardProps) => {
                   {...leitoCardActions}
                 />
             ))}
+            
+            {/* Renderizar leitos soltos */}
             {leitosSoltos.length > 0 && (
               <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
                 {leitosSoltos
@@ -99,7 +68,9 @@ const SetorCard = (props: SetorCardProps) => {
             )}
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground"><p>Nenhum leito cadastrado neste setor</p></div>
+          <div className="text-center py-8 text-muted-foreground">
+            <p>Nenhum leito cadastrado neste setor</p>
+          </div>
         )}
       </CardContent>
     </Card>
