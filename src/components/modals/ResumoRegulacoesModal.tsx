@@ -57,7 +57,7 @@ export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }
     const listaOrdenada = [...lista].sort((a, b) => b.msDeRegulacao - a.msDeRegulacao);
 
     // Define o cabeçalho da mensagem
-    const header = `*REGULAÇÕES PENDENTES - ${tipo === 'origem' ? 'SAÍDAS DE PACIENTES' : 'CHEGADAS DE PACIENTES'} (${setorNome})*`;
+    const header = `*REGULAÇÕES PENDENTES - Setor: ${setorNome}*`;
 
     let corpo = '';
     let footer = '';
@@ -87,7 +87,7 @@ export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }
       footer = `\n*ORIENTAÇÕES PARA A EQUIPE DE DESTINO:*
 - Verificar se os leitos de destino estão prontos para receber os pacientes;
 - Informar ao NIR caso ainda não tenha recebido o plantão do setor de origem;
-- *PUXAR O PACIENTE PARA O LEITO NO SISTEMA MV/TASY ASSIM QUE ELE CHEGAR NA UNIDADE!*`;
+- *PUXAR O PACIENTE PARA O LEITO NO SISTEMA MV ASSIM QUE ELE CHEGAR NA UNIDADE!*`;
     }
     // --------------------------------------------------
 
