@@ -122,7 +122,6 @@ export const RegulacaoModals = ({
       <TransferenciaModal
         open={transferenciaModalOpen}
         onOpenChange={setTransferenciaModalOpen}
-        paciente={pacienteParaAcao}
         onConfirm={onConfirmarTransferenciaExterna}
       />
 
@@ -130,7 +129,7 @@ export const RegulacaoModals = ({
         open={alocacaoCirurgiaModalOpen}
         onOpenChange={setAlocacaoCirurgiaModalOpen}
         cirurgia={cirurgiaParaAlocar}
-        onConfirm={onConfirmarAlocacaoCirurgia}
+        onAlocarLeito={onConfirmarAlocacaoCirurgia}
       />
 
       <GerenciarTransferenciaModal
