@@ -58,8 +58,8 @@ const GestaoIsolamentos = () => {
           paciente.nomeCompleto.toLowerCase().includes(busca.toLowerCase()) ||
           paciente.leitoCodigo.toLowerCase().includes(busca.toLowerCase());
         
-        const matchSexo = filtros.sexo === '' || paciente.sexoPaciente === filtros.sexo;
-        const matchSetor = filtros.setor === '' || paciente.setorNome === filtros.setor;
+        const matchSexo = filtros.sexo === '' || filtros.sexo === 'todos' || paciente.sexoPaciente === filtros.sexo;
+        const matchSetor = filtros.setor === '' || filtros.setor === 'todos' || paciente.setorNome === filtros.setor;
         
         const matchIsolamentos = filtros.isolamentos.length === 0 || 
           paciente.isolamentosVigentes?.some((iso: any) => 

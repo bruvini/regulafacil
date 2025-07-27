@@ -107,7 +107,7 @@ export const FiltrosGestaoIsolamentos = ({
                     <SelectValue placeholder="Selecione o sexo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos</SelectItem>
+                    <SelectItem value="todos">Todos</SelectItem>
                     <SelectItem value="Masculino">Masculino</SelectItem>
                     <SelectItem value="Feminino">Feminino</SelectItem>
                   </SelectContent>
@@ -124,7 +124,7 @@ export const FiltrosGestaoIsolamentos = ({
                     <SelectValue placeholder="Selecione o setor" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os setores</SelectItem>
+                    <SelectItem value="todos">Todos os setores</SelectItem>
                     {setores.map(setor => (
                       <SelectItem key={setor.id} value={setor.nomeSetor}>
                         {setor.nomeSetor}
