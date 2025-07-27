@@ -38,7 +38,7 @@ export const CancelamentoModal = ({ open, onOpenChange, onConfirm, paciente }: P
     if (!paciente) return "";
     const idade = calcularIdade(paciente.dataNascimento);
     return `⚠️ CANCELAMENTO DE REGULAÇÃO ⚠️
-Paciente: ${paciente.nomePaciente} - ${paciente.sexoPaciente} - ${idade} anos
+Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
 Origem: ${paciente.setorOrigem} - ${paciente.leitoCodigo}
 Destino Cancelado: ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'}
 Motivo do Cancelamento: ${motivo || '(preencha o motivo abaixo)'}
