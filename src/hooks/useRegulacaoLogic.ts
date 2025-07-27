@@ -93,31 +93,6 @@ export const useRegulacaoLogic = () => {
     return codigoLeito.split('-')[0];
   };
 
-  // Função auxiliar para aplicar ordenação
-  const aplicarOrdenacao = (lista: any[], sortConfig: any) => {
-    if (!sortConfig?.key) return lista;
-    
-    return [...lista].sort((a, b) => {
-      let aValue = a[sortConfig.key];
-      let bValue = b[sortConfig.key];
-      
-      if (sortConfig.key === 'idade') {
-        aValue = calcularIdade(a.dataNascimento);
-        bValue = calcularIdade(b.dataNascimento);
-      } else if (sortConfig.key === 'tempoInternacao') {
-        aValue = new Date(a.dataInternacao).getTime();
-        bValue = new Date(b.dataInternacao).getTime();
-      } else if (sortConfig.key === 'nomeCompleto') {
-        aValue = aValue?.toLowerCase() || '';
-        bValue = bValue?.toLowerCase() || '';
-      }
-      
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  };
-
   // Lógica de Combinação de Dados
   const pacientesComDadosCompletos = useMemo(() => {
     if (setoresLoading || leitosLoading || pacientesLoading) return [];
@@ -315,33 +290,26 @@ export const useRegulacaoLogic = () => {
   const pacientesAguardandoRegulacao = filteredPacientes.filter(
     (p) => p.statusLeito === "Ocupado"
   );
-  const pacientesJaRegulados = aplicarOrdenacao(
-    filteredPacientes.filter((p) => p.statusLeito === "Regulado"),
-    sortConfig
+  const pacientesJaRegulados = filteredPacientes.filter(
+    (p) => p.statusLeito === "Regulado"
   );
-  const pacientesAguardandoUTI = aplicarOrdenacao(
-    filteredPacientes.filter((p) => p.aguardaUTI && !p.transferirPaciente),
-    sortConfig
+  const pacientesAguardandoUTI = filteredPacientes.filter(
+        (p) => p.aguardaUTI && !p.transferirPaciente
+    );
+  const pacientesAguardandoTransferencia = filteredPacientes.filter(
+    (p) => p.transferirPaciente
   );
-  const pacientesAguardandoTransferencia = aplicarOrdenacao(
-    filteredPacientes.filter((p) => p.transferirPaciente),
-    sortConfig
+  const pacientesAguardandoRemanejamento = filteredPacientes.filter(
+    (p) => p.remanejarPaciente && p.statusLeito !== 'Regulado'
   );
-  const pacientesAguardandoRemanejamento = aplicarOrdenacao(
-    filteredPacientes.filter((p) => p.remanejarPaciente && p.statusLeito !== 'Regulado'),
-    sortConfig
+  const decisaoCirurgica = pacientesAguardandoRegulacao.filter(
+    (p) => p.setorOrigem === "PS DECISÃO CIRURGICA"
   );
-  const decisaoCirurgica = aplicarOrdenacao(
-    pacientesAguardandoRegulacao.filter((p) => p.setorOrigem === "PS DECISÃO CIRURGICA"),
-    sortConfig
+  const decisaoClinica = pacientesAguardandoRegulacao.filter(
+    (p) => p.setorOrigem === "PS DECISÃO CLINICA"
   );
-  const decisaoClinica = aplicarOrdenacao(
-    pacientesAguardandoRegulacao.filter((p) => p.setorOrigem === "PS DECISÃO CLINICA"),
-    sortConfig
-  );
-  const recuperacaoCirurgica = aplicarOrdenacao(
-    pacientesAguardandoRegulacao.filter((p) => p.setorOrigem === "CC - RECUPERAÇÃO"),
-    sortConfig
+  const recuperacaoCirurgica = pacientesAguardandoRegulacao.filter(
+    (p) => p.setorOrigem === "CC - RECUPERAÇÃO"
   );
   const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 
@@ -366,7 +334,7 @@ export const useRegulacaoLogic = () => {
   const handleOpenRegulacaoModal = (
     paciente: any,
     modo: "normal" | "uti" = "normal"
-  ) => {
+) => {
     // 1. Define o Paciente-Alvo:
     // Coloca o paciente que precisa ser remanejado no estado `pacienteParaRegular`.
     setPacienteParaRegular(paciente);
@@ -379,13 +347,13 @@ export const useRegulacaoLogic = () => {
 
     // 4. Abre o Modal: Abre o mesmo modal que você usa para regular um paciente do PS.
     setRegulacaoModalOpen(true);
-  };
+};
 
   const handleConfirmarRegulacao = async (
     leitoDestino: any,
     observacoes: string,
     motivoAlteracao?: string
-  ) => {
+) => {
     // 1. GUARDA DE SEGURANÇA
     // Garante que a função não execute se nenhum paciente foi selecionado.
     if (!pacienteParaRegular) return;
@@ -448,7 +416,7 @@ export const useRegulacaoLogic = () => {
     setRegulacaoModalOpen(false);
     setPacienteParaRegular(null);
     setIsAlteracaoMode(false);
-  };
+};
 
   const handleConcluir = async (paciente: any) => {
     // 1. GUARDA DE SEGURANÇA
@@ -501,13 +469,13 @@ export const useRegulacaoLogic = () => {
         // Exibe uma notificação de sucesso para o usuário.
         toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado." });
     }
-  };
+};
 
   const handleAlterar = (paciente: any) => {
     setPacienteParaRegular(paciente);
     setIsAlteracaoMode(true);
     setRegulacaoModalOpen(true);
-  };
+};
 
   const handleCancelar = (paciente: any) => {
     setPacienteParaAcao(paciente);
@@ -557,7 +525,7 @@ export const useRegulacaoLogic = () => {
     toast({ title: "Cancelado!", description: "A regulação foi desfeita com sucesso." });
     setCancelamentoModalOpen(false);
     setPacienteParaAcao(null);
-  };
+};
 
   const cancelarPedidoUTI = async (paciente: Paciente) => {
     const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);

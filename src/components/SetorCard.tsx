@@ -3,7 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import LeitoCard from './LeitoCard';
 import QuartoCard from './QuartoCard';
 import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
-import { Setor, LeitoEnriquecido } from '@/types/hospital';
+import { Setor } from '@/types/hospital';
+import { LeitoEnriquecido } from '@/pages/MapaLeitos';
 
 interface SetorCardProps {
   setor: Setor & { leitos: LeitoEnriquecido[] };

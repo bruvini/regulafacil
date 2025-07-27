@@ -77,212 +77,120 @@ const RegulacaoLeitos = () => {
           </CardContent>
         </Card>
 
-        {/* Filtros movidos para cá - agora bloco independente */}
-        <Card className="shadow-card border border-border/50">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-medical-primary">
-              Filtros de Pesquisa
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FiltrosRegulacao
-              filtrosAvancados={filtrosProps.filtrosAvancados}
-              setFiltrosAvancados={filtrosProps.setFiltrosAvancados}
-              searchTerm={filtrosProps.searchTerm}
-              setSearchTerm={filtrosProps.setSearchTerm}
-              resetFiltros={filtrosProps.resetFiltros}
-              sortConfig={filtrosProps.sortConfig}
-              setSortConfig={filtrosProps.setSortConfig}
-            />
-          </CardContent>
-        </Card>
+        <ListasLaterais
+          pacientesAguardandoUTI={listas.pacientesAguardandoUTI}
+          pacientesAguardandoTransferencia={listas.pacientesAguardandoTransferencia}
+          cirurgias={listas.cirurgias}
+          onCancelarUTI={handlers.cancelarPedidoUTI}
+          onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
+          onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
+          onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
+          onAlocarCirurgia={handlers.handleAlocarLeitoCirurgia}
+        />
 
-        {/* Bloco principal de Pacientes Aguardando Regulação */}
-        <Card className="shadow-card border border-border/50">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-medical-primary flex items-center gap-2">
-              Pacientes Aguardando Regulação
-              <Badge>{listas.totalPendentes}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <ListaPacientesPendentes
-                titulo="Decisão Cirúrgica"
-                pacientes={listas.decisaoCirurgica}
-                onRegularClick={handlers.handleOpenRegulacaoModal}
-                onConcluir={handlers.handleConcluir}
-                onAlterar={handlers.handleAlterar}
-                onCancelar={handlers.handleCancelar}
-                onAlta={(leitoId) => handlers.altaAposRecuperacao(leitoId)}
+        <Accordion
+          type="multiple"
+          className="w-full space-y-4"
+          defaultValue={["item-1"]}
+        >
+          <AccordionItem
+            value="item-1"
+            className="border rounded-lg bg-card shadow-card"
+          >
+            <AccordionTrigger className="px-4 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">
+                  Pacientes Aguardando Regulação
+                </h3>
+                <Badge>{listas.totalPendentes}</Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4 space-y-6">
+              <FiltrosRegulacao
+                filtrosAvancados={filtrosProps.filtrosAvancados}
+                setFiltrosAvancados={filtrosProps.setFiltrosAvancados}
+                searchTerm={filtrosProps.searchTerm}
+                setSearchTerm={filtrosProps.setSearchTerm}
+                resetFiltros={filtrosProps.resetFiltros}
+                sortConfig={filtrosProps.sortConfig}
+                setSortConfig={filtrosProps.setSortConfig}
               />
-              <ListaPacientesPendentes
-                titulo="Decisão Clínica"
-                pacientes={listas.decisaoClinica}
-                onRegularClick={handlers.handleOpenRegulacaoModal}
-                onConcluir={handlers.handleConcluir}
-                onAlterar={handlers.handleAlterar}
-                onCancelar={handlers.handleCancelar}
-                onAlta={(leitoId) => handlers.altaAposRecuperacao(leitoId)}
-              />
-              <ListaPacientesPendentes
-                titulo="Recuperação Cirúrgica"
-                pacientes={listas.recuperacaoCirurgica}
-                onRegularClick={handlers.handleOpenRegulacaoModal}
-                onAlta={(leitoId) => handlers.altaAposRecuperacao(leitoId)}
-                onConcluir={handlers.handleConcluir}
-                onAlterar={handlers.handleAlterar}
-                onCancelar={handlers.handleCancelar}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bloco de Pacientes Regulados - agora separado */}
-        {listas.pacientesJaRegulados.length > 0 && (
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="regulados" className="border rounded-lg bg-card shadow-card">
-              <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">
-                    Pacientes Regulados
-                  </h3>
-                  <Badge variant="secondary">
-                    {listas.pacientesJaRegulados.length}
-                  </Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <div className="flex justify-between items-center mb-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handlers.setResumoModalOpen(true)}
-                  >
-                    Ver Resumo
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {listas.pacientesJaRegulados.map((paciente) => (
-                    <PacienteReguladoItem
-                      key={paciente.id}
-                      paciente={paciente}
-                      onConcluir={handlers.handleConcluir}
-                      onAlterar={handlers.handleAlterar}
-                      onCancelar={handlers.handleCancelar}
-                    />
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        )}
-
-        {/* Bloco Aguardando UTI - linha exclusiva */}
-        {listas.pacientesAguardandoUTI.length > 0 && (
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="uti" className="border rounded-lg bg-card shadow-card">
-              <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">
-                    Aguardando UTI
-                  </h3>
-                  <Badge variant="destructive">
-                    {listas.pacientesAguardandoUTI.length}
-                  </Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <ListasLaterais
-                  pacientesAguardandoUTI={listas.pacientesAguardandoUTI}
-                  pacientesAguardandoTransferencia={[]}
-                  cirurgias={[]}
-                  onCancelarUTI={handlers.cancelarPedidoUTI}
-                  onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-                  onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
-                  onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
-                  onAlocarCirurgia={handlers.handleAlocarLeitoCirurgia}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <ListaPacientesPendentes
+                  titulo="Decisão Cirúrgica"
+                  pacientes={listas.decisaoCirurgica}
+                  onRegularClick={handlers.handleOpenRegulacaoModal}
+                  onConcluir={handlers.handleConcluir}
+                  onAlterar={handlers.handleAlterar}
+                  onCancelar={handlers.handleCancelar}
                 />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        )}
-
-        {/* Bloco Aguardando Transferência - linha exclusiva */}
-        {listas.pacientesAguardandoTransferencia.length > 0 && (
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="transferencia" className="border rounded-lg bg-card shadow-card">
-              <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">
-                    Aguardando Transferência
-                  </h3>
-                  <Badge variant="destructive">
-                    {listas.pacientesAguardandoTransferencia.length}
-                  </Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <ListasLaterais
-                  pacientesAguardandoUTI={[]}
-                  pacientesAguardandoTransferencia={listas.pacientesAguardandoTransferencia}
-                  cirurgias={[]}
-                  onCancelarUTI={handlers.cancelarPedidoUTI}
-                  onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-                  onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
-                  onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
-                  onAlocarCirurgia={handlers.handleAlocarLeitoCirurgia}
+                <ListaPacientesPendentes
+                  titulo="Decisão Clínica"
+                  pacientes={listas.decisaoClinica}
+                  onRegularClick={handlers.handleOpenRegulacaoModal}
+                  onConcluir={handlers.handleConcluir}
+                  onAlterar={handlers.handleAlterar}
+                  onCancelar={handlers.handleCancelar}
                 />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        )}
-
-        {/* Bloco Cirurgia Eletiva - linha exclusiva */}
-        {listas.cirurgias.length > 0 && (
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="cirurgia" className="border rounded-lg bg-card shadow-card">
-              <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">
-                    Aguardando Cirurgia Eletiva
-                  </h3>
-                  <Badge variant="destructive">
-                    {listas.cirurgias.length}
-                  </Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
-                <ListasLaterais
-                  pacientesAguardandoUTI={[]}
-                  pacientesAguardandoTransferencia={[]}
-                  cirurgias={listas.cirurgias}
-                  onCancelarUTI={handlers.cancelarPedidoUTI}
-                  onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-                  onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
-                  onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
-                  onAlocarCirurgia={handlers.handleAlocarLeitoCirurgia}
+                <ListaPacientesPendentes
+                  titulo="Recuperação Cirúrgica"
+                  pacientes={listas.recuperacaoCirurgica}
+                  onRegularClick={handlers.handleOpenRegulacaoModal}
+                  onAlta={(leitoId) => handlers.altaAposRecuperacao(leitoId)}
+                  onConcluir={handlers.handleConcluir}
+                  onAlterar={handlers.handleAlterar}
+                  onCancelar={handlers.handleCancelar}
                 />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        )}
-
-        {/* Bloco Remanejamentos Pendentes */}
-        {listas.pacientesAguardandoRemanejamento.length > 0 && (
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="remanejamento" className="border rounded-lg bg-card shadow-card">
-              <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-foreground">
-                    REMANEJAMENTOS PENDENTES
-                  </h3>
-                  <Badge variant="destructive">
-                    {listas.pacientesAguardandoRemanejamento.length}
-                  </Badge>
+              </div>
+              {listas.pacientesJaRegulados.length > 0 && (
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      Pacientes Regulados
+                      <Badge variant="secondary">
+                        {listas.pacientesJaRegulados.length}
+                      </Badge>
+                    </h4>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handlers.setResumoModalOpen(true)}
+                    >
+                      Ver Resumo
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {listas.pacientesJaRegulados.map((paciente) => (
+                      <PacienteReguladoItem
+                        key={paciente.id}
+                        paciente={paciente}
+                        onConcluir={handlers.handleConcluir}
+                        onAlterar={handlers.handleAlterar}
+                        onCancelar={handlers.handleCancelar}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4">
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem
+            value="item-2"
+            className="border rounded-lg bg-card shadow-card"
+          >
+            <AccordionTrigger className="px-4 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground">
+                  REMANEJAMENTOS PENDENTES
+                </h3>
+                <Badge variant="destructive">
+                  {listas.pacientesAguardandoRemanejamento.length}
+                </Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              {listas.pacientesAguardandoRemanejamento.length > 0 ? (
                 <div className="space-y-2">
                   {listas.pacientesAguardandoRemanejamento.map((paciente) => (
                     <RemanejamentoPendenteItem
@@ -295,10 +203,14 @@ const RegulacaoLeitos = () => {
                     />
                   ))}
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        )}
+              ) : (
+                <p className="italic text-muted-foreground text-center py-4">
+                  Nenhum remanejamento pendente.
+                </p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         <RegulacaoModals
           importModalOpen={modals.importModalOpen}
