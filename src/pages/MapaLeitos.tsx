@@ -23,7 +23,6 @@ import { Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { AcoesRapidas } from '@/components/AcoesRapidas';
 
 // Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
 export type LeitoEnriquecido = Leito & {
@@ -222,13 +221,6 @@ const MapaLeitos = () => {
               <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
               <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
             </div>
-            <AcoesRapidas 
-              onImportarClick={() => setImportModalOpen(true)}
-              onPassagemClick={() => {}}
-              onSugestoesClick={() => {}}
-              showAllButtons={false}
-              sugestoesDisponiveis={false}
-            />
           </header>
 
           {loading ? (
