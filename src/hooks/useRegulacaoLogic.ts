@@ -248,7 +248,9 @@ export const useRegulacaoLogic = () => {
   const pacientesJaRegulados = filteredPacientes.filter(
     (p) => p.statusLeito === "Regulado"
   );
-  const pacientesAguardandoUTI = filteredPacientes.filter((p) => p.aguardaUTI);
+  const pacientesAguardandoUTI = filteredPacientes.filter(
+        (p) => p.aguardaUTI && !p.transferirPaciente
+    );
   const pacientesAguardandoTransferencia = filteredPacientes.filter(
     (p) => p.transferirPaciente
   );
@@ -987,6 +989,7 @@ const handleProcessFileRequest = (file: File) => {
     
     // Dados
     listas: {
+      pacientesAguardandoRegulacao,
       pacientesAguardandoUTI,
       pacientesAguardandoTransferencia,
       pacientesAguardandoRemanejamento,
