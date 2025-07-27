@@ -73,6 +73,21 @@ export interface Paciente {
   };
 }
 
+/**
+ * Representa um leito enriquecido com dados do paciente
+ */
+export interface LeitoEnriquecido extends Leito {
+  statusLeito: 'Vago' | 'Ocupado' | 'Bloqueado' | 'Higienizacao' | 'Regulado' | 'Reservado';
+  dadosPaciente?: Paciente;
+  dataAtualizacaoStatus: string;
+  motivoBloqueio?: string;
+  infoRegulacao?: {
+    paraSetor: string;
+    paraLeito: string;
+    observacoes?: string;
+  };
+}
+
 // ... outros tipos (FormData, SolicitacaoCirurgica, etc.) permanecem os mesmos
 export interface SetorFormData {
   nomeSetor: string;
