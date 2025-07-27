@@ -13,6 +13,30 @@ const calcularIdade = (dataNascimento: string): number => {
     return idade;
 };
 
+const aplicarOrdenacao = (pacientes: any[], sortConfig: { key: string; direction: string }) => {
+    return [...pacientes].sort((a, b) => {
+        let comparison = 0;
+        
+        if (sortConfig?.key === 'nome') {
+            comparison = (a?.nomeCompleto || '').localeCompare(b?.nomeCompleto || '');
+        } else if (sortConfig?.key === 'idade') {
+            const idadeA = a?.dataNascimento ? calcularIdade(a.dataNascimento) : 0;
+            const idadeB = b?.dataNascimento ? calcularIdade(b.dataNascimento) : 0;
+            comparison = idadeA - idadeB;
+        } else if (sortConfig?.key === 'tempo') {
+            const dataA = a?.dataInternacao ? parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
+            const dataB = b?.dataInternacao ? parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
+            if (isValid(dataA) && isValid(dataB)) {
+                const tempoA = differenceInHours(new Date(), dataA);
+                const tempoB = differenceInHours(new Date(), dataB);
+                comparison = tempoA - tempoB;
+            }
+        }
+
+        return sortConfig?.direction === 'desc' ? -comparison : comparison;
+    });
+};
+
 export const useFiltrosRegulacao = (pacientes: any[]) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filtrosAvancados, setFiltrosAvancados] = useState({
@@ -22,7 +46,7 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
         idadeMax: '',
         tempoInternacaoMin: '',
         tempoInternacaoMax: '',
-        unidadeTempo: 'dias', // 'dias' ou 'horas'
+        unidadeTempo: 'dias',
     });
     const [sortConfig, setSortConfig] = useState({ key: 'tempo', direction: 'desc' });
 
@@ -30,15 +54,14 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
         if (!pacientes || pacientes.length === 0) return [];
         
         let pacientesFiltrados = pacientes.filter(paciente => {
-            // Verificar se o paciente existe e tem as propriedades necessárias
             if (!paciente) return false;
 
-            // Filtro por Nome - usando nomeCompleto
+            // Filtro por Nome
             if (searchTerm && !paciente.nomeCompleto?.toLowerCase().includes(searchTerm.toLowerCase())) {
                 return false;
             }
 
-            // Filtros Avançados - Verificar se filtrosAvancados existe e tem a propriedade
+            // Filtros Avançados
             if (filtrosAvancados?.especialidade && paciente.especialidadePaciente !== filtrosAvancados.especialidade) {
                 return false;
             }
@@ -46,7 +69,7 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
                 return false;
             }
             
-            // Verificar se dataNascimento existe antes de calcular idade
+            // Filtro de idade
             if (paciente.dataNascimento && filtrosAvancados) {
                 const idade = calcularIdade(paciente.dataNascimento);
                 if (filtrosAvancados.idadeMin && idade < parseInt(filtrosAvancados.idadeMin)) {
@@ -77,29 +100,7 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
             return true;
         });
 
-        // LÓGICA DE ORDENAÇÃO IMPLEMENTADA
-        return [...pacientesFiltrados].sort((a, b) => {
-            let comparison = 0;
-            
-            if (sortConfig?.key === 'nome') {
-                comparison = (a?.nomeCompleto || '').localeCompare(b?.nomeCompleto || '');
-            } else if (sortConfig?.key === 'idade') {
-                const idadeA = a?.dataNascimento ? calcularIdade(a.dataNascimento) : 0;
-                const idadeB = b?.dataNascimento ? calcularIdade(b.dataNascimento) : 0;
-                comparison = idadeA - idadeB;
-            } else if (sortConfig?.key === 'tempo') {
-                // Para tempo de internação, usa dataInternacao
-                const dataA = a?.dataInternacao ? parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
-                const dataB = b?.dataInternacao ? parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
-                if (isValid(dataA) && isValid(dataB)) {
-                    const tempoA = differenceInHours(new Date(), dataA);
-                    const tempoB = differenceInHours(new Date(), dataB);
-                    comparison = tempoA - tempoB;
-                }
-            }
-
-            return sortConfig?.direction === 'desc' ? -comparison : comparison;
-        });
+        return aplicarOrdenacao(pacientesFiltrados, sortConfig);
     }, [pacientes, searchTerm, filtrosAvancados, sortConfig]);
 
     const resetFiltros = () => {
@@ -115,6 +116,11 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
         });
     };
 
+    // Função para aplicar ordenação a listas específicas
+    const aplicarOrdenacaoALista = (lista: any[]) => {
+        return aplicarOrdenacao(lista, sortConfig);
+    };
+
     return { 
         searchTerm, 
         setSearchTerm, 
@@ -123,6 +129,7 @@ export const useFiltrosRegulacao = (pacientes: any[]) => {
         filteredPacientes, 
         resetFiltros, 
         sortConfig, 
-        setSortConfig 
+        setSortConfig,
+        aplicarOrdenacaoALista
     };
 };
