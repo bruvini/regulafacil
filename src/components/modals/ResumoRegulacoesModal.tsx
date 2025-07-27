@@ -76,7 +76,7 @@ export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }
     
     // Mapeia cada paciente para uma linha de texto, agora incluindo o tempo de regulação.
     const corpo = listaOrdenada.map(p => 
-      `_${p.siglaSetorOrigem} - ${p.leitoCodigo}_ - *${p.nomeCompleto}* / VAI PARA: *${p.regulacao.paraSetor} - ${p.regulacao.paraLeito}* (*${p.tempoDeRegulacao}*)`
+      `_${p.siglaSetorOrigem} - ${p.leitoCodigo}_ - *${p.nomeCompleto}* / VAI PARA: *${p.regulacao.paraSetor} - ${p.regulacao.paraLeito}* (*Tempo de regulação: ${p.tempoDeRegulacao}*)`
     ).join('\n');
 
     // Monta as orientações finais.
