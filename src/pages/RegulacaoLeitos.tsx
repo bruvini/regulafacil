@@ -232,6 +232,7 @@ const RegulacaoLeitos = () => {
           isSyncing={loading}
           pacientesRegulados={listas.pacientesJaRegulados}
           sugestoes={listas.sugestoesDeRegulacao}
+          totalPendentes={listas.totalPendentes}
           onProcessFileRequest={handlers.handleProcessFileRequest}
           onConfirmSync={handlers.handleConfirmSync}
           onConfirmarRegulacao={handlers.handleConfirmarRegulacao}

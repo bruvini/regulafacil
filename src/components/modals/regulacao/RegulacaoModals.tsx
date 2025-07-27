@@ -1,16 +1,13 @@
 
-import { ImportacaoMVModal } from "@/components/modals/ImportacaoMVModal";
-import { RegulacaoModal } from "@/components/modals/RegulacaoModal";
-import { TransferenciaModal } from "@/components/modals/TransferenciaModal";
-import { AlocacaoCirurgiaModal } from "@/components/modals/AlocacaoCirurgiaModal";
-import { GerenciarTransferenciaModal } from "@/components/modals/GerenciarTransferenciaModal";
-import { SugestoesRegulacaoModal } from '@/components/modals/SugestoesRegulacaoModal';
-import { CancelamentoModal } from "@/components/modals/CancelamentoModal";
-import { ResumoRegulacoesModal } from "@/components/modals/ResumoRegulacoesModal";
-import {
-  ResultadoValidacao,
-  SyncSummary,
-} from "@/components/modals/ValidacaoImportacao";
+import { ImportacaoMVModal } from '../ImportacaoMVModal';
+import { RegulacaoModal } from '../RegulacaoModal';
+import { CancelamentoModal } from '../CancelamentoModal';
+import { TransferenciaModal } from '../TransferenciaModal';
+import { AlocacaoCirurgiaModal } from '../AlocacaoCirurgiaModal';
+import { GerenciarTransferenciaModal } from '../GerenciarTransferenciaModal';
+import { ResumoRegulacoesModal } from '../ResumoRegulacoesModal';
+import { SugestoesRegulacaoModal } from '../SugestoesRegulacaoModal';
+import { ResultadoValidacao, SyncSummary } from '../ValidacaoImportacao';
 
 interface RegulacaoModalsProps {
   // Estados dos modais
@@ -23,7 +20,7 @@ interface RegulacaoModalsProps {
   resumoModalOpen: boolean;
   sugestoesModalOpen: boolean;
   
-  // Dados
+  // Dados dos modais
   pacienteParaRegular: any;
   pacienteParaAcao: any;
   cirurgiaParaAlocar: any;
@@ -35,6 +32,7 @@ interface RegulacaoModalsProps {
   isSyncing: boolean;
   pacientesRegulados: any[];
   sugestoes: any[];
+  totalPendentes: number;
   
   // Handlers
   onProcessFileRequest: (file: File) => void;
@@ -75,6 +73,7 @@ export const RegulacaoModals = ({
   isSyncing,
   pacientesRegulados,
   sugestoes,
+  totalPendentes,
   onProcessFileRequest,
   onConfirmSync,
   onConfirmarRegulacao,
@@ -93,78 +92,64 @@ export const RegulacaoModals = ({
   return (
     <>
       <ImportacaoMVModal
-        open={importModalOpen}
-        onOpenChange={(isOpen) => {
-          setImportModalOpen(isOpen);
-          if (!isOpen) {
-            // Reset states when closing
-          }
-        }}
-        onProcessFileRequest={onProcessFileRequest}
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onProcessFile={onProcessFileRequest}
         validationResult={validationResult}
         syncSummary={syncSummary}
+        onConfirmSync={onConfirmSync}
         processing={processing}
         isSyncing={isSyncing}
-        onConfirmSync={onConfirmSync}
+      />
+
+      <RegulacaoModal
+        isOpen={regulacaoModalOpen}
+        onClose={() => setRegulacaoModalOpen(false)}
+        paciente={pacienteParaRegular}
+        onConfirm={onConfirmarRegulacao}
+        isAlteracaoMode={isAlteracaoMode}
+        modo={modoRegulacao}
       />
 
       <CancelamentoModal
-        open={cancelamentoModalOpen}
-        onOpenChange={setCancelamentoModalOpen}
+        isOpen={cancelamentoModalOpen}
+        onClose={() => setCancelamentoModalOpen(false)}
         onConfirm={onConfirmarCancelamento}
         paciente={pacienteParaAcao}
       />
 
-      <ResumoRegulacoesModal
-        open={resumoModalOpen}
-        onOpenChange={setResumoModalOpen}
-        pacientesRegulados={pacientesRegulados}
-      />
-
       <TransferenciaModal
-        open={transferenciaModalOpen}
-        onOpenChange={setTransferenciaModalOpen}
+        isOpen={transferenciaModalOpen}
+        onClose={() => setTransferenciaModalOpen(false)}
+        paciente={pacienteParaAcao}
         onConfirm={onConfirmarTransferenciaExterna}
       />
 
+      <AlocacaoCirurgiaModal
+        isOpen={alocacaoCirurgiaModalOpen}
+        onClose={() => setAlocacaoCirurgiaModalOpen(false)}
+        cirurgia={cirurgiaParaAlocar}
+        onConfirm={onConfirmarAlocacaoCirurgia}
+      />
+
       <GerenciarTransferenciaModal
-        open={gerenciarTransferenciaOpen}
-        onOpenChange={setGerenciarTransferenciaOpen}
+        isOpen={gerenciarTransferenciaOpen}
+        onClose={() => setGerenciarTransferenciaOpen(false)}
         paciente={pacienteParaAcao}
       />
 
-      <AlocacaoCirurgiaModal
-        open={alocacaoCirurgiaModalOpen}
-        onOpenChange={setAlocacaoCirurgiaModalOpen}
-        cirurgia={cirurgiaParaAlocar}
-        onAlocarLeito={onConfirmarAlocacaoCirurgia}
+      <ResumoRegulacoesModal
+        isOpen={resumoModalOpen}
+        onClose={() => setResumoModalOpen(false)}
+        pacientesRegulados={pacientesRegulados}
       />
 
       <SugestoesRegulacaoModal
         open={sugestoesModalOpen}
         onOpenChange={setSugestoesModalOpen}
         sugestoes={sugestoes}
+        totalPendentes={totalPendentes}
       />
-
-      {pacienteParaRegular && (
-        <RegulacaoModal
-          open={regulacaoModalOpen}
-          onOpenChange={(isOpen) => {
-            setRegulacaoModalOpen(isOpen);
-            if (!isOpen) {
-              // Reset states when closing
-            }
-          }}
-          paciente={pacienteParaRegular}
-          origem={{
-            setor: pacienteParaRegular.setorOrigem,
-            leito: pacienteParaRegular.leitoCodigo,
-          }}
-          onConfirmRegulacao={onConfirmarRegulacao}
-          isAlteracao={isAlteracaoMode}
-          modo={modoRegulacao}
-        />
-      )}
     </>
   );
 };

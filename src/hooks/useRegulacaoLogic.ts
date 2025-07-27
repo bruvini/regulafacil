@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { useCirurgiasEletivas } from "@/hooks/useCirurgiasEletivas";
 import { useCirurgias } from "@/hooks/useCirurgias";
@@ -60,6 +59,40 @@ export const useRegulacaoLogic = () => {
   const [processing, setProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Função auxiliar para calcular idade
+  const calcularIdade = (dataNascimento: string): number => {
+    if (!dataNascimento) return 0;
+    
+    // Tenta diferentes formatos de data
+    let nascimento: Date;
+    
+    if (dataNascimento.includes('/')) {
+      // Formato DD/MM/YYYY
+      const [dia, mes, ano] = dataNascimento.split('/').map(Number);
+      nascimento = new Date(ano, mes - 1, dia);
+    } else if (dataNascimento.includes('-')) {
+      // Formato ISO
+      nascimento = new Date(dataNascimento);
+    } else {
+      return 0;
+    }
+    
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const m = hoje.getMonth() - nascimento.getMonth();
+    
+    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+      idade--;
+    }
+    
+    return idade;
+  };
+
+  // Função auxiliar para extrair o ID do quarto
+  const getQuartoId = (codigoLeito: string): string => {
+    return codigoLeito.split('-')[0];
+  };
+
   // Lógica de Combinação de Dados
   const pacientesComDadosCompletos = useMemo(() => {
     if (setoresLoading || leitosLoading || pacientesLoading) return [];
@@ -99,11 +132,6 @@ export const useRegulacaoLogic = () => {
     });
   }, [pacientes, leitos, setores, setoresLoading, leitosLoading, pacientesLoading]);
 
-  // Função auxiliar para extrair o ID do quarto
-  const getQuartoId = (codigoLeito: string): string => {
-    return codigoLeito.split('-')[0];
-  };
-
   // Lógica Inteligente de Sugestões de Regulação Refinada
   const sugestoesDeRegulacao = useMemo(() => {
     if (setoresLoading || leitosLoading || pacientesLoading) return [];
@@ -134,9 +162,20 @@ export const useRegulacaoLogic = () => {
       );
     });
 
+    // Configuração das especialidades compatíveis por setor
+    const especialidadesCompatíveis: Record<string, string[]> = {
+      'UNID. JS ORTOPEDIA': ['NEUROCIRURGIA', 'ODONTOLOGIA C.TRAUM.B.M.F.', 'ORTOPEDIA/TRAUMATOLOGIA'],
+      'UNID. INT. GERAL - UIG': ['CLINICA GERAL', 'INTENSIVISTA', 'NEUROLOGIA', 'PROCTOLOGIA', 'UROLOGIA'],
+      'UNID. CLINICA MEDICA': ['CLINICA GERAL', 'INTENSIVISTA', 'NEUROLOGIA', 'PROCTOLOGIA', 'UROLOGIA'],
+      'UNID. ONCOLOGIA': ['ONCOLOGIA CIRURGICA', 'ONCOLOGIA CLINICA/CANCEROLOGIA'],
+      'UNID. CIRURGICA': ['CIRURGIA CABECA E PESCOCO', 'CIRURGIA GERAL', 'CIRURGIA TORACICA', 'CIRURGIA VASCULAR', 'NEUROCIRURGIA', 'PROCTOLOGIA', 'UROLOGIA', 'ONCOLOGIA CIRURGICA'],
+      'UNID. NEFROLOGIA TRANSPLANTE': ['NEFROLOGIA'],
+    };
+
     const sugestoesPorLeito = leitosDisponiveis
       .map((leito) => {
         const setor = mapaSetores.get(leito.setorId);
+        const setorNome = setor?.nomeSetor || '';
         
         const quartoId = getQuartoId(leito.codigoLeito);
         const leitosDoQuarto = leitos.filter(
@@ -155,6 +194,13 @@ export const useRegulacaoLogic = () => {
         );
 
         const pacientesElegiveis = pacientesRelevantes.filter((paciente) => {
+          // 1. Filtro de especialidade por setor
+          const especialidadesSetor = especialidadesCompatíveis[setorNome] || [];
+          if (especialidadesSetor.length > 0 && !especialidadesSetor.includes(paciente.especialidadePaciente || '')) {
+            return false;
+          }
+
+          // 2. Filtro de gênero para quartos compartilhados
           if (pacientesDoQuarto.length > 0) {
             const sexoDoQuarto = pacientesDoQuarto[0]?.sexoPaciente;
             if (sexoDoQuarto && paciente.sexoPaciente !== sexoDoQuarto) {
@@ -162,6 +208,7 @@ export const useRegulacaoLogic = () => {
             }
           }
 
+          // 3. Filtro de isolamento
           const pacientePrecisaIsolamento = paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0;
           
           if (pacientePrecisaIsolamento && !leito.leitoIsolamento) {
@@ -172,20 +219,18 @@ export const useRegulacaoLogic = () => {
             return false;
           }
 
+          // 4. Filtro de idade para leitos PCP
+          if (leito.leitoPCP) {
+            const idade = calcularIdade(paciente.dataNascimento);
+            if (idade < 18 || idade > 60) {
+              return false;
+            }
+          }
+
           return true;
         });
 
         const pacientesOrdenados = pacientesElegiveis.sort((a, b) => {
-          const especialidadesCompatíveis: Record<string, string[]> = {
-            'UNID. CIRURGICA': ['CIRURGIA GERAL', 'ORTOPEDIA', 'UROLOGIA'],
-            'UNID. CLINICA MEDICA': ['CLINICA MEDICA', 'CARDIOLOGIA', 'PNEUMOLOGIA'],
-            'UNID. INT. GERAL - UIG': ['CLINICA MEDICA', 'MEDICINA INTERNA'],
-            'UNID. JS ORTOPEDIA': ['ORTOPEDIA', 'TRAUMATOLOGIA'],
-            'UNID. NEFROLOGIA TRANSPLANTE': ['NEFROLOGIA', 'UROLOGIA'],
-            'UNID. ONCOLOGIA': ['ONCOLOGIA', 'HEMATOLOGIA'],
-          };
-
-          const setorNome = setor?.nomeSetor || '';
           const compatíveisSetor = especialidadesCompatíveis[setorNome] || [];
           
           const aCompatível = compatíveisSetor.includes(a.especialidadePaciente || '');
@@ -198,11 +243,11 @@ export const useRegulacaoLogic = () => {
         });
 
         return {
-          setor: setor?.nomeSetor || '',
+          setor: setorNome,
           sugestao: {
             leito: {
               ...leito,
-              setorNome: setor?.nomeSetor,
+              setorNome: setorNome,
               statusLeito: leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1].statusLeito,
             },
             pacientesElegiveis: pacientesOrdenados,
@@ -629,7 +674,7 @@ export const useRegulacaoLogic = () => {
     setTransferenciaModalOpen(true);
   };
 
-const handleProcessFileRequest = (file: File) => {
+  const handleProcessFileRequest = (file: File) => {
 
     // 1. PREPARAÇÃO INICIAL
     // Reseta os estados da interface para começar um novo processo de importação.
@@ -779,7 +824,6 @@ const handleProcessFileRequest = (file: File) => {
     // Inicia a leitura do arquivo.
     reader.readAsBinaryString(file);
   };
-
 
   const handleConfirmSync = async () => {
       // 1. GUARDA DE SEGURANÇA E PREPARAÇÃO INICIAL

@@ -37,18 +37,16 @@ interface SugestoesRegulacaoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sugestoes: SugestaoAgrupada[];
+  totalPendentes: number;
 }
 
 export const SugestoesRegulacaoModal = ({
   open,
   onOpenChange,
   sugestoes,
+  totalPendentes,
 }: SugestoesRegulacaoModalProps) => {
   const totalLeitos = sugestoes.reduce((acc, grupo) => acc + grupo.sugestoes.length, 0);
-  const totalPacientes = sugestoes.reduce(
-    (acc, grupo) => acc + grupo.sugestoes.reduce((acc2, s) => acc2 + s.pacientesElegiveis.length, 0),
-    0
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -75,7 +73,7 @@ export const SugestoesRegulacaoModal = ({
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-medical-secondary" />
               <span className="text-sm font-medium">
-                {totalPacientes} pacientes compatíveis
+                {totalPendentes} pacientes aguardando regulação
               </span>
             </div>
           </div>
