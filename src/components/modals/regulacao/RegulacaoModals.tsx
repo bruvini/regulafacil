@@ -92,9 +92,9 @@ export const RegulacaoModals = ({
   return (
     <>
       <ImportacaoMVModal
-        isOpen={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        onProcessFile={onProcessFileRequest}
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        onProcessFileRequest={onProcessFileRequest}
         validationResult={validationResult}
         syncSummary={syncSummary}
         onConfirmSync={onConfirmSync}
@@ -103,44 +103,45 @@ export const RegulacaoModals = ({
       />
 
       <RegulacaoModal
-        isOpen={regulacaoModalOpen}
-        onClose={() => setRegulacaoModalOpen(false)}
+        open={regulacaoModalOpen}
+        onOpenChange={setRegulacaoModalOpen}
         paciente={pacienteParaRegular}
-        onConfirm={onConfirmarRegulacao}
-        isAlteracaoMode={isAlteracaoMode}
+        origem={{ setor: pacienteParaRegular?.setorOrigem || '', leito: pacienteParaRegular?.leitoOrigem || '' }}
+        onConfirmRegulacao={onConfirmarRegulacao}
+        isAlteracao={isAlteracaoMode}
         modo={modoRegulacao}
       />
 
       <CancelamentoModal
-        isOpen={cancelamentoModalOpen}
-        onClose={() => setCancelamentoModalOpen(false)}
+        open={cancelamentoModalOpen}
+        onOpenChange={setCancelamentoModalOpen}
         onConfirm={onConfirmarCancelamento}
         paciente={pacienteParaAcao}
       />
 
       <TransferenciaModal
-        isOpen={transferenciaModalOpen}
-        onClose={() => setTransferenciaModalOpen(false)}
+        open={transferenciaModalOpen}
+        onOpenChange={setTransferenciaModalOpen}
         paciente={pacienteParaAcao}
         onConfirm={onConfirmarTransferenciaExterna}
       />
 
       <AlocacaoCirurgiaModal
-        isOpen={alocacaoCirurgiaModalOpen}
-        onClose={() => setAlocacaoCirurgiaModalOpen(false)}
+        open={alocacaoCirurgiaModalOpen}
+        onOpenChange={setAlocacaoCirurgiaModalOpen}
         cirurgia={cirurgiaParaAlocar}
         onConfirm={onConfirmarAlocacaoCirurgia}
       />
 
       <GerenciarTransferenciaModal
-        isOpen={gerenciarTransferenciaOpen}
-        onClose={() => setGerenciarTransferenciaOpen(false)}
+        open={gerenciarTransferenciaOpen}
+        onOpenChange={setGerenciarTransferenciaOpen}
         paciente={pacienteParaAcao}
       />
 
       <ResumoRegulacoesModal
-        isOpen={resumoModalOpen}
-        onClose={() => setResumoModalOpen(false)}
+        open={resumoModalOpen}
+        onOpenChange={setResumoModalOpen}
         pacientesRegulados={pacientesRegulados}
       />
 
