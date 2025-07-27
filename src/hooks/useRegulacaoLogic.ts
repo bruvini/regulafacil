@@ -527,28 +527,48 @@ export const useRegulacaoLogic = () => {
     setTransferenciaModalOpen(true);
   };
 
-  const handleProcessFileRequest = (file: File) => {
-    setProcessing(true);
-    setValidationResult(null);
-    setSyncSummary(null);
+const handleProcessFileRequest = (file: File) => {
 
+    // 1. PREPARAÇÃO INICIAL
+    // Reseta os estados da interface para começar um novo processo de importação.
+    // Isso garante que dados de importações anteriores não interfiram na atual.
+    setProcessing(true); // Ativa o indicador de "processando" na tela.
+    setValidationResult(null); // Limpa resultados de validação anteriores.
+    setSyncSummary(null); // Limpa o resumo de sincronização anterior.
+
+    // 2. LEITURA DO ARQUIVO
+    // O FileReader é uma API do navegador para ler o conteúdo de arquivos.
     const reader = new FileReader();
+
+    // A função `onload` será executada quando o arquivo for completamente lido.
     reader.onload = (e) => {
       try {
+        // --- ETAPA A: EXTRAÇÃO DOS DADOS DA PLANILHA ---
+        
+        // Pega o conteúdo binário do arquivo lido.
         const data = e.target!.result;
+        // A biblioteca 'xlsx' (SheetJS) lê o conteúdo binário do Excel.
         const workbook = XLSX.read(data, { type: "binary" });
+        // Pega o nome da primeira aba da planilha.
         const sheetName = workbook.SheetNames[0];
+        // Seleciona a primeira aba para trabalhar.
         const worksheet = workbook.Sheets[sheetName];
+        // Converte a aba em um array de arrays (JSON), onde cada array interno é uma linha.
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
           header: 1,
         });
 
+        // --- ETAPA B: TRANSFORMAÇÃO E LIMPEZA DOS DADOS ---
+
+        // Pula as 3 primeiras linhas (cabeçalhos do relatório do MV) e mapeia cada
+        // linha para um objeto de paciente estruturado.
         const pacientesDaPlanilha: PacienteDaPlanilha[] = jsonData
           .slice(3)
           .map((row: any) => {
             const sexo =
               row[2]?.trim().toUpperCase() === "F" ? "Feminino" : "Masculino";
             return {
+              // `.trim()` remove espaços em branco no início e no fim.
               nomeCompleto: row[0]?.trim(),
               dataNascimento: row[1]?.trim(),
               sexo: sexo as "Masculino" | "Feminino",
@@ -558,17 +578,25 @@ export const useRegulacaoLogic = () => {
               especialidade: row[7]?.trim(),
             };
           })
+          // Filtra qualquer linha que não tenha as informações essenciais (nome, leito, setor).
           .filter((p) => p.nomeCompleto && p.leitoCodigo && p.setorNome);
 
+        // Armazena os dados processados no estado para uso posterior.
         setDadosPlanilhaProcessados(pacientesDaPlanilha);
 
+        // --- ETAPA C: VALIDAÇÃO DE INTEGRIDADE (SETORES E LEITOS) ---
+
+        // Cria conjuntos (Sets) com os nomes dos setores e códigos dos leitos existentes
+        // no sistema para uma verificação rápida e performática.
         const setoresCadastrados = new Set(setores.map((s) => s.nomeSetor));
         const leitosCadastrados = new Set(leitos.map((l) => l.codigoLeito));
 
+        // Compara os setores da planilha com os setores cadastrados e lista os que não existem.
         const setoresFaltantes = [
           ...new Set(pacientesDaPlanilha.map((p) => p.setorNome)),
         ].filter((nomeSetor) => !setoresCadastrados.has(nomeSetor));
 
+        // Compara os leitos da planilha com os leitos cadastrados e lista os que não existem.
         const leitosFaltantes: Record<string, string[]> = {};
         pacientesDaPlanilha.forEach((p) => {
           if (!leitosCadastrados.has(p.leitoCodigo)) {
@@ -579,46 +607,62 @@ export const useRegulacaoLogic = () => {
           }
         });
 
+        // Se encontrar qualquer setor ou leito faltando, interrompe o processo e exibe o modal de validação.
         if (
           setoresFaltantes.length > 0 ||
           Object.keys(leitosFaltantes).length > 0
         ) {
           setValidationResult({ setoresFaltantes, leitosFaltantes });
-          return;
+          return; // Para a execução da função aqui.
         }
 
+        // --- ETAPA D: ANÁLISE INTELIGENTE DE MUDANÇAS ---
+
+        // Cria uma função para gerar uma chave única para cada paciente.
+        // Usar NOME + DATA DE NASCIMENTO é muito mais seguro contra homônimos.
+        // O `.toUpperCase()` e a remoção de espaços extras garantem consistência.
+        const gerarChaveUnica = (p: { nomeCompleto: string; dataNascimento: string; }) => 
+            `${p.nomeCompleto.toUpperCase().trim()}-${p.dataNascimento.trim()}`;
+
+        // Cria os mapas de acesso rápido usando a nova chave única.
         const mapaPacientesPlanilha = new Map(
-          pacientesDaPlanilha.map((p) => [p.nomeCompleto, p])
+          pacientesDaPlanilha.map((p) => [gerarChaveUnica(p), p])
         );
         const mapaPacientesSistema = new Map(
-          pacientes.map((p) => [p.nomeCompleto, p])
+          pacientes.map((p) => [gerarChaveUnica(p), p])
         );
         const mapaLeitosSistema = new Map(leitos.map((l) => [l.id, l]));
 
+        // Identifica ALTAS: Pacientes que estão no sistema, mas não na nova planilha.
         const altas = pacientes
-          .filter((p) => !mapaPacientesPlanilha.has(p.nomeCompleto))
+          .filter((p) => !mapaPacientesPlanilha.has(gerarChaveUnica(p)))
           .map((p) => ({
             nomePaciente: p.nomeCompleto,
             leitoAntigo: mapaLeitosSistema.get(p.leitoId)?.codigoLeito || "N/A",
           }));
 
+        // Identifica NOVAS INTERNAÇÕES: Pacientes que estão na planilha, mas não no sistema.
         const novasInternacoes = pacientesDaPlanilha.filter(
-          (p) => !mapaPacientesSistema.has(p.nomeCompleto)
+          (p) => !mapaPacientesSistema.has(gerarChaveUnica(p))
         );
 
+        // Identifica TRANSFERÊNCIAS: Pacientes que estão em ambos, mas em leitos diferentes.
         const transferencias = pacientesDaPlanilha
-          .filter((p) => mapaPacientesSistema.has(p.nomeCompleto))
+          .filter((p) => mapaPacientesSistema.has(gerarChaveUnica(p)))
           .map((p) => {
-            const pacienteSistema = pacientes.find(
-              (paciente) => paciente.nomeCompleto === p.nomeCompleto
-            )!;
+            const pacienteSistema = mapaPacientesSistema.get(gerarChaveUnica(p))!;
             const leitoAntigo = mapaLeitosSistema.get(pacienteSistema.leitoId);
             return { paciente: p, leitoAntigo: leitoAntigo?.codigoLeito };
           })
           .filter((t) => t.paciente.leitoCodigo !== t.leitoAntigo);
 
+        // --- ETAPA E: GERAÇÃO DO RESUMO FINAL ---
+        
+        // Armazena o resultado da análise no estado para exibir no modal de confirmação.
         setSyncSummary({ novasInternacoes, transferencias, altas });
+
       } catch (error) {
+        // Se qualquer erro acontecer durante o processo, exibe uma notificação.
         console.error("Erro ao processar planilha:", error);
         toast({
           title: "Erro de Processamento",
@@ -626,136 +670,166 @@ export const useRegulacaoLogic = () => {
           variant: "destructive",
         });
       } finally {
+        // Independentemente de sucesso ou falha, desativa o indicador de "processando".
         setProcessing(false);
       }
     };
+    // Inicia a leitura do arquivo.
     reader.readAsBinaryString(file);
   };
 
+
   const handleConfirmSync = async () => {
-    if (!syncSummary) return;
-    setIsSyncing(true);
+      // 1. GUARDA DE SEGURANÇA E PREPARAÇÃO INICIAL
+      // --------------------------------------------------
 
-    const batch = writeBatch(db);
-    const agora = new Date().toISOString();
+      // Se não houver um resumo de sincronização, a função para imediatamente.
+      if (!syncSummary) return;
+      // Ativa o indicador de "sincronizando" na tela para o usuário.
+      setIsSyncing(true);
 
-    const mapaLeitos = new Map(leitos.map((l) => [l.codigoLeito, l]));
-    const mapaSetores = new Map(setores.map((s) => [s.nomeSetor, s]));
+      // 2. CRIAÇÃO DO "CARRINHO DE COMPRAS" (BATCH) E PREPARAÇÃO DE DADOS
+      // --------------------------------------------------
 
-    try {
-      for (const itemAlta of syncSummary.altas) {
-        const pacienteParaAlta = pacientes.find(p => p.nomeCompleto === itemAlta.nomePaciente);
+      // O `writeBatch` garante que todas as operações sejam executadas com sucesso, ou nenhuma delas.
+      const batch = writeBatch(db);
+      // Pega a data e hora atuais para garantir que todos os registros tenham o mesmo timestamp.
+      const agora = new Date().toISOString();
+      // Cria mapas de acesso rápido para leitos e setores para otimizar a performance.
+      const mapaLeitos = new Map(leitos.map((l) => [l.codigoLeito, l]));
+      const mapaSetores = new Map(setores.map((s) => [s.nomeSetor, s]));
 
-        if (pacienteParaAlta) {
-          const leitoRef = doc(db, "leitosRegulaFacil", pacienteParaAlta.leitoId);
-          const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteParaAlta.id);
+      try {
+          // 3. PROCESSANDO AS ALTAS
+          // --------------------------------------------------
+          for (const itemAlta of syncSummary.altas) {
+              // Encontra o paciente completo no estado atual para obter os IDs necessários.
+              const pacienteParaAlta = pacientes.find(p => p.nomeCompleto === itemAlta.nomePaciente);
 
-          const historicoAlta = {
-            statusLeito: "Higienizacao",
-            dataAtualizacaoStatus: agora,
-          };
-          batch.update(leitoRef, {
-            historicoMovimentacao: arrayUnion(historicoAlta),
+              if (pacienteParaAlta) {
+                  // Prepara as referências aos documentos que vamos modificar.
+                  const leitoRef = doc(db, "leitosRegulaFacil", pacienteParaAlta.leitoId);
+                  const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteParaAlta.id);
+
+                  // **AJUSTE 1:** O status do leito é definido como "Vago" diretamente.
+                  const historicoAlta = {
+                      statusLeito: "Vago",
+                      dataAtualizacaoStatus: agora,
+                  };
+
+                  // Adiciona as operações ao "carrinho".
+                  batch.update(leitoRef, {
+                      historicoMovimentacao: arrayUnion(historicoAlta),
+                  });
+                  batch.delete(pacienteRef);
+              }
+          }
+
+          // 4. PROCESSANDO AS TRANSFERÊNCIAS
+          // --------------------------------------------------
+          for (const { paciente, leitoAntigo } of syncSummary.transferencias) {
+              const pacienteSistema = pacientes.find(
+                  (p) => p.nomeCompleto === paciente.nomeCompleto
+              )!;
+              
+              // Prepara as referências para os 3 documentos que serão alterados.
+              const leitoAntigoRef = doc(db, "leitosRegulaFacil", pacienteSistema.leitoId);
+              const leitoNovo = mapaLeitos.get(paciente.leitoCodigo)!;
+              const leitoNovoRef = doc(db, "leitosRegulaFacil", leitoNovo.id);
+              const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteSistema.id);
+
+              // **AJUSTE 2:** O status do leito antigo é definido como "Vago".
+              const historicoLeitoAntigo = {
+                  statusLeito: "Vago",
+                  dataAtualizacaoStatus: agora,
+              };
+              const historicoLeitoNovo = {
+                  statusLeito: "Ocupado",
+                  dataAtualizacaoStatus: agora,
+                  pacienteId: pacienteSistema.id,
+              };
+
+              // Adiciona as operações ao "carrinho".
+              batch.update(leitoAntigoRef, {
+                  historicoMovimentacao: arrayUnion(historicoLeitoAntigo),
+              });
+              batch.update(leitoNovoRef, {
+                  historicoMovimentacao: arrayUnion(historicoLeitoNovo),
+              });
+              batch.update(pacienteRef, {
+                  leitoId: leitoNovo.id,
+                  setorId: leitoNovo.setorId,
+                  especialidadePaciente: paciente.especialidade,
+              });
+          }
+
+          // 5. PROCESSANDO NOVAS INTERNAÇÕES
+          // --------------------------------------------------
+          for (const novaInternacao of syncSummary.novasInternacoes) {
+              const leito = mapaLeitos.get(novaInternacao.leitoCodigo)!;
+              const setor = mapaSetores.get(novaInternacao.setorNome)!;
+              const leitoRef = doc(db, "leitosRegulaFacil", leito.id);
+              const pacienteRef = doc(collection(db, "pacientesRegulaFacil"));
+
+              const novoPaciente = {
+                  leitoId: leito.id,
+                  setorId: setor.id!,
+                  nomeCompleto: novaInternacao.nomeCompleto,
+                  dataNascimento: novaInternacao.dataNascimento,
+                  sexoPaciente: novaInternacao.sexo,
+                  dataInternacao: novaInternacao.dataInternacao,
+                  especialidadePaciente: novaInternacao.especialidade,
+              };
+              batch.set(pacienteRef, novoPaciente);
+
+              const historicoOcupacao = {
+                  statusLeito: "Ocupado",
+                  dataAtualizacaoStatus: agora,
+                  pacienteId: pacienteRef.id,
+              };
+              batch.update(leitoRef, {
+                  historicoMovimentacao: arrayUnion(historicoOcupacao),
+              });
+          }
+          
+          // --- AJUSTE 3: LOG DE AUDITORIA ÚNICO E RESUMIDO ---
+          // --------------------------------------------------
+
+          // Cria a mensagem de resumo com base na contagem de cada tipo de operação.
+          const logResumo = `Sincronização via planilha concluída. Resumo: ${syncSummary.novasInternacoes.length} novas internações, ${syncSummary.transferencias.length} transferências e ${syncSummary.altas.length} altas.`;
+          
+          // Registra o resumo como um único evento na auditoria.
+          registrarLog(logResumo, "Sincronização MV");
+
+          // 6. EXECUÇÃO FINAL E SEGURA
+          // --------------------------------------------------
+          // Envia todas as operações do "carrinho" para o Firestore de uma só vez.
+          await batch.commit();
+
+          // Se tudo deu certo, exibe a notificação de sucesso.
+          toast({
+              title: "Sucesso!",
+              description: "Sincronização concluída com sucesso!",
           });
-          batch.delete(pacienteRef);
-          registrarLog(
-            `Alta (via importação) para ${pacienteParaAlta.nomeCompleto} do leito ${itemAlta.leitoAntigo}.`,
-            "Sincronização MV"
-          );
-        }
+          setImportModalOpen(false);
+
+      } catch (error) {
+          // Se algo der errado, exibe uma notificação de erro.
+          console.error("Erro ao sincronizar:", error);
+          toast({
+              title: "Erro!",
+              description: "Não foi possível sincronizar os dados.",
+              variant: "destructive",
+          });
+      } finally {
+          // 7. LIMPEZA DA INTERFACE
+          // --------------------------------------------------
+          // Este bloco é executado sempre, garantindo que a UI seja limpa.
+          setIsSyncing(false);
+          setSyncSummary(null);
+          setValidationResult(null);
+          setDadosPlanilhaProcessados([]);
       }
-
-      for (const { paciente, leitoAntigo } of syncSummary.transferencias) {
-        const pacienteSistema = pacientes.find(
-          (p) => p.nomeCompleto === paciente.nomeCompleto
-        )!;
-        const leitoAntigoRef = doc(
-          db,
-          "leitosRegulaFacil",
-          pacienteSistema.leitoId
-        );
-        const leitoNovo = mapaLeitos.get(paciente.leitoCodigo)!;
-        const leitoNovoRef = doc(db, "leitosRegulaFacil", leitoNovo.id);
-        const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteSistema.id);
-
-        const historicoAlta = {
-          statusLeito: "Higienizacao",
-          dataAtualizacaoStatus: agora,
-        };
-        const historicoOcupacao = {
-          statusLeito: "Ocupado",
-          dataAtualizacaoStatus: agora,
-          pacienteId: pacienteSistema.id,
-        };
-
-        batch.update(leitoAntigoRef, {
-          historicoMovimentacao: arrayUnion(historicoAlta),
-        });
-        batch.update(leitoNovoRef, {
-          historicoMovimentacao: arrayUnion(historicoOcupacao),
-        });
-        batch.update(pacienteRef, {
-          leitoId: leitoNovo.id,
-          setorId: leitoNovo.setorId,
-          especialidadePaciente: paciente.especialidade,
-        });
-        registrarLog(
-          `Transferência (via importação) de ${pacienteSistema.nomeCompleto} do leito ${leitoAntigo} para ${leitoNovo.codigoLeito}.`,
-          "Sincronização MV"
-        );
-      }
-
-      for (const novaInternacao of syncSummary.novasInternacoes) {
-        const leito = mapaLeitos.get(novaInternacao.leitoCodigo)!;
-        const setor = mapaSetores.get(novaInternacao.setorNome)!;
-        const leitoRef = doc(db, "leitosRegulaFacil", leito.id);
-
-        const pacienteRef = doc(collection(db, "pacientesRegulaFacil"));
-
-        const novoPaciente = {
-          leitoId: leito.id,
-          setorId: setor.id!,
-          nomeCompleto: novaInternacao.nomeCompleto,
-          dataNascimento: novaInternacao.dataNascimento,
-          sexoPaciente: novaInternacao.sexo,
-          dataInternacao: novaInternacao.dataInternacao,
-          especialidadePaciente: novaInternacao.especialidade,
-        };
-        batch.set(pacienteRef, novoPaciente);
-
-        const historicoOcupacao = {
-          statusLeito: "Ocupado",
-          dataAtualizacaoStatus: agora,
-          pacienteId: pacienteRef.id,
-        };
-        batch.update(leitoRef, {
-          historicoMovimentacao: arrayUnion(historicoOcupacao),
-        });
-        registrarLog(
-          `Nova internação (via importação) para ${novaInternacao.nomeCompleto} no leito ${leito.codigoLeito}.`,
-          "Sincronização MV"
-        );
-      }
-
-      await batch.commit();
-      toast({
-        title: "Sucesso!",
-        description: "Sincronização concluída com sucesso!",
-      });
-      setImportModalOpen(false);
-    } catch (error) {
-      console.error("Erro ao sincronizar:", error);
-      toast({
-        title: "Erro!",
-        description: "Não foi possível sincronizar os dados.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSyncing(false);
-      setSyncSummary(null);
-      setValidationResult(null);
-      setDadosPlanilhaProcessados([]);
-    }
   };
 
   const handlePassagemPlantao = () => {
