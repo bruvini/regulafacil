@@ -1,75 +1,85 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PacientePendenteItem } from "@/components/PacientePendenteItem";
+// src/components/ListaPacientesPendentes.tsx
+
+import { Paciente } from '@/types/hospital';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { PacientePendenteItem } from './PacientePendenteItem';
+import { parse } from 'date-fns';
 
 interface ListaPacientesPendentesProps {
   titulo: string;
-  pacientes: any[];
-  onRegularClick: (paciente: any, modo?: "normal" | "uti") => void;
-  onConcluir?: (paciente: any) => void;
-  onAlterar?: (paciente: any) => void;
-  onCancelar?: (paciente: any) => void;
+  pacientes: (Paciente & {
+    setorOrigem: string;
+    siglaSetorOrigem: string;
+    leitoCodigo: string;
+    leitoId: string;
+    statusLeito: string;
+    regulacao?: any;
+  })[];
+  onRegularClick: (paciente: Paciente) => void;
   onAlta?: (leitoId: string) => void;
-  showAltaButton?: boolean;
-  fullWidth?: boolean;
+  onConcluir: (paciente: Paciente) => void;
+  onAlterar: (paciente: Paciente) => void;
+  onCancelar: (paciente: Paciente) => void;
 }
 
 export const ListaPacientesPendentes = ({
   titulo,
   pacientes,
   onRegularClick,
+  onAlta,
   onConcluir,
   onAlterar,
-  onCancelar,
-  onAlta,
-  showAltaButton = false,
-  fullWidth = false,
+  onCancelar
 }: ListaPacientesPendentesProps) => {
-  if (pacientes.length === 0) {
-    return (
-      <Card className={`${fullWidth ? 'w-full' : ''}`}>
-        {titulo && (
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              {titulo}
-              <Badge variant="secondary">0</Badge>
-            </CardTitle>
-          </CardHeader>
-        )}
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-4">
-            Nenhum paciente pendente.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const pacientesOrdenados = [...pacientes].sort((a, b) => {
+    const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+    const dataB = parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+    return dataA.getTime() - dataB.getTime();
+  });
+
+  console.log('ListaPacientesPendentes - pacientes recebidos:', pacientes);
+  console.log('ListaPacientesPendentes - pacientes ordenados:', pacientesOrdenados);
 
   return (
-    <Card className={`${fullWidth ? 'w-full' : ''}`}>
-      {titulo && (
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            {titulo}
-            <Badge variant="secondary">{pacientes.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-      )}
-      <CardContent className="space-y-3">
-        {pacientes.map((paciente) => (
-          <PacientePendenteItem
-            key={paciente.id}
-            paciente={paciente}
-            onRegularClick={() => onRegularClick(paciente)}
-            onConcluir={onConcluir ? () => onConcluir(paciente) : undefined}
-            onAlterar={onAlterar ? () => onAlterar(paciente) : undefined}
-            onCancelar={onCancelar ? () => onCancelar(paciente) : undefined}
-            onAlta={onAlta && showAltaButton ? () => onAlta(paciente.leitoId) : undefined}
-            showAltaButton={showAltaButton}
-          />
-        ))}
+    <Card className="flex flex-col">
+      <CardHeader className="flex-row items-center justify-between py-3 px-4">
+        <CardTitle className="text-base font-semibold">{titulo}</CardTitle>
+        <Badge variant="secondary">{pacientes.length}</Badge>
+      </CardHeader>
+      <CardContent className="p-0 flex-grow flex flex-col">
+        {pacientes.length > 0 ? (
+          <ScrollArea className="h-72 p-2">
+            <div className="space-y-2">
+              {pacientesOrdenados.map((paciente) => (
+                <PacientePendenteItem
+                  key={`${paciente.id}-${paciente.leitoId}`}
+                  paciente={paciente}
+                  onRegularClick={() => onRegularClick(paciente)}
+                  onAlta={
+                    titulo === 'Recuperação Cirúrgica'
+                      ? () => onAlta?.(paciente.leitoId)
+                      : undefined
+                  }
+                  onConcluir={onConcluir}
+                  onAlterar={onAlterar}
+                  onCancelar={onCancelar}
+                />
+              ))}
+            </div>
+          </ScrollArea>
+        ) : (
+          <div className="flex items-center justify-center h-full text-sm text-muted-foreground p-4">
+            Nenhum paciente nesta fila.
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,127 +1,216 @@
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+// src/components/PacientePendenteItem.tsx
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
+
+import {
+  LogIn,
+  LogOut,
+  Clock,
+  CheckCheck,
+  Pencil,
+  XCircle
+} from 'lucide-react';
+
+import { formatarDuracao } from '@/lib/utils';
+import { Paciente } from '@/types/hospital';
+
+// Função auxiliar
+const calcularIdade = (dataNascimento: string): string => {
+  if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
+  const [dia, mes, ano] = dataNascimento.split('/').map(Number);
+  const hoje = new Date();
+  const nascimento = new Date(ano, mes - 1, dia);
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const m = hoje.getMonth() - nascimento.getMonth();
+  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
+  return idade.toString();
+};
 
 interface PacientePendenteItemProps {
-  paciente: any;
-  onRegularClick: () => void;
-  onConcluir?: () => void;
-  onAlterar?: () => void;
-  onCancelar?: () => void;
+  paciente: Paciente & {
+    setorOrigem: string;
+    siglaSetorOrigem: string;
+    leitoCodigo: string;
+    leitoId: string;
+    statusLeito: string;
+    regulacao?: any;
+  };
+  onRegularClick?: () => void;
   onAlta?: () => void;
-  showAltaButton?: boolean;
+  onConcluir?: (paciente: Paciente) => void;
+  onAlterar?: (paciente: Paciente) => void;
+  onCancelar?: (paciente: Paciente) => void;
 }
 
 export const PacientePendenteItem = ({
   paciente,
   onRegularClick,
+  onAlta,
   onConcluir,
   onAlterar,
-  onCancelar,
-  onAlta,
-  showAltaButton = false,
+  onCancelar
 }: PacientePendenteItemProps) => {
-  const calcularIdade = (dataNascimento: string): number => {
-    if (!dataNascimento) return 0;
-    const [dia, mes, ano] = dataNascimento.split('/').map(Number);
-    const hoje = new Date();
-    const nascimento = new Date(ano, mes - 1, dia);
-    let idade = hoje.getFullYear() - nascimento.getFullYear();
-    const m = hoje.getMonth() - nascimento.getMonth();
-    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
-      idade--;
-    }
-    return idade;
-  };
-
-  const calcularTempoInternacao = (dataInternacao: string): string => {
-    if (!dataInternacao) return "N/A";
-    try {
-      const [dataParte, horaParte] = dataInternacao.split(' ');
-      const [dia, mes, ano] = dataParte.split('/').map(Number);
-      const [hora, minuto] = horaParte.split(':').map(Number);
-      const dataEntrada = new Date(ano, mes - 1, dia, hora, minuto);
-      return formatDistanceToNow(dataEntrada, { locale: ptBR });
-    } catch {
-      return "N/A";
-    }
-  };
-
   const idade = calcularIdade(paciente.dataNascimento);
-  const tempoInternacao = calcularTempoInternacao(paciente.dataInternacao);
+  
+  console.log('PacientePendenteItem - paciente:', paciente);
+  console.log('PacientePendenteItem - nomeCompleto:', paciente.nomeCompleto);
 
   return (
-    <Card className="border-l-4 border-l-medical-primary">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex-1">
-            <h4 className="font-medium text-foreground">{paciente.nomeCompleto}</h4>
-            <p className="text-sm text-muted-foreground">
-              {paciente.leitoCodigo} • {paciente.siglaSetorOrigem}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={onRegularClick}>
-              Regular
-            </Button>
-            {onConcluir && (
-              <Button size="sm" variant="outline" onClick={onConcluir}>
-                Concluir
-              </Button>
-            )}
-            {onAlterar && (
-              <Button size="sm" variant="outline" onClick={onAlterar}>
-                Alterar
-              </Button>
-            )}
-            {onCancelar && (
-              <Button size="sm" variant="destructive" onClick={onCancelar}>
-                Cancelar
-              </Button>
-            )}
-            {showAltaButton && onAlta && (
-              <Button size="sm" variant="outline" onClick={onAlta}>
-                Informar Alta
-              </Button>
-            )}
-          </div>
+    <div className="flex items-start gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
+      <div className="flex-grow">
+        <div className="flex items-center gap-2">
+          <p className="font-bold text-sm text-foreground">
+            {paciente.nomeCompleto || 'Nome não disponível'}
+          </p>
+          <Badge variant="outline" className="text-xs">
+            {paciente.sexoPaciente?.charAt(0) || '?'} - {idade}a
+          </Badge>
         </div>
 
-        <Separator className="my-2" />
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-          <div>
-            <span className="font-medium">Idade:</span>
-            <p className="text-muted-foreground">{idade} anos</p>
-          </div>
-          <div>
-            <span className="font-medium">Sexo:</span>
-            <p className="text-muted-foreground">{paciente.sexoPaciente}</p>
-          </div>
-          <div>
-            <span className="font-medium">Especialidade:</span>
-            <p className="text-muted-foreground">{paciente.especialidadePaciente}</p>
-          </div>
-          <div>
-            <span className="font-medium">Tempo:</span>
-            <p className="text-muted-foreground">{tempoInternacao}</p>
-          </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+          {paciente.statusLeito === 'Regulado' ? (
+            <>
+              <span className="font-semibold text-purple-600">Destino:</span>
+              <span>
+                {paciente.regulacao?.paraSetorSigla || 'Setor desconhecido'} -{' '}
+                {paciente.regulacao?.paraLeito || 'Leito não informado'}
+              </span>
+              <span className="text-gray-400">•</span>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatarDuracao(paciente.regulacao?.data)}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {formatarDuracao(paciente.dataInternacao)}
+            </div>
+          )}
         </div>
+      </div>
 
-        {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {paciente.isolamentosVigentes.map((isolamento: string, index: number) => (
-              <Badge key={index} variant="destructive" className="text-xs">
-                {isolamento}
-              </Badge>
-            ))}
-          </div>
+      <div className="flex items-center gap-1">
+        {paciente.statusLeito === 'Regulado' ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onConcluir?.(paciente)}
+                  aria-label="Concluir regulação"
+                >
+                  <CheckCheck className="h-4 w-4 text-green-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Concluir Regulação</p></TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onAlterar?.(paciente)}
+                  aria-label="Alterar regulação"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Alterar Regulação</p></TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onCancelar?.(paciente)}
+                  aria-label="Cancelar regulação"
+                >
+                  <XCircle className="h-4 w-4 text-destructive" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Cancelar Regulação</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onRegularClick}
+                  aria-label="Regular leito"
+                >
+                  <LogIn className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Regular Leito</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
-      </CardContent>
-    </Card>
+
+        {onAlta && (
+          <AlertDialog>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-green-600"
+                      aria-label="Informar alta"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                </TooltipTrigger>
+                <TooltipContent><p>Informar Alta</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Alta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação irá liberar o leito do paciente. Deseja continuar?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={onAlta}>Confirmar Alta</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+    </div>
   );
 };
