@@ -83,7 +83,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
     setEtapa(isAlteracao ? 3 : 2);
   };
 
-  const getMensagemConfirmacao = () => {
+const getMensagemConfirmacao = () => {
     // Guarda de segurança, não faz nada se não houver paciente ou leito selecionado.
     if (!paciente || !leitoSelecionado) return "";
 
@@ -93,24 +93,38 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
     const obs = observacoes ? `\nObservações NIR: ${observacoes}` : "";
     const motivoAlt = isAlteracao && motivoAlteracao ? `\nMotivo da Alteração: ${motivoAlteracao}` : "";
 
-    // --- AJUSTE PRINCIPAL: VERIFICA SE É UM REMANEJAMENTO ---
-    // --------------------------------------------------
+    // --- LÓGICA DE MENSAGEM PERSONALIZADA ---
+
+    // 1. VERIFICA SE É UM REMANEJAMENTO
     // Se o paciente que está sendo regulado tem a flag `remanejarPaciente` como true...
     if (paciente.remanejarPaciente && !isAlteracao) {
-        // ...gera uma mensagem personalizada para remanejamento.
-        return `⚠️ SOLICITAÇÃO DE REMANEJAMENTO ⚠️
+        
+        // **AJUSTE PRINCIPAL: VERIFICA O TIPO DE REMANEJAMENTO**
+        // --------------------------------------------------
+        // Compara o nome do setor de destino com o nome do setor de origem.
+        const isMesmoSetor = leitoSelecionado.setorNome === origem.setor;
+
+        // Monta a parte principal da mensagem, que é comum aos dois tipos.
+        const baseMensagem = `⚠️ SOLICITAÇÃO DE REMANEJAMENTO ⚠️
 Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
 Origem: ${origem.setor} - ${origem.leito}
 Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
 Motivo do Remanejamento: ${paciente.motivoRemanejamento}
-Isolamento: ${isolamentos}${obs}
+Isolamento: ${isolamentos}${obs}`;
 
-- Fazer contato com o destino para passar plantão e agilizar transferências.
+        // Define as orientações com base na comparação dos setores.
+        const orientacoes = isMesmoSetor
+            // Se for o MESMO setor:
+            ? `- Assim que possível, puxe o paciente para o novo leito no MV.\n- Informar ao NIR quando o remanejamento for efetivado.`
+            // Se for para OUTRO setor:
+            : `- Fazer contato com o destino para passar plantão e agilizar transferências.\n- Avisar o NIR caso haja alguma intercorrência, dificuldade na passagem de plantão ou demais eventualidades!`;
 
-Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
+        // Junta tudo e retorna a mensagem completa e contextualizada.
+        return `${baseMensagem}\n\n${orientacoes}\n\nData e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
     } 
     // --------------------------------------------------
     
+    // 2. VERIFICA SE É UMA ALTERAÇÃO
     // Se for uma alteração, usa a mensagem de alteração.
     else if (isAlteracao) {
         return `⚠️ ALTERAÇÃO DE REGULAÇÃO ⚠️
@@ -123,6 +137,7 @@ Isolamento: ${isolamentos}${motivoAlt}${obs}
 Data e hora da alteração: ${new Date().toLocaleString('pt-BR')}`;
     } 
     
+    // 3. CASO PADRÃO
     // Caso contrário, usa a mensagem de regulação padrão.
     else {
         return `⚠️ LEITO REGULADO ⚠️
