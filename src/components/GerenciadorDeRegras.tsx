@@ -11,9 +11,16 @@ interface Props {
   tipoIsolamento: TipoIsolamento;
   setorId: string;
   leitoId: string;
+  onFinalizarIsolamento?: () => void;
 }
 
-export const GerenciadorDeRegras = ({ isolamentoVigente, tipoIsolamento, setorId, leitoId }: Props) => {
+export const GerenciadorDeRegras = ({ 
+  isolamentoVigente, 
+  tipoIsolamento, 
+  setorId, 
+  leitoId, 
+  onFinalizarIsolamento 
+}: Props) => {
   const [regrasCumpridas, setRegrasCumpridas] = useState<string[]>(isolamentoVigente.regrasCumpridas || []);
   const [podeFinalizar, setPodeFinalizar] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -46,14 +53,15 @@ export const GerenciadorDeRegras = ({ isolamentoVigente, tipoIsolamento, setorId
       ? [...regrasCumpridas, regraId]
       : regrasCumpridas.filter(id => id !== regraId);
     setRegrasCumpridas(novasRegras);
-    // TODO: Implement actual API call
+    // TODO: Implement actual API call to update rules
   };
 
   const handleFinalizar = async () => {
     setLoading(true);
     try {
-      // TODO: Implement actual API call
-      console.log('Finalizando isolamento:', isolamentoVigente.isolamentoId);
+      if (onFinalizarIsolamento) {
+        await onFinalizarIsolamento();
+      }
     } finally {
       setLoading(false);
     }
@@ -84,7 +92,7 @@ export const GerenciadorDeRegras = ({ isolamentoVigente, tipoIsolamento, setorId
           onClick={handleFinalizar}
           className={podeFinalizar ? "bg-green-600 hover:bg-green-700" : ""}
         >
-          Finalizar Isolamento
+          {loading ? 'Finalizando...' : 'Finalizar Isolamento'}
         </Button>
       </div>
     </div>
