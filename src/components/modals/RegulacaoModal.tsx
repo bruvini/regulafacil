@@ -84,14 +84,36 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
   };
 
   const getMensagemConfirmacao = () => {
+    // Guarda de segurança, não faz nada se não houver paciente ou leito selecionado.
     if (!paciente || !leitoSelecionado) return "";
+
+    // Calcula a idade e formata os isolamentos para incluir na mensagem.
     const idade = calcularIdade(paciente.dataNascimento);
     const isolamentos = paciente.isolamentosVigentes?.map(i => i.sigla).join(', ') || 'Nenhum';
     const obs = observacoes ? `\nObservações NIR: ${observacoes}` : "";
     const motivoAlt = isAlteracao && motivoAlteracao ? `\nMotivo da Alteração: ${motivoAlteracao}` : "";
 
-    if (isAlteracao) {
-      return `⚠️ ALTERAÇÃO DE REGULAÇÃO ⚠️
+    // --- AJUSTE PRINCIPAL: VERIFICA SE É UM REMANEJAMENTO ---
+    // --------------------------------------------------
+    // Se o paciente que está sendo regulado tem a flag `remanejarPaciente` como true...
+    if (paciente.remanejarPaciente && !isAlteracao) {
+        // ...gera uma mensagem personalizada para remanejamento.
+        return `⚠️ SOLICITAÇÃO DE REMANEJAMENTO ⚠️
+Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
+Origem: ${origem.setor} - ${origem.leito}
+Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
+Motivo do Remanejamento: ${paciente.motivoRemanejamento}
+Isolamento: ${isolamentos}${obs}
+
+- Fazer contato com o destino para passar plantão e agilizar transferências.
+
+Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
+    } 
+    // --------------------------------------------------
+    
+    // Se for uma alteração, usa a mensagem de alteração.
+    else if (isAlteracao) {
+        return `⚠️ ALTERAÇÃO DE REGULAÇÃO ⚠️
 Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
 Origem: ${origem.setor} - ${origem.leito}
 Regulação Prévia: ${(paciente as any).regulacao?.paraSetorSigla || 'N/A'} - ${(paciente as any).regulacao?.paraLeito || 'N/A'}
@@ -99,8 +121,11 @@ Novo Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
 Isolamento: ${isolamentos}${motivoAlt}${obs}
 
 Data e hora da alteração: ${new Date().toLocaleString('pt-BR')}`;
-    } else {
-      return `⚠️ LEITO REGULADO ⚠️
+    } 
+    
+    // Caso contrário, usa a mensagem de regulação padrão.
+    else {
+        return `⚠️ LEITO REGULADO ⚠️
 Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
 Origem: ${origem.setor} - ${origem.leito}
 Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
@@ -110,7 +135,7 @@ Isolamento: ${isolamentos}${obs}
 
 Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
     }
-  };
+};
 
   const copiarParaClipboard = () => {
     const mensagem = getMensagemConfirmacao();

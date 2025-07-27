@@ -287,44 +287,48 @@ export const useRegulacaoLogic = () => {
   const handleOpenRegulacaoModal = (
     paciente: any,
     modo: "normal" | "uti" = "normal"
-  ) => {
+) => {
+    // 1. Define o Paciente-Alvo:
+    // Coloca o paciente que precisa ser remanejado no estado `pacienteParaRegular`.
     setPacienteParaRegular(paciente);
+    
+    // 2. Define o Modo: Garante que o modal abra no modo "normal" (não de UTI).
     setModoRegulacao(modo);
+    
+    // 3. Reseta o Estado de Alteração: Garante que não está no modo de "alterar" regulação.
     setIsAlteracaoMode(false);
+
+    // 4. Abre o Modal: Abre o mesmo modal que você usa para regular um paciente do PS.
     setRegulacaoModalOpen(true);
-  };
+};
 
   const handleConfirmarRegulacao = async (
     leitoDestino: any,
     observacoes: string,
-    motivoAlteracao?: string // O motivo agora é crucial
+    motivoAlteracao?: string
 ) => {
+    // 1. GUARDA DE SEGURANÇA
+    // Garante que a função não execute se nenhum paciente foi selecionado.
     if (!pacienteParaRegular) return;
 
-    // --- LÓGICA DE ALTERAÇÃO ---
+    // 2. LÓGICA DE ALTERAÇÃO (se aplicável)
+    // Se for uma alteração, libera o leito que estava reservado anteriormente.
     if (isAlteracaoMode) {
-        // 1. ENCONTRA O LEITO ANTIGO
-        // Pega a informação da regulação *anterior* que está salva no objeto do paciente.
         const regulaçãoAnterior = (pacienteParaRegular as any).regulacao;
         if (regulaçãoAnterior) {
             const leitoReservadoAntigo = leitos.find(
                 (l) => l.codigoLeito === regulaçãoAnterior.paraLeito
             );
-
-            // 2. LIBERA O LEITO ANTIGO
-            // Se o leito antigo for encontrado, seu status é revertido para "Vago".
             if (leitoReservadoAntigo) {
                 await atualizarStatusLeito(leitoReservadoAntigo.id, "Vago");
             }
-
-            // 3. GERA O LOG DE AUDITORIA ESPECÍFICO
             const logMessage = `Regulação de ${pacienteParaRegular.nomeCompleto} alterada de ${regulaçãoAnterior.paraLeito} para ${leitoDestino.codigoLeito}. Motivo: ${motivoAlteracao}`;
             registrarLog(logMessage, "Regulação de Leitos");
         }
     }
-    // --- FIM DA LÓGICA DE ALTERAÇÃO ---
 
-    // A lógica padrão de regulação continua a mesma...
+    // 3. ATUALIZAÇÃO DOS LEITOS (Origem e Destino)
+    // A lógica principal de regular e reservar os leitos permanece a mesma.
     await atualizarStatusLeito(pacienteParaRegular.leitoId, "Regulado", {
         pacienteId: pacienteParaRegular.id,
         infoRegulacao: {
@@ -333,17 +337,35 @@ export const useRegulacaoLogic = () => {
             observacoes,
         },
     });
-
     await atualizarStatusLeito(leitoDestino.id, "Reservado", {
         pacienteId: pacienteParaRegular.id,
     });
     
-    // ... com a diferença que, se foi uma alteração, um novo log não é gerado aqui.
+    // 4. **AJUSTE PRINCIPAL: LIMPEZA DO STATUS DE REMANEJAMENTO**
+    // --------------------------------------------------
+    // Verifica se o paciente que acabamos de regular tinha uma solicitação de remanejamento ativa.
+    if (pacienteParaRegular.remanejarPaciente) {
+        // Prepara a referência ao documento do paciente no Firestore.
+        const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteParaRegular.id);
+        // Atualiza o documento, efetivamente cancelando o pedido de remanejamento,
+        // já que ele foi atendido com esta nova regulação.
+        await updateDoc(pacienteRef, {
+            remanejarPaciente: false,
+            motivoRemanejamento: null,
+            dataPedidoRemanejamento: null,
+        });
+    }
+    // --------------------------------------------------
+
+    // 5. REGISTRO E FEEDBACK
+    // Se não for uma alteração, registra o log de regulação padrão.
     if (!isAlteracaoMode) {
         registrarLog(`Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`, "Regulação de Leitos");
     }
 
     toast({ title: isAlteracaoMode ? "Alteração Confirmada!" : "Regulação Confirmada!", description: "A mensagem foi copiada para a área de transferência." });
+    
+    // 6. LIMPEZA DA INTERFACE
     setRegulacaoModalOpen(false);
     setPacienteParaRegular(null);
     setIsAlteracaoMode(false);

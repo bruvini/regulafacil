@@ -1,5 +1,5 @@
+// src/components/RemanejamentoPendenteItem.tsx
 
-import { DadosPaciente } from '@/types/hospital';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -13,10 +13,13 @@ interface Props {
 }
 
 export const RemanejamentoPendenteItem = ({ paciente, onRemanejar, onCancelar }: Props) => {
+    // 1. Calcula o tempo de espera usando a função utilitária.
     const tempoAguardando = formatarDuracao(paciente.dataPedidoRemanejamento);
+    
     return (
         <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
             <div>
+                {/* 2. Exibe as informações do paciente. */}
                 <p className="font-bold text-sm">{paciente.nomeCompleto} <Badge variant="outline">{paciente.sexoPaciente.charAt(0)}</Badge></p>
                 <p className="text-xs text-muted-foreground">{paciente.siglaSetorOrigem || paciente.setorOrigem} - {paciente.leitoCodigo}</p>
                 <p className="text-xs text-amber-600 mt-1">Motivo: {paciente.motivoRemanejamento}</p>
@@ -29,6 +32,7 @@ export const RemanejamentoPendenteItem = ({ paciente, onRemanejar, onCancelar }:
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
+                            {/* 3. Botão de Remanejar: Ao ser clicado, chama a função `onRemanejar` que veio da página principal. */}
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onRemanejar(paciente)}>
                                 <ArrowRightLeft className="h-4 w-4"/>
                             </Button>
@@ -37,6 +41,7 @@ export const RemanejamentoPendenteItem = ({ paciente, onRemanejar, onCancelar }:
                     </Tooltip>
                     <Tooltip>
                         <TooltipTrigger asChild>
+                            {/* 4. Botão de Cancelar: Ao ser clicado, chama a função `onCancelar` que veio da página principal. */}
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onCancelar(paciente)}>
                                 <XCircle className="h-4 w-4"/>
                             </Button>
