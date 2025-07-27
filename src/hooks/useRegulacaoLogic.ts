@@ -297,55 +297,116 @@ export const useRegulacaoLogic = () => {
   const handleConfirmarRegulacao = async (
     leitoDestino: any,
     observacoes: string,
-    motivoAlteracao?: string
-  ) => {
+    motivoAlteracao?: string // O motivo agora é crucial
+) => {
     if (!pacienteParaRegular) return;
 
+    // --- LÓGICA DE ALTERAÇÃO ---
+    if (isAlteracaoMode) {
+        // 1. ENCONTRA O LEITO ANTIGO
+        // Pega a informação da regulação *anterior* que está salva no objeto do paciente.
+        const regulaçãoAnterior = (pacienteParaRegular as any).regulacao;
+        if (regulaçãoAnterior) {
+            const leitoReservadoAntigo = leitos.find(
+                (l) => l.codigoLeito === regulaçãoAnterior.paraLeito
+            );
+
+            // 2. LIBERA O LEITO ANTIGO
+            // Se o leito antigo for encontrado, seu status é revertido para "Vago".
+            if (leitoReservadoAntigo) {
+                await atualizarStatusLeito(leitoReservadoAntigo.id, "Vago");
+            }
+
+            // 3. GERA O LOG DE AUDITORIA ESPECÍFICO
+            const logMessage = `Regulação de ${pacienteParaRegular.nomeCompleto} alterada de ${regulaçãoAnterior.paraLeito} para ${leitoDestino.codigoLeito}. Motivo: ${motivoAlteracao}`;
+            registrarLog(logMessage, "Regulação de Leitos");
+        }
+    }
+    // --- FIM DA LÓGICA DE ALTERAÇÃO ---
+
+    // A lógica padrão de regulação continua a mesma...
     await atualizarStatusLeito(pacienteParaRegular.leitoId, "Regulado", {
-      pacienteId: pacienteParaRegular.id,
-      infoRegulacao: {
-        paraSetor: leitoDestino.setorNome,
-        paraLeito: leitoDestino.codigoLeito,
-        observacoes,
-      },
+        pacienteId: pacienteParaRegular.id,
+        infoRegulacao: {
+            paraSetor: leitoDestino.setorNome,
+            paraLeito: leitoDestino.codigoLeito,
+            observacoes,
+        },
     });
 
     await atualizarStatusLeito(leitoDestino.id, "Reservado", {
-      pacienteId: pacienteParaRegular.id,
+        pacienteId: pacienteParaRegular.id,
     });
+    
+    // ... com a diferença que, se foi uma alteração, um novo log não é gerado aqui.
+    if (!isAlteracaoMode) {
+        registrarLog(`Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`, "Regulação de Leitos");
+    }
 
+    toast({ title: isAlteracaoMode ? "Alteração Confirmada!" : "Regulação Confirmada!", description: "A mensagem foi copiada para a área de transferência." });
     setRegulacaoModalOpen(false);
     setPacienteParaRegular(null);
     setIsAlteracaoMode(false);
-  };
+};
 
   const handleConcluir = async (paciente: any) => {
+    // 1. GUARDA DE SEGURANÇA
+    // Verifica se o objeto do paciente contém as informações da regulação.
     if (!paciente.regulacao) return;
+
+    // 2. ENCONTRAR O LEITO DE DESTINO
+    // Usa o código do leito salvo em `infoRegulacao` para encontrar o documento completo do leito de destino.
     const leitoDestino = leitos.find(
-      (l) => l.codigoLeito === paciente.regulacao.paraLeito
+        (l) => l.codigoLeito === paciente.regulacao.paraLeito
     );
+
     if (leitoDestino) {
-      await atualizarStatusLeito(paciente.leitoId, "Higienizacao");
-      await atualizarStatusLeito(leitoDestino.id, "Ocupado", {
-        pacienteId: paciente.id,
-      });
-      const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
-      await updateDoc(pacienteRef, {
-        leitoId: leitoDestino.id,
-        setorId: leitoDestino.setorId,
-      });
-      registrarLog(
-        `Concluiu regulação de ${paciente.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`,
-        "Regulação de Leitos"
-      );
+        // --- CÁLCULO DE DURAÇÃO PARA O LOG ---
+        // Encontra o leito de origem do paciente para acessar seu histórico.
+        const leitoOrigem = leitos.find(l => l.id === paciente.leitoId);
+        // No histórico, encontra o registro exato de quando o leito foi marcado como "Regulado".
+        const historicoRegulacao = leitoOrigem?.historicoMovimentacao.find(h => 
+            h.statusLeito === 'Regulado' && h.infoRegulacao?.paraLeito === leitoDestino.codigoLeito
+        );
+        
+        let duracaoFormatada = 'N/A';
+        // Se o registro foi encontrado, calcula a diferença de tempo.
+        if (historicoRegulacao?.dataAtualizacaoStatus) {
+            const dataInicio = new Date(historicoRegulacao.dataAtualizacaoStatus);
+            const duracao = intervalToDuration({ start: dataInicio, end: new Date() });
+            duracaoFormatada = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
+        }
+        // --- FIM DO CÁLCULO ---
+
+        // 3. ATUALIZAÇÃO DOS LEITOS E PACIENTE
+        // Libera o leito antigo, mudando seu status para "Vago".
+        await atualizarStatusLeito(paciente.leitoId, "Vago");
+        // Ocupa o novo leito com o paciente.
+        await atualizarStatusLeito(leitoDestino.id, "Ocupado", {
+            pacienteId: paciente.id,
+        });
+        // Atualiza o "endereço" do paciente no banco de dados, vinculando-o ao novo leito e setor.
+        const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
+        await updateDoc(pacienteRef, {
+            leitoId: leitoDestino.id,
+            setorId: leitoDestino.setorId,
+        });
+
+        // 4. REGISTRO DE AUDITORIA E FEEDBACK
+        // Cria a mensagem de log, agora incluindo o tempo de espera.
+        const logMessage = `Regulação de ${paciente.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}. Tempo de espera: ${duracaoFormatada}.`;
+        registrarLog(logMessage, "Regulação de Leitos");
+        
+        // Exibe uma notificação de sucesso para o usuário.
+        toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado." });
     }
-  };
+};
 
   const handleAlterar = (paciente: any) => {
     setPacienteParaRegular(paciente);
     setIsAlteracaoMode(true);
     setRegulacaoModalOpen(true);
-  };
+};
 
   const handleCancelar = (paciente: any) => {
     setPacienteParaAcao(paciente);
@@ -353,32 +414,49 @@ export const useRegulacaoLogic = () => {
   };
 
   const onConfirmarCancelamento = async (motivo: string) => {
-    if (pacienteParaAcao) {
-      const leitoOrigem = leitos.find(
+    // 1. GUARDA DE SEGURANÇA
+    // Garante que a função não execute se nenhum paciente foi selecionado para a ação.
+    if (!pacienteParaAcao) return;
+
+    // 2. ENCONTRAR OS LEITOS ENVOLVIDOS
+    // Pega o leito de origem diretamente do objeto do paciente.
+    const leitoOrigem = leitos.find(
         (l) => l.id === pacienteParaAcao.leitoId
-      )!;
-      const historicoRegulacao = leitoOrigem.historicoMovimentacao.find(
+    )!;
+
+    // Encontra o registro de histórico que contém a informação da regulação.
+    const historicoRegulacao = leitoOrigem.historicoMovimentacao.find(
         (h) => h.statusLeito === "Regulado"
-      );
-      if (!historicoRegulacao || !historicoRegulacao.infoRegulacao) return;
+    );
 
-      const leitoDestino = leitos.find(
-        (l) => l.codigoLeito === historicoRegulacao.infoRegulacao!.paraLeito
-      )!;
-
-      await atualizarStatusLeito(leitoOrigem.id, "Ocupado", {
-        pacienteId: pacienteParaAcao.id,
-      });
-      await atualizarStatusLeito(leitoDestino.id, "Vago");
-
-      registrarLog(
-        `Cancelou regulação de ${pacienteParaAcao.nomeCompleto}. Motivo: ${motivo}`,
-        "Regulação de Leitos"
-      );
+    // Se não encontrar o histórico ou as informações de destino, interrompe para evitar erros.
+    if (!historicoRegulacao || !historicoRegulacao.infoRegulacao) {
+        toast({ title: "Erro", description: "Não foi possível encontrar os dados da regulação original.", variant: "destructive" });
+        return;
     }
+
+    // Encontra o leito de destino que estava reservado.
+    const leitoDestino = leitos.find(
+        (l) => l.codigoLeito === historicoRegulacao.infoRegulacao!.paraLeito
+    )!;
+
+    // 3. ATUALIZAÇÃO DOS STATUS
+    // Devolve o leito de origem ao status "Ocupado", pois o paciente ainda está lá.
+    await atualizarStatusLeito(leitoOrigem.id, "Ocupado", {
+        pacienteId: pacienteParaAcao.id,
+    });
+    // Libera o leito de destino, que agora volta a ficar "Vago".
+    await atualizarStatusLeito(leitoDestino.id, "Vago");
+
+    // 4. REGISTRO E FEEDBACK
+    // **CORREÇÃO:** Agora usa `pacienteParaAcao.nomeCompleto` para garantir que o nome apareça corretamente.
+    const logMessage = `Cancelou regulação de ${pacienteParaAcao.nomeCompleto} para o leito ${leitoDestino.codigoLeito}. Motivo: ${motivo}`;
+    registrarLog(logMessage, "Regulação de Leitos");
+
+    toast({ title: "Cancelado!", description: "A regulação foi desfeita com sucesso." });
     setCancelamentoModalOpen(false);
     setPacienteParaAcao(null);
-  };
+};
 
   const cancelarPedidoUTI = async (paciente: Paciente) => {
     const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
