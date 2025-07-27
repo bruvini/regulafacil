@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Copy, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { formatarDuracao } from '@/lib/utils'; // Importa a função de formatação de tempo
+import { formatarDuracao } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -18,39 +18,27 @@ interface Props {
 export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }: Props) => {
   const { toast } = useToast();
 
-  // 1. PROCESSAMENTO E AGRUPAMENTO DOS DADOS
-  // --------------------------------------------------
-  // O useMemo garante que este cálculo complexo só seja refeito se a lista de pacientes mudar.
   const dadosAgrupados = useMemo(() => {
-    // Objeto para agrupar pacientes por setor de ORIGEM (quem está enviando)
     const porOrigem: Record<string, any[]> = {};
-    // Objeto para agrupar pacientes por setor de DESTINO (quem está recebendo)
     const porDestino: Record<string, any[]> = {};
 
     pacientesRegulados.forEach(paciente => {
-      // Pula qualquer paciente que não tenha os dados completos da regulação.
-      if (!paciente.regulacao) return;
+      if (!paciente.regulacao || !paciente.regulacao.dataAtualizacaoStatus) return;
 
-      // **AJUSTE PRINCIPAL: CALCULA A DURAÇÃO DA ESPERA**
-      // Calcula há quanto tempo a regulação está pendente.
       const tempoDeRegulacao = formatarDuracao(paciente.regulacao.dataAtualizacaoStatus);
-      // Armazena a duração em milissegundos para facilitar a ordenação numérica.
       const msDeRegulacao = new Date().getTime() - new Date(paciente.regulacao.dataAtualizacaoStatus).getTime();
 
-      // Cria um objeto de 'paciente para exibição' com os dados já formatados.
       const pacienteComTempo = {
         ...paciente,
         tempoDeRegulacao,
         msDeRegulacao,
       };
 
-      // Adiciona o paciente à lista do seu setor de origem.
       if (!porOrigem[paciente.setorOrigem]) {
         porOrigem[paciente.setorOrigem] = [];
       }
       porOrigem[paciente.setorOrigem].push(pacienteComTempo);
 
-      // Adiciona o paciente à lista do seu setor de destino.
       if (!porDestino[paciente.regulacao.paraSetor]) {
         porDestino[paciente.regulacao.paraSetor] = [];
       }
@@ -60,34 +48,52 @@ export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }
     return { porOrigem, porDestino };
   }, [pacientesRegulados]);
 
-  // 2. FUNÇÃO PARA COPIAR O RESUMO PARA A ÁREA DE TRANSFERÊNCIA
-  // --------------------------------------------------
+  // --- FUNÇÃO DE CÓPIA ATUALIZADA E INTELIGENTE ---
   const handleCopy = (setorNome: string, tipo: 'origem' | 'destino') => {
-    // Seleciona a lista correta de pacientes (origem ou destino).
     const lista = tipo === 'origem' ? dadosAgrupados.porOrigem[setorNome] : dadosAgrupados.porDestino[setorNome];
     if (!lista || lista.length === 0) return;
 
-    // **AJUSTE PRINCIPAL: ORDENA A LISTA POR TEMPO DE ESPERA**
-    // Ordena os pacientes em ordem decrescente, do que está esperando há mais tempo para o mais recente.
+    // Ordena os pacientes pelo maior tempo de espera, garantindo que os casos mais críticos fiquem no topo.
     const listaOrdenada = [...lista].sort((a, b) => b.msDeRegulacao - a.msDeRegulacao);
 
-    // Monta o cabeçalho da mensagem.
-    const header = `*REGULAÇÕES PENDENTES - ${tipo === 'origem' ? 'SAÍDAS' : 'CHEGADAS'} (${setorNome})*`;
-    
-    // Mapeia cada paciente para uma linha de texto, agora incluindo o tempo de regulação.
-    const corpo = listaOrdenada.map(p => 
-      `_${p.siglaSetorOrigem} - ${p.leitoCodigo}_ - *${p.nomeCompleto}* / VAI PARA: *${p.regulacao.paraSetor} - ${p.regulacao.paraLeito}* (*Tempo de regulação: ${p.tempoDeRegulacao}*)`
-    ).join('\n');
+    // Define o cabeçalho da mensagem
+    const header = `*REGULAÇÕES PENDENTES - ${tipo === 'origem' ? 'SAÍDAS DE PACIENTES' : 'CHEGADAS DE PACIENTES'} (${setorNome})*`;
 
-    // Monta as orientações finais.
-    const footer = `\n- Passar plantão para o destino, se ainda não realizado;
-- Informar ao NIR sobre as transferências realizadas ou se houver dificuldades na passagem de plantão;
-- Informar equipe de limpeza para higienização dos leitos liberados;`;
+    let corpo = '';
+    let footer = '';
 
-    // Junta tudo, copia e exibe a notificação de sucesso.
-    const mensagemCompleta = `${header}\n${corpo}\n${footer}`;
+    // **AJUSTE PRINCIPAL: MENSAGENS E ORIENTAÇÕES PERSONALIZADAS**
+    // --------------------------------------------------
+    if (tipo === 'origem') {
+      // 1. MENSAGEM PARA QUEM ENVIA O PACIENTE
+      corpo = listaOrdenada.map(p => 
+        `_${p.leitoCodigo}_ - *${p.nomeCompleto}* / VAI PARA: *${p.regulacao.paraSetor} - ${p.regulacao.paraLeito}* / Aguardando há: *${p.tempoDeRegulacao}*`
+      ).join('\n');
+      
+      // Orientações específicas para a equipe de origem.
+      footer = `\n*ORIENTAÇÕES PARA A EQUIPE DE ORIGEM:*
+- Identificar os pacientes acima na unidade;
+- Passar o plantão para o enfermeiro(a) do setor de destino;
+- Informar ao NIR sobre qualquer intercorrência que impacte a transferência;
+- *AVISAR O NIR ASSIM QUE O PACIENTE FOR TRANSFERIDO!*`;
+
+    } else {
+      // 2. MENSAGEM PARA QUEM RECEBE O PACIENTE
+      corpo = listaOrdenada.map(p => 
+        `*${p.regulacao.paraLeito}* - *${p.nomeCompleto}* / VEM DE: _${p.setorOrigem} - ${p.leitoCodigo}_ / Aguardando há: *${p.tempoDeRegulacao}*`
+      ).join('\n');
+
+      // Orientações específicas para a equipe de destino.
+      footer = `\n*ORIENTAÇÕES PARA A EQUIPE DE DESTINO:*
+- Verificar se os leitos de destino estão prontos para receber os pacientes;
+- Informar ao NIR caso ainda não tenha recebido o plantão do setor de origem;
+- *PUXAR O PACIENTE PARA O LEITO NO SISTEMA MV/TASY ASSIM QUE ELE CHEGAR NA UNIDADE!*`;
+    }
+    // --------------------------------------------------
+
+    const mensagemCompleta = `${header}\n\n${corpo}\n\n${footer}`;
     navigator.clipboard.writeText(mensagemCompleta);
-    toast({ title: 'Copiado!', description: `Resumo do setor ${setorNome} copiado.` });
+    toast({ title: 'Copiado!', description: `Resumo do setor ${setorNome} copiado com sucesso.` });
   };
 
   return (
@@ -110,7 +116,6 @@ export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }
                       <Button size="sm" variant="outline" onClick={() => handleCopy(setorNome, 'origem')}><Copy className="h-4 w-4 mr-2" />Copiar</Button>
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
-                      {/* **AJUSTE PRINCIPAL: ORDENA E EXIBE O TEMPO** */}
                       {[...pacientes].sort((a, b) => b.msDeRegulacao - a.msDeRegulacao).map(p => (
                         <div key={p.id} className="text-sm border-b last:border-b-0 py-1">
                           <div className="flex justify-between items-center">
@@ -142,11 +147,10 @@ export const ResumoRegulacoesModal = ({ open, onOpenChange, pacientesRegulados }
                      <Button size="sm" variant="outline" onClick={() => handleCopy(setorNome, 'destino')}><Copy className="h-4 w-4 mr-2" />Copiar</Button>
                    </CardHeader>
                    <CardContent className="p-4 pt-0">
-                      {/* **AJUSTE PRINCIPAL: ORDENA E EXIBE O TEMPO** */}
                      {[...pacientes].sort((a, b) => b.msDeRegulacao - a.msDeRegulacao).map(p => (
                        <div key={p.id} className="text-sm border-b last:border-b-0 py-1">
                          <div className="flex justify-between items-center">
-                           <span><strong>{p.leitoCodigo}:</strong> {p.nomeCompleto}</span>
+                           <span><strong>{p.regulacao.paraLeito}:</strong> {p.nomeCompleto}</span>
                            <span className="flex items-center gap-1 font-mono text-xs text-red-600">
                              <Clock className="h-3 w-3" />
                              {p.tempoDeRegulacao}
