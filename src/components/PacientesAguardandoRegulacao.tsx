@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ListaPacientesPendentes } from "@/components/ListaPacientesPendentes";
 import { PacienteReguladoItem } from "@/components/PacienteReguladoItem";
+import { parse, differenceInHours, isValid } from 'date-fns';
 
 interface PacientesAguardandoRegulacaoProps {
   listas: {
@@ -50,7 +51,6 @@ export const PacientesAguardandoRegulacao = ({ listas, handlers, filtrosProps }:
         const idadeB = b?.dataNascimento ? calcularIdade(b.dataNascimento) : 0;
         comparison = idadeA - idadeB;
       } else if (filtrosProps.sortConfig?.key === 'tempo') {
-        const { parse, differenceInHours, isValid } = require('date-fns');
         const dataA = a?.dataInternacao ? parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
         const dataB = b?.dataInternacao ? parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
         if (isValid(dataA) && isValid(dataB)) {
