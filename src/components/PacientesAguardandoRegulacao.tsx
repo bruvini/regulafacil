@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ListaPacientesPendentes } from "@/components/ListaPacientesPendentes";
 import { PacienteReguladoItem } from "@/components/PacienteReguladoItem";
+import { useFiltrosRegulacao } from "@/hooks/useFiltrosRegulacao";
 
 interface PacientesAguardandoRegulacaoProps {
   listas: {
@@ -21,9 +22,31 @@ interface PacientesAguardandoRegulacaoProps {
     altaAposRecuperacao: (leitoId: string) => void;
     setResumoModalOpen: (open: boolean) => void;
   };
+  filtrosProps: {
+    filteredPacientes: any[];
+    sortConfig: { key: string; direction: string };
+  };
 }
 
-export const PacientesAguardandoRegulacao = ({ listas, handlers }: PacientesAguardandoRegulacaoProps) => {
+export const PacientesAguardandoRegulacao = ({ listas, handlers, filtrosProps }: PacientesAguardandoRegulacaoProps) => {
+  // Aplicar ordenação aos sub-blocos
+  const { filteredPacientes: pacientesOrdenados } = useFiltrosRegulacao([
+    ...listas.decisaoCirurgica,
+    ...listas.decisaoClinica,
+    ...listas.recuperacaoCirurgica
+  ]);
+
+  // Separar pacientes ordenados por categoria
+  const decisaoCirurgicaOrdenada = pacientesOrdenados.filter(p => 
+    listas.decisaoCirurgica.some(dc => dc.id === p.id)
+  );
+  const decisaoClinicaOrdenada = pacientesOrdenados.filter(p => 
+    listas.decisaoClinica.some(dc => dc.id === p.id)
+  );
+  const recuperacaoCirurgicaOrdenada = pacientesOrdenados.filter(p => 
+    listas.recuperacaoCirurgica.some(rc => rc.id === p.id)
+  );
+
   return (
     <Card className="shadow-card border border-border/50">
       <CardHeader>
@@ -36,23 +59,25 @@ export const PacientesAguardandoRegulacao = ({ listas, handlers }: PacientesAgua
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ListaPacientesPendentes
             titulo="Decisão Cirúrgica"
-            pacientes={listas.decisaoCirurgica}
+            pacientes={decisaoCirurgicaOrdenada}
             onRegularClick={handlers.handleOpenRegulacaoModal}
+            onAlta={(leitoId) => handlers.altaAposRecuperacao(leitoId)}
             onConcluir={handlers.handleConcluir}
             onAlterar={handlers.handleAlterar}
             onCancelar={handlers.handleCancelar}
           />
           <ListaPacientesPendentes
             titulo="Decisão Clínica"
-            pacientes={listas.decisaoClinica}
+            pacientes={decisaoClinicaOrdenada}
             onRegularClick={handlers.handleOpenRegulacaoModal}
+            onAlta={(leitoId) => handlers.altaAposRecuperacao(leitoId)}
             onConcluir={handlers.handleConcluir}
             onAlterar={handlers.handleAlterar}
             onCancelar={handlers.handleCancelar}
           />
           <ListaPacientesPendentes
             titulo="Recuperação Cirúrgica"
-            pacientes={listas.recuperacaoCirurgica}
+            pacientes={recuperacaoCirurgicaOrdenada}
             onRegularClick={handlers.handleOpenRegulacaoModal}
             onAlta={(leitoId) => handlers.altaAposRecuperacao(leitoId)}
             onConcluir={handlers.handleConcluir}

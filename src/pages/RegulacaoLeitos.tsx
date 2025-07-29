@@ -3,15 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
 import { RegulacaoModals } from "@/components/modals/regulacao/RegulacaoModals";
-import { RemanejamentoPendenteItem } from "@/components/RemanejamentoPendenteItem";
 import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
+import { useState } from "react";
 
-// Novos componentes criados
+// Componentes atualizados
 import { FiltrosBlocoRegulacao } from "@/components/FiltrosBlocoRegulacao";
 import { PacientesAguardandoRegulacao } from "@/components/PacientesAguardandoRegulacao";
 import { PacientesReguladosBloco } from "@/components/PacientesReguladosBloco";
 import { EsperaUTITransferencias } from "@/components/EsperaUTITransferencias";
 import { CirurgiasEletivasBloco } from "@/components/CirurgiasEletivasBloco";
+import { RemanejamentosPendentesBloco } from "@/components/RemanejamentosPendentesBloco";
+
+// Novos modals
+import { PanoramaSelecaoPeriodoModal } from "@/components/modals/PanoramaSelecaoPeriodoModal";
+import { PanoramaVisualizacaoModal } from "@/components/modals/PanoramaVisualizacaoModal";
 
 const RegulacaoLeitos = () => {
   const {
@@ -21,6 +26,20 @@ const RegulacaoLeitos = () => {
     handlers,
     filtrosProps,
   } = useRegulacaoLogic();
+
+  // Estados para os novos modais de panorama
+  const [panoramaSelecaoOpen, setPanoramaSelecaoOpen] = useState(false);
+  const [panoramaVisualizacaoOpen, setPanoramaVisualizacaoOpen] = useState(false);
+  const [periodoSelecionado, setPeriodoSelecionado] = useState({ inicio: '', fim: '' });
+
+  const handleAbrirPanorama = () => {
+    setPanoramaSelecaoOpen(true);
+  };
+
+  const handleGerarPanorama = (dataInicio: string, dataFim: string) => {
+    setPeriodoSelecionado({ inicio: dataInicio, fim: dataFim });
+    setPanoramaVisualizacaoOpen(true);
+  };
 
   if (loading) {
     return (
@@ -95,6 +114,7 @@ const RegulacaoLeitos = () => {
             altaAposRecuperacao: handlers.altaAposRecuperacao,
             setResumoModalOpen: handlers.setResumoModalOpen
           }}
+          filtrosProps={filtrosProps}
         />
 
         {/* 5. Bloco: Pacientes Regulados */}
@@ -104,6 +124,7 @@ const RegulacaoLeitos = () => {
           onAlterar={handlers.handleAlterar}
           onCancelar={handlers.handleCancelar}
           onVerResumo={() => handlers.setResumoModalOpen(true)}
+          onAbrirPanorama={handleAbrirPanorama}
         />
 
         {/* 6. Bloco Agrupador: Espera por UTI e Transferências Externas */}
@@ -123,36 +144,11 @@ const RegulacaoLeitos = () => {
         />
 
         {/* 8. Bloco: Remanejamentos Pendentes */}
-        <Card className="shadow-card border border-border/50">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-medical-primary flex items-center gap-2">
-              Remanejamentos Pendentes
-              <Badge variant="destructive">
-                {listas.pacientesAguardandoRemanejamento.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {listas.pacientesAguardandoRemanejamento.length > 0 ? (
-              <div className="space-y-2">
-                {listas.pacientesAguardandoRemanejamento.map((paciente) => (
-                  <RemanejamentoPendenteItem
-                    key={paciente.id}
-                    paciente={paciente}
-                    onRemanejar={() =>
-                      handlers.handleOpenRegulacaoModal(paciente, "normal")
-                    }
-                    onCancelar={() => handlers.handleCancelarRemanejamento(paciente)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="italic text-muted-foreground text-center py-4">
-                Nenhum remanejamento pendente.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <RemanejamentosPendentesBloco
+          pacientesAguardandoRemanejamento={listas.pacientesAguardandoRemanejamento}
+          onRemanejar={(paciente) => handlers.handleOpenRegulacaoModal(paciente, "normal")}
+          onCancelar={handlers.handleCancelarRemanejamento}
+        />
 
         {/* Modais */}
         <RegulacaoModals
@@ -190,6 +186,26 @@ const RegulacaoLeitos = () => {
           setGerenciarTransferenciaOpen={handlers.setGerenciarTransferenciaOpen}
           setResumoModalOpen={handlers.setResumoModalOpen}
           setSugestoesModalOpen={handlers.setSugestoesModalOpen}
+        />
+
+        {/* Novos Modais de Panorama */}
+        <PanoramaSelecaoPeriodoModal
+          open={panoramaSelecaoOpen}
+          onOpenChange={setPanoramaSelecaoOpen}
+          onGerarPanorama={handleGerarPanorama}
+        />
+
+        <PanoramaVisualizacaoModal
+          open={panoramaVisualizacaoOpen}
+          onOpenChange={setPanoramaVisualizacaoOpen}
+          pacientesPendentes={[
+            ...listas.decisaoCirurgica,
+            ...listas.decisaoClinica,
+            ...listas.recuperacaoCirurgica
+          ]}
+          pacientesRegulados={listas.pacientesJaRegulados}
+          dataInicio={periodoSelecionado.inicio}
+          dataFim={periodoSelecionado.fim}
         />
       </div>
     </div>
