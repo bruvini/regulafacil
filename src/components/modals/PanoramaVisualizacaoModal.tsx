@@ -9,6 +9,13 @@ import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Tipagem para os dados que virão do Firestore
+interface EventoHistorico {
+  evento: 'criada' | 'alterada' | 'concluida' | 'cancelada';
+  timestamp: string;
+  detalhes: string;
+  [key: string]: any;
+}
+
 interface RegulacaoHistorico {
   id: string;
   pacienteNome: string;
@@ -17,17 +24,18 @@ interface RegulacaoHistorico {
   setorDestinoNome: string;
   leitoDestinoCodigo: string;
   status: 'Pendente' | 'Concluída' | 'Cancelada';
-  historicoEventos: Array<{
-    evento: 'criada' | 'alterada' | 'concluida' | 'cancelada';
-    timestamp: string;
-    [key: string]: any;
-  }>;
+  criadaEm: string;
+  concluidaEm?: string;
+  canceladaEm?: string;
+  motivoCancelamento?: string;
+  historicoEventos: EventoHistorico[];
 }
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pacientesPendentes: any[]; // Mantemos para a seção de pendentes
+  // **CORREÇÃO 1**: A prop agora se chama 'pacientesRegulados' para clareza.
+  pacientesRegulados: any[]; 
   dataInicio: string;
   dataFim: string;
 }
@@ -35,7 +43,7 @@ interface Props {
 export const PanoramaVisualizacaoModal = ({ 
   open, 
   onOpenChange, 
-  pacientesPendentes, 
+  pacientesRegulados, 
   dataInicio,
   dataFim
 }: Props) => {
@@ -43,50 +51,35 @@ export const PanoramaVisualizacaoModal = ({
   const [loading, setLoading] = useState(false);
   const [dadosHistoricos, setDadosHistoricos] = useState<RegulacaoHistorico[]>([]);
 
-  // Efeito que busca os dados no Firestore sempre que o modal abrir ou as datas mudarem
+  // Efeito que busca os dados no Firestore (lógica mantida, está correta)
   useEffect(() => {
     const fetchRegulacoesDoPeriodo = async () => {
       if (!open || !dataInicio || !dataFim) {
         setDadosHistoricos([]);
         return;
       }
-
       try {
         setLoading(true);
         const inicio = new Date(dataInicio);
         const fim = new Date(dataFim);
+        if (!isValid(inicio) || !isValid(fim)) return;
 
-        if (!isValid(inicio) || !isValid(fim)) {
-          console.error("Datas de período inválidas");
-          setDadosHistoricos([]);
-          return;
-        }
-
-        // Query para buscar na nova coleção, dentro do período selecionado
         const q = query(
           collection(db, "regulacoesRegulaFacil"),
           where("criadaEm", ">=", inicio.toISOString()),
           where("criadaEm", "<=", fim.toISOString()),
           orderBy("criadaEm", "desc")
         );
-
         const querySnapshot = await getDocs(q);
-        const regulacoes: RegulacaoHistorico[] = [];
-        querySnapshot.forEach((doc) => {
-          regulacoes.push({ id: doc.id, ...doc.data() } as RegulacaoHistorico);
-        });
-        
+        const regulacoes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RegulacaoHistorico));
         setDadosHistoricos(regulacoes);
-
       } catch (error) {
-        console.error("Erro ao buscar histórico de regulações:", error);
-        toast({ title: "Erro", description: "Não foi possível carregar o histórico do período.", variant: "destructive" });
-        setDadosHistoricos([]);
+        console.error("Erro ao buscar histórico:", error);
+        toast({ title: "Erro", description: "Não foi possível carregar o histórico.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
-
     fetchRegulacoesDoPeriodo();
   }, [open, dataInicio, dataFim, toast]);
 
@@ -126,29 +119,34 @@ export const PanoramaVisualizacaoModal = ({
   };
 
   const gerarTextoFormatado = () => {
-    // --- SEÇÃO 1: REGULAÇÕES PENDENTES (LÓGICA ANTIGA E CORRETA) ---
+    // --- SEÇÃO 1: REGULAÇÕES PENDENTES ---
     let texto = '*REGULAÇÕES PENDENTES*\n\n';
-    const pacientesOrdenados = [...pacientesPendentes].sort((a, b) => 
+    // **CORREÇÃO 1**: Usando a prop correta 'pacientesRegulados'.
+    // Esta lista contém apenas pacientes com status "Regulado" que ainda não foram concluídos.
+    const pendentesOrdenados = [...pacientesRegulados].sort((a, b) => 
         new Date(a.regulacao?.dataAtualizacaoStatus).getTime() - new Date(b.regulacao?.dataAtualizacaoStatus).getTime()
     );
 
-    if (pacientesOrdenados.length > 0) {
-      pacientesOrdenados.forEach(paciente => {
+    if (pendentesOrdenados.length > 0) {
+      pendentesOrdenados.forEach(paciente => {
+        const dataRegulacao = new Date(paciente.regulacao?.dataAtualizacaoStatus);
+        // **CORREÇÃO 2**: Adicionando data e hora do início da pendência.
+        const dataFormatada = isValid(dataRegulacao) ? format(dataRegulacao, 'dd/MM HH:mm') : 'N/A';
         const tempoAguardando = calcularTempoAguardando(paciente.regulacao?.dataAtualizacaoStatus);
-        texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} / VAI PARA: ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'} / AGUARDANDO HÁ: ${tempoAguardando}\n`;
+        texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} -> ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'}\n`;
+        texto += `_(Regulado em ${dataFormatada} - Aguardando há ${tempoAguardando})_\n\n`;
       });
     } else {
       texto += '_Nenhuma regulação pendente no momento._\n';
     }
-    texto += '\n---\n\n';
+    texto += '---\n\n';
 
-    // --- SEÇÃO 2: RELATÓRIO DO PERÍODO (NOVA LÓGICA) ---
+    // --- SEÇÃO 2: RELATÓRIO DO PERÍODO ---
     const dataInicioFormatada = isValid(new Date(dataInicio)) ? format(new Date(dataInicio), 'dd/MM/yyyy HH:mm') : 'N/A';
     const dataFimFormatada = isValid(new Date(dataFim)) ? format(new Date(dataFim), 'dd/MM/yyyy HH:mm') : 'N/A';
     texto += `*PANORAMA DO PERÍODO (${dataInicioFormatada} - ${dataFimFormatada})*\n\n`;
 
-    if (loading) {
-        return "Carregando dados do período...";
+    if (loading) return "Carregando dados do período...";
     }
 
     // Calculando as estatísticas
@@ -166,12 +164,32 @@ export const PanoramaVisualizacaoModal = ({
     texto += `*Detalhamento:*\n`;
     if (dadosHistoricos.length > 0) {
         dadosHistoricos.forEach(reg => {
-            let desfecho = reg.status.toUpperCase();
+            const dataCriacao = new Date(reg.criadaEm);
+            const dataCriacaoFormatada = isValid(dataCriacao) ? format(dataCriacao, 'dd/MM HH:mm') : 'N/A';
+            texto += `- *${reg.pacienteNome}* (${reg.setorOrigemNome} -> ${reg.setorDestinoNome} ${reg.leitoDestinoCodigo})\n`;
+            texto += `  _Iniciada em: ${dataCriacaoFormatada}_\n`;
+
+            // **CORREÇÃO 3**: Adicionando detalhes de alteração e cancelamento
+            reg.historicoEventos.forEach(evento => {
+                if (evento.evento === 'alterada') {
+                    const dataAlteracao = new Date(evento.timestamp);
+                    const dataAlteracaoFormatada = isValid(dataAlteracao) ? format(dataAlteracao, 'dd/MM HH:mm') : 'N/A';
+                    texto += `  _Alterada em: ${dataAlteracaoFormatada} - Motivo: ${evento.detalhes.split('Motivo: ')[1] || 'N/A'}_\n`;
+                }
+            });
+
             if (reg.status === 'Concluída') {
+                const dataConclusao = new Date(reg.concluidaEm!);
+                const dataConclusaoFormatada = isValid(dataConclusao) ? format(dataConclusao, 'dd/MM HH:mm') : 'N/A';
                 const tempo = calcularTempoDeConclusao(reg.historicoEventos);
-                desfecho += ` (em ${tempo})`;
+                texto += `  *Desfecho: CONCLUÍDA em ${dataConclusaoFormatada} (em ${tempo})*\n\n`;
+            } else if (reg.status === 'Cancelada') {
+                const dataCancelamento = new Date(reg.canceladaEm!);
+                const dataCancelamentoFormatada = isValid(dataCancelamento) ? format(dataCancelamento, 'dd/MM HH:mm') : 'N/A';
+                texto += `  *Desfecho: CANCELADA em ${dataCancelamentoFormatada} (Motivo: ${reg.motivoCancelamento || 'N/A'})*\n\n`;
+            } else {
+                texto += `  *Desfecho: PENDENTE*\n\n`;
             }
-            texto += `- ${reg.pacienteNome} (${reg.setorOrigemNome}) -> ${reg.setorDestinoNome} (${reg.leitoDestinoCodigo}) | *${desfecho}*\n`;
         });
     } else {
         texto += '_Nenhuma regulação registrada no período selecionado._\n';
