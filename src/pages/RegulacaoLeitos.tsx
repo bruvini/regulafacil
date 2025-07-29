@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
@@ -19,19 +18,17 @@ import { PanoramaSelecaoPeriodoModal } from "@/components/modals/PanoramaSelecao
 import { PanoramaVisualizacaoModal } from "@/components/modals/PanoramaVisualizacaoModal";
 
 const RegulacaoLeitos = () => {
-  const {
-    loading,
-    listas,
-    modals,
-    handlers,
-    filtrosProps,
-  } = useRegulacaoLogic();
-
+  const { loading, listas, modals, handlers, filtrosProps } =
+    useRegulacaoLogic();
 
   // Estados para os novos modais de panorama
   const [panoramaSelecaoOpen, setPanoramaSelecaoOpen] = useState(false);
-  const [panoramaVisualizacaoOpen, setPanoramaVisualizacaoOpen] = useState(false);
-  const [periodoSelecionado, setPeriodoSelecionado] = useState({ inicio: '', fim: '' });
+  const [panoramaVisualizacaoOpen, setPanoramaVisualizacaoOpen] =
+    useState(false);
+  const [periodoSelecionado, setPeriodoSelecionado] = useState({
+    inicio: "",
+    fim: "",
+  });
 
   const handleAbrirPanorama = () => {
     setPanoramaSelecaoOpen(true);
@@ -72,7 +69,7 @@ const RegulacaoLeitos = () => {
               Visão geral e controle das solicitações e pendências de leitos.
             </p>
           </div>
-          <AcoesRapidas 
+          <AcoesRapidas
             onImportarClick={() => handlers.setImportModalOpen(true)}
             onPassagemClick={handlers.handlePassagemPlantao}
             onSugestoesClick={handlers.handleAbrirSugestoes}
@@ -105,7 +102,7 @@ const RegulacaoLeitos = () => {
             decisaoClinica: listas.decisaoClinica,
             recuperacaoCirurgica: listas.recuperacaoCirurgica,
             totalPendentes: listas.totalPendentes,
-            pacientesJaRegulados: listas.pacientesJaRegulados
+            pacientesJaRegulados: listas.pacientesJaRegulados,
           }}
           handlers={{
             handleOpenRegulacaoModal: handlers.handleOpenRegulacaoModal,
@@ -113,10 +110,10 @@ const RegulacaoLeitos = () => {
             handleAlterar: handlers.handleAlterar,
             handleCancelar: handlers.handleCancelar,
             altaAposRecuperacao: handlers.altaAposRecuperacao,
-            setResumoModalOpen: handlers.setResumoModalOpen
+            setResumoModalOpen: handlers.setResumoModalOpen,
           }}
           filtrosProps={{
-            sortConfig: filtrosProps.sortConfig
+            sortConfig: filtrosProps.sortConfig,
           }}
         />
 
@@ -133,7 +130,9 @@ const RegulacaoLeitos = () => {
         {/* 6. Bloco Agrupador: Espera por UTI e Transferências Externas */}
         <EsperaUTITransferencias
           pacientesAguardandoUTI={listas.pacientesAguardandoUTI}
-          pacientesAguardandoTransferencia={listas.pacientesAguardandoTransferencia}
+          pacientesAguardandoTransferencia={
+            listas.pacientesAguardandoTransferencia
+          }
           onCancelarUTI={handlers.cancelarPedidoUTI}
           onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
           onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
@@ -149,8 +148,12 @@ const RegulacaoLeitos = () => {
         {/* 8. Bloco: Remanejamentos Pendentes */}
         {listas.pacientesAguardandoRemanejamento.length > 0 && (
           <RemanejamentosPendentesBloco
-            pacientesAguardandoRemanejamento={listas.pacientesAguardandoRemanejamento}
-            onRemanejar={(paciente) => handlers.handleOpenRegulacaoModal(paciente, "normal")}
+            pacientesAguardandoRemanejamento={
+              listas.pacientesAguardandoRemanejamento
+            }
+            onRemanejar={(paciente) =>
+              handlers.handleOpenRegulacaoModal(paciente, "normal")
+            }
             onCancelar={handlers.handleCancelarRemanejamento}
           />
         )}
@@ -181,7 +184,9 @@ const RegulacaoLeitos = () => {
           onConfirmSync={handlers.handleConfirmSync}
           onConfirmarRegulacao={handlers.handleConfirmarRegulacao}
           onConfirmarCancelamento={handlers.onConfirmarCancelamento}
-          onConfirmarTransferenciaExterna={handlers.handleConfirmarTransferenciaExterna}
+          onConfirmarTransferenciaExterna={
+            handlers.handleConfirmarTransferenciaExterna
+          }
           onConfirmarAlocacaoCirurgia={handlers.handleConfirmarAlocacaoCirurgia}
           setImportModalOpen={handlers.setImportModalOpen}
           setRegulacaoModalOpen={handlers.setRegulacaoModalOpen}
@@ -203,11 +208,6 @@ const RegulacaoLeitos = () => {
         <PanoramaVisualizacaoModal
           open={panoramaVisualizacaoOpen}
           onOpenChange={setPanoramaVisualizacaoOpen}
-          pacientesPendentes={[
-            ...listas.decisaoCirurgica,
-            ...listas.decisaoClinica,
-            ...listas.recuperacaoCirurgica
-          ]}
           pacientesRegulados={listas.pacientesJaRegulados}
           dataInicio={periodoSelecionado.inicio}
           dataFim={periodoSelecionado.fim}

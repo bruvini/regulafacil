@@ -34,8 +34,7 @@ interface RegulacaoHistorico {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // **CORREÇÃO 1**: A prop agora se chama 'pacientesRegulados' para clareza.
-  pacientesRegulados: any[]; 
+  pacientesRegulados: any[]; // Usado para a seção de pendentes em tempo real
   dataInicio: string;
   dataFim: string;
 }
@@ -51,7 +50,6 @@ export const PanoramaVisualizacaoModal = ({
   const [loading, setLoading] = useState(false);
   const [dadosHistoricos, setDadosHistoricos] = useState<RegulacaoHistorico[]>([]);
 
-  // Efeito que busca os dados no Firestore (lógica mantida, está correta)
   useEffect(() => {
     const fetchRegulacoesDoPeriodo = async () => {
       if (!open || !dataInicio || !dataFim) {
@@ -95,23 +93,17 @@ export const PanoramaVisualizacaoModal = ({
       return 'N/A';
     }
   };
-
-  const calcularTempoDeConclusao = (historico: RegulacaoHistorico['historicoEventos']): string => {
-    try {
-        // Pega o último evento de 'criada' ou 'alterada' como ponto de partida
+  
+  const calcularTempoDeConclusao = (historico: EventoHistorico[]): string => {
+     try {
         const eventoInicio = [...historico].reverse().find(e => e.evento === 'criada' || e.evento === 'alterada');
         const eventoFim = historico.find(e => e.evento === 'concluida');
-
         if (!eventoInicio || !eventoFim) return 'N/A';
-
         const dataInicio = new Date(eventoInicio.timestamp);
         const dataFim = new Date(eventoFim.timestamp);
-
         if (!isValid(dataInicio) || !isValid(dataFim)) return 'N/A';
-
         const horas = differenceInHours(dataFim, dataInicio);
         const minutos = differenceInMinutes(dataFim, dataInicio) % 60;
-
         return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}hs`;
     } catch {
         return 'N/A';
@@ -121,8 +113,6 @@ export const PanoramaVisualizacaoModal = ({
   const gerarTextoFormatado = () => {
     // --- SEÇÃO 1: REGULAÇÕES PENDENTES ---
     let texto = '*REGULAÇÕES PENDENTES*\n\n';
-    // **CORREÇÃO 1**: Usando a prop correta 'pacientesRegulados'.
-    // Esta lista contém apenas pacientes com status "Regulado" que ainda não foram concluídos.
     const pendentesOrdenados = [...pacientesRegulados].sort((a, b) => 
         new Date(a.regulacao?.dataAtualizacaoStatus).getTime() - new Date(b.regulacao?.dataAtualizacaoStatus).getTime()
     );
@@ -130,7 +120,6 @@ export const PanoramaVisualizacaoModal = ({
     if (pendentesOrdenados.length > 0) {
       pendentesOrdenados.forEach(paciente => {
         const dataRegulacao = new Date(paciente.regulacao?.dataAtualizacaoStatus);
-        // **CORREÇÃO 2**: Adicionando data e hora do início da pendência.
         const dataFormatada = isValid(dataRegulacao) ? format(dataRegulacao, 'dd/MM HH:mm') : 'N/A';
         const tempoAguardando = calcularTempoAguardando(paciente.regulacao?.dataAtualizacaoStatus);
         texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} -> ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'}\n`;
@@ -147,9 +136,7 @@ export const PanoramaVisualizacaoModal = ({
     texto += `*PANORAMA DO PERÍODO (${dataInicioFormatada} - ${dataFimFormatada})*\n\n`;
 
     if (loading) return "Carregando dados do período...";
-    }
 
-    // Calculando as estatísticas
     const total = dadosHistoricos.length;
     const concluidas = dadosHistoricos.filter(r => r.status === 'Concluída').length;
     const canceladas = dadosHistoricos.filter(r => r.status === 'Cancelada').length;
@@ -169,12 +156,12 @@ export const PanoramaVisualizacaoModal = ({
             texto += `- *${reg.pacienteNome}* (${reg.setorOrigemNome} -> ${reg.setorDestinoNome} ${reg.leitoDestinoCodigo})\n`;
             texto += `  _Iniciada em: ${dataCriacaoFormatada}_\n`;
 
-            // **CORREÇÃO 3**: Adicionando detalhes de alteração e cancelamento
             reg.historicoEventos.forEach(evento => {
                 if (evento.evento === 'alterada') {
                     const dataAlteracao = new Date(evento.timestamp);
                     const dataAlteracaoFormatada = isValid(dataAlteracao) ? format(dataAlteracao, 'dd/MM HH:mm') : 'N/A';
-                    texto += `  _Alterada em: ${dataAlteracaoFormatada} - Motivo: ${evento.detalhes.split('Motivo: ')[1] || 'N/A'}_\n`;
+                    const motivo = evento.detalhes.split('Motivo: ')[1] || 'N/A';
+                    texto += `  _Alterada em: ${dataAlteracaoFormatada} - Motivo: ${motivo}_\n`;
                 }
             });
 
@@ -196,7 +183,7 @@ export const PanoramaVisualizacaoModal = ({
     }
 
     return texto;
-  };
+  }; // <--- CHAVE FINAL DA FUNÇÃO 'gerarTextoFormatado'
 
   const handleCopiar = () => {
     const texto = gerarTextoFormatado();
