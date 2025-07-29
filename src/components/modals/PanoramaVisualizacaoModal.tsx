@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatarDuracao } from '@/lib/utils';
-import { format, differenceInMilliseconds } from 'date-fns';
+import { format, differenceInMilliseconds, isValid } from 'date-fns';
 
 interface Props {
   open: boolean;
@@ -41,29 +41,55 @@ export const PanoramaVisualizacaoModal = ({
 
     texto += '\n---\n\n';
 
-    // Seção de regulações do período
-    const dataInicioFormatada = format(new Date(dataInicio), 'dd/MM/yyyy HH:mm');
-    const dataFimFormatada = format(new Date(dataFim), 'dd/MM/yyyy HH:mm');
+    // Seção de regulações do período - com validação de datas
+    let dataInicioFormatada = 'Data Inválida';
+    let dataFimFormatada = 'Data Inválida';
+
+    try {
+      const dataInicioObj = new Date(dataInicio);
+      const dataFimObj = new Date(dataFim);
+
+      if (isValid(dataInicioObj)) {
+        dataInicioFormatada = format(dataInicioObj, 'dd/MM/yyyy HH:mm');
+      }
+
+      if (isValid(dataFimObj)) {
+        dataFimFormatada = format(dataFimObj, 'dd/MM/yyyy HH:mm');
+      }
+    } catch (error) {
+      console.error('Erro ao formatar datas do período:', error);
+    }
     
     texto += `*REGULAÇÕES NO PERÍODO (${dataInicioFormatada} - ${dataFimFormatada})*\n\n`;
 
-    // Filtrar regulações do período
+    // Filtrar regulações do período com validação
     const regulacoesDoPeriodo = pacientesRegulados.filter(paciente => {
       if (!paciente.regulacao?.data) return false;
-      const dataRegulacao = new Date(paciente.regulacao.data);
-      const inicio = new Date(dataInicio);
-      const fim = new Date(dataFim);
-      return dataRegulacao >= inicio && dataRegulacao <= fim;
+      
+      try {
+        const dataRegulacao = new Date(paciente.regulacao.data);
+        const inicio = new Date(dataInicio);
+        const fim = new Date(dataFim);
+        
+        return isValid(dataRegulacao) && isValid(inicio) && isValid(fim) && 
+               dataRegulacao >= inicio && dataRegulacao <= fim;
+      } catch (error) {
+        console.error('Erro ao validar data de regulação:', error);
+        return false;
+      }
     });
 
     if (regulacoesDoPeriodo.length > 0) {
       regulacoesDoPeriodo.forEach(paciente => {
-        const dataRegulacao = new Date(paciente.regulacao.data);
-        const dataConclusao = new Date(paciente.regulacao.dataAtualizacaoStatus || paciente.regulacao.data);
-        const tempoTransferencia = differenceInMilliseconds(dataConclusao, dataRegulacao);
-        const tempoFormatado = formatarDuracao(dataRegulacao.toISOString());
-        
-        texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} -> FOI PARA ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'} / TEMPO DE TRANSFERÊNCIA: ${tempoFormatado}\n`;
+        try {
+          const dataRegulacao = new Date(paciente.regulacao.data);
+          const tempoFormatado = formatarDuracao(paciente.regulacao.data);
+          
+          texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} -> FOI PARA ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'} / TEMPO DE TRANSFERÊNCIA: ${tempoFormatado}\n`;
+        } catch (error) {
+          console.error('Erro ao processar regulação:', error, paciente);
+          texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} -> FOI PARA ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'} / TEMPO DE TRANSFERÊNCIA: Erro no cálculo\n`;
+        }
       });
     } else {
       texto += '_Nenhuma regulação realizada no período selecionado._\n';
