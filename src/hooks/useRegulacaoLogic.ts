@@ -185,13 +185,13 @@ export const useRegulacaoLogic = () => {
         );
 
         const pacientesDoQuarto = leitosDoQuarto
-  .map((l) => {
-    const historico = l.historicoMovimentacao[l.historicoMovimentacao.length - 1];
-    const pacienteId = historico?.pacienteId;
-    // Agora usamos o mapa para uma busca direta e mais confiável!
-    return (historico?.statusLeito === 'Ocupado' && pacienteId) ? mapaPacientes.get(pacienteId) : null;
-  })
-  .filter(Boolean);
+          .map((l) => {
+            const historico = l.historicoMovimentacao[l.historicoMovimentacao.length - 1];
+            const pacienteId = historico?.pacienteId;
+            // Agora usamos o mapa para uma busca direta e mais confiável!
+            return (historico?.statusLeito === 'Ocupado' && pacienteId) ? mapaPacientes.get(pacienteId) : null;
+          })
+          .filter(Boolean);
 
         const temIsolamentoNoQuarto = pacientesDoQuarto.some(p =>
           p?.isolamentosVigentes && p.isolamentosVigentes.length > 0
@@ -208,11 +208,10 @@ export const useRegulacaoLogic = () => {
           }
 
           // 2. Filtro de gênero para quartos compartilhados
-          if (pacientesDoQuarto.length > 0) {
-            const sexoDoQuarto = pacientesDoQuarto[0]?.sexoPaciente;
-            if (sexoDoQuarto && paciente.sexoPaciente !== sexoDoQuarto) {
-              return false;
-            }
+          // Se o sexo compatível do quarto for 'Masculino' ou 'Feminino',
+          // o sexo do paciente DEVE ser o mesmo. Se for 'Ambos', qualquer um é aceito.
+          if (sexoCompativel !== 'Ambos' && paciente.sexoPaciente !== sexoCompativel) {
+            return false;
           }
 
           // 3. Filtro de isolamento
