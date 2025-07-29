@@ -549,16 +549,20 @@ const registrarHistoricoRegulacao = async (
   const onConfirmarCancelamento = async (motivo: string) => {
     if (!pacienteParaAcao) return;
 
-    const leitoOrigem = leitos.find(l => l.id === pacienteParaAcao.leitoId)!;
-    const historicoRegulacao = leitoOrigem.historicoMovimentacao.find(h => h.statusLeito === "Regulado");
+    // <<< AQUI ESTÁ A CORREÇÃO PRINCIPAL >>>
+    // Em vez de usar a lista 'leitos', usamos 'pacientesComDadosCompletos'
+    // para garantir que estamos pegando a informação de regulação mais recente
+    // que já foi processada pelo hook.
+    const pacienteAtualizado = pacientesComDadosCompletos.find(p => p.id === pacienteParaAcao.id);
 
-    if (!historicoRegulacao?.infoRegulacao?.regulacaoId) {
+    // Agora, usamos 'pacienteAtualizado.regulacao' que é a fonte mais confiável do 'regulacaoId'.
+    if (!pacienteAtualizado?.regulacao?.regulacaoId) {
         toast({ title: "Erro", description: "Não foi possível encontrar o ID da regulação para cancelar.", variant: "destructive" });
         return;
     }
 
-    const regulacaoId = historicoRegulacao.infoRegulacao.regulacaoId;
-    const leitoDestino = leitos.find(l => l.codigoLeito === historicoRegulacao.infoRegulacao!.paraLeito)!;
+    const regulacaoId = pacienteAtualizado.regulacao.regulacaoId;
+    const leitoDestino = leitos.find(l => l.codigoLeito === pacienteAtualizado.regulacao.paraLeito)!;
     
     const logMessage = `Cancelou regulação de ${pacienteParaAcao.nomeCompleto} para o leito ${leitoDestino.codigoLeito}. Motivo: ${motivo}`;
 
@@ -568,8 +572,8 @@ const registrarHistoricoRegulacao = async (
         detalhesLog: logMessage,
     });
 
-    // Lógica original de atualização de leitos
-    await atualizarStatusLeito(leitoOrigem.id, "Ocupado", {
+    // A lógica original para atualizar os leitos permanece a mesma
+    await atualizarStatusLeito(pacienteParaAcao.leitoId, "Ocupado", {
         pacienteId: pacienteParaAcao.id,
     });
     await atualizarStatusLeito(leitoDestino.id, "Vago");
