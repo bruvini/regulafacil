@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
 import { RegulacaoModals } from "@/components/modals/regulacao/RegulacaoModals";
 import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
+import { useFiltrosRegulacao } from "@/hooks/useFiltrosRegulacao";
 import { useState } from "react";
 
 // Componentes atualizados
@@ -26,6 +27,15 @@ const RegulacaoLeitos = () => {
     handlers,
     filtrosProps,
   } = useRegulacaoLogic();
+
+  // Use the filter hook to get filtered patients
+  const todosPacientesPendentes = [
+    ...listas.decisaoCirurgica,
+    ...listas.decisaoClinica,
+    ...listas.recuperacaoCirurgica
+  ];
+
+  const { filteredPacientes } = useFiltrosRegulacao(todosPacientesPendentes);
 
   // Estados para os novos modais de panorama
   const [panoramaSelecaoOpen, setPanoramaSelecaoOpen] = useState(false);
@@ -115,8 +125,8 @@ const RegulacaoLeitos = () => {
             setResumoModalOpen: handlers.setResumoModalOpen
           }}
           filtrosProps={{
-            ...filtrosProps,
-            filteredPacientes: filtrosProps.filteredPacientes
+            filteredPacientes: filteredPacientes,
+            sortConfig: filtrosProps.sortConfig
           }}
         />
 
@@ -147,11 +157,13 @@ const RegulacaoLeitos = () => {
         />
 
         {/* 8. Bloco: Remanejamentos Pendentes */}
-        <RemanejamentosPendentesBloco
-          pacientesAguardandoRemanejamento={listas.pacientesAguardandoRemanejamento}
-          onRemanejar={(paciente) => handlers.handleOpenRegulacaoModal(paciente, "normal")}
-          onCancelar={handlers.handleCancelarRemanejamento}
-        />
+        {listas.pacientesAguardandoRemanejamento.length > 0 && (
+          <RemanejamentosPendentesBloco
+            pacientesAguardandoRemanejamento={listas.pacientesAguardandoRemanejamento}
+            onRemanejar={(paciente) => handlers.handleOpenRegulacaoModal(paciente, "normal")}
+            onCancelar={handlers.handleCancelarRemanejamento}
+          />
+        )}
 
         {/* Modais */}
         <RegulacaoModals
