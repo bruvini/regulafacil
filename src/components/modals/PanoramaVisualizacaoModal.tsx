@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatarDuracao } from '@/lib/utils';
-import { format, differenceInMilliseconds, isValid } from 'date-fns';
+import { format, differenceInMilliseconds, isValid, differenceInHours, differenceInMinutes } from 'date-fns';
 
 interface Props {
   open: boolean;
@@ -26,13 +26,62 @@ export const PanoramaVisualizacaoModal = ({
 }: Props) => {
   const { toast } = useToast();
 
+  const calcularTempoAguardandoRegulacao = (dataRegulacao: string): string => {
+    try {
+      const dataRegulacaoObj = new Date(dataRegulacao);
+      if (!isValid(dataRegulacaoObj)) return 'N/A';
+
+      const agora = new Date();
+      const horas = differenceInHours(agora, dataRegulacaoObj);
+      const minutos = differenceInMinutes(agora, dataRegulacaoObj) % 60;
+
+      return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}hs`;
+    } catch (error) {
+      console.error('Erro ao calcular tempo de aguardo:', error);
+      return 'N/A';
+    }
+  };
+
+  const calcularTempoTransferencia = (dataRegulacao: string, dataConfirmacao?: string): string => {
+    try {
+      const dataRegulacaoObj = new Date(dataRegulacao);
+      const dataConfirmacaoObj = dataConfirmacao ? new Date(dataConfirmacao) : new Date();
+
+      if (!isValid(dataRegulacaoObj) || !isValid(dataConfirmacaoObj)) return 'N/A';
+
+      const horas = differenceInHours(dataConfirmacaoObj, dataRegulacaoObj);
+      const minutos = differenceInMinutes(dataConfirmacaoObj, dataRegulacaoObj) % 60;
+
+      return `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}hs`;
+    } catch (error) {
+      console.error('Erro ao calcular tempo de transferência:', error);
+      return 'N/A';
+    }
+  };
+
   const gerarTextoFormatado = () => {
     let texto = '*REGULAÇÕES PENDENTES*\n\n';
 
-    // Seção de regulações pendentes
-    if (pacientesPendentes.length > 0) {
-      pacientesPendentes.forEach(paciente => {
-        const tempoAguardando = formatarDuracao(paciente.dataInternacao);
+    // Seção de regulações pendentes - pacientes regulados aguardando transferência física
+    const pacientesAguardandoTransferencia = pacientesRegulados.filter(paciente => 
+      paciente.regulacao && 
+      paciente.regulacao.status !== 'concluido' && 
+      paciente.regulacao.paraSetorSigla && 
+      paciente.regulacao.paraLeito
+    );
+
+    // Ordenar por tempo de aguardo (mais tempo primeiro - ordem decrescente)
+    const pacientesOrdenados = pacientesAguardandoTransferencia.sort((a, b) => {
+      const dataA = new Date(a.regulacao?.data || a.regulacao?.dataAtualizacaoStatus);
+      const dataB = new Date(b.regulacao?.data || b.regulacao?.dataAtualizacaoStatus);
+      return dataA.getTime() - dataB.getTime(); // Mais antigo primeiro (aguardando há mais tempo)
+    });
+
+    if (pacientesOrdenados.length > 0) {
+      pacientesOrdenados.forEach(paciente => {
+        const tempoAguardando = calcularTempoAguardandoRegulacao(
+          paciente.regulacao?.dataAtualizacaoStatus || paciente.regulacao?.data
+        );
         texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} / VAI PARA: ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'} / AGUARDANDO HÁ: ${tempoAguardando}\n`;
       });
     } else {
@@ -62,7 +111,7 @@ export const PanoramaVisualizacaoModal = ({
     
     texto += `*REGULAÇÕES NO PERÍODO (${dataInicioFormatada} - ${dataFimFormatada})*\n\n`;
 
-    // Filtrar regulações do período com validação
+    // Filtrar regulações do período - buscar na coleção regulacoesRegulaFacil
     const regulacoesDoPeriodo = pacientesRegulados.filter(paciente => {
       if (!paciente.regulacao?.data) return false;
       
@@ -71,8 +120,10 @@ export const PanoramaVisualizacaoModal = ({
         const inicio = new Date(dataInicio);
         const fim = new Date(dataFim);
         
+        // Verificar se a regulação foi concluída no período selecionado
         return isValid(dataRegulacao) && isValid(inicio) && isValid(fim) && 
-               dataRegulacao >= inicio && dataRegulacao <= fim;
+               dataRegulacao >= inicio && dataRegulacao <= fim &&
+               paciente.regulacao.status === 'concluido';
       } catch (error) {
         console.error('Erro ao validar data de regulação:', error);
         return false;
@@ -82,10 +133,12 @@ export const PanoramaVisualizacaoModal = ({
     if (regulacoesDoPeriodo.length > 0) {
       regulacoesDoPeriodo.forEach(paciente => {
         try {
-          const dataRegulacao = new Date(paciente.regulacao.data);
-          const tempoFormatado = formatarDuracao(paciente.regulacao.data);
+          const tempoTransferencia = calcularTempoTransferencia(
+            paciente.regulacao.data,
+            paciente.regulacao.dataConfirmacaoChegada || paciente.regulacao.dataAtualizacaoStatus
+          );
           
-          texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} -> FOI PARA ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'} / TEMPO DE TRANSFERÊNCIA: ${tempoFormatado}\n`;
+          texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} -> FOI PARA ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'} / TEMPO DE TRANSFERÊNCIA: ${tempoTransferencia}\n`;
         } catch (error) {
           console.error('Erro ao processar regulação:', error, paciente);
           texto += `${paciente.siglaSetorOrigem} - ${paciente.nomeCompleto} -> FOI PARA ${paciente.regulacao?.paraSetorSigla || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'} / TEMPO DE TRANSFERÊNCIA: Erro no cálculo\n`;

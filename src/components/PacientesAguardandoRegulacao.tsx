@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ListaPacientesPendentes } from "@/components/ListaPacientesPendentes";
 import { PacienteReguladoItem } from "@/components/PacienteReguladoItem";
-import { useFiltrosRegulacao } from "@/hooks/useFiltrosRegulacao";
 
 interface PacientesAguardandoRegulacaoProps {
   listas: {
@@ -29,23 +28,46 @@ interface PacientesAguardandoRegulacaoProps {
 }
 
 export const PacientesAguardandoRegulacao = ({ listas, handlers, filtrosProps }: PacientesAguardandoRegulacaoProps) => {
-  // Aplicar ordenação aos sub-blocos
-  const { filteredPacientes: pacientesOrdenados } = useFiltrosRegulacao([
-    ...listas.decisaoCirurgica,
-    ...listas.decisaoClinica,
-    ...listas.recuperacaoCirurgica
-  ]);
+  // Aplicar ordenação específica aos sub-blocos usando os pacientes já filtrados
+  const aplicarOrdenacao = (pacientes: any[]) => {
+    return [...pacientes].sort((a, b) => {
+      let comparison = 0;
+      
+      if (filtrosProps.sortConfig?.key === 'nome') {
+        comparison = (a?.nomeCompleto || '').localeCompare(b?.nomeCompleto || '');
+      } else if (filtrosProps.sortConfig?.key === 'idade') {
+        const calcularIdade = (dataNascimento: string): number => {
+          if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return 999;
+          const [dia, mes, ano] = dataNascimento.split('/').map(Number);
+          const hoje = new Date();
+          const nascimento = new Date(ano, mes - 1, dia);
+          let idade = hoje.getFullYear() - nascimento.getFullYear();
+          const m = hoje.getMonth() - nascimento.getMonth();
+          if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
+          return idade;
+        };
+        const idadeA = a?.dataNascimento ? calcularIdade(a.dataNascimento) : 0;
+        const idadeB = b?.dataNascimento ? calcularIdade(b.dataNascimento) : 0;
+        comparison = idadeA - idadeB;
+      } else if (filtrosProps.sortConfig?.key === 'tempo') {
+        const { parse, differenceInHours, isValid } = require('date-fns');
+        const dataA = a?.dataInternacao ? parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
+        const dataB = b?.dataInternacao ? parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date()) : new Date(0);
+        if (isValid(dataA) && isValid(dataB)) {
+          const tempoA = differenceInHours(new Date(), dataA);
+          const tempoB = differenceInHours(new Date(), dataB);
+          comparison = tempoA - tempoB;
+        }
+      }
 
-  // Separar pacientes ordenados por categoria
-  const decisaoCirurgicaOrdenada = pacientesOrdenados.filter(p => 
-    listas.decisaoCirurgica.some(dc => dc.id === p.id)
-  );
-  const decisaoClinicaOrdenada = pacientesOrdenados.filter(p => 
-    listas.decisaoClinica.some(dc => dc.id === p.id)
-  );
-  const recuperacaoCirurgicaOrdenada = pacientesOrdenados.filter(p => 
-    listas.recuperacaoCirurgica.some(rc => rc.id === p.id)
-  );
+      return filtrosProps.sortConfig?.direction === 'desc' ? -comparison : comparison;
+    });
+  };
+
+  // Aplicar ordenação a cada sub-bloco
+  const decisaoCirurgicaOrdenada = aplicarOrdenacao(listas.decisaoCirurgica);
+  const decisaoClinicaOrdenada = aplicarOrdenacao(listas.decisaoClinica);
+  const recuperacaoCirurgicaOrdenada = aplicarOrdenacao(listas.recuperacaoCirurgica);
 
   return (
     <Card className="shadow-card border border-border/50">
