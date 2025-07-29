@@ -28,7 +28,7 @@ export const CirurgiasEletivasBloco = ({ cirurgias, onAlocarCirurgia }: Cirurgia
               <CirurgiaEletivaItem
                 key={cirurgia.id}
                 cirurgia={cirurgia}
-                onAlocar={onAlocarCirurgia}
+                onAlocarLeito={onAlocarCirurgia}
               />
             ))}
           </div>

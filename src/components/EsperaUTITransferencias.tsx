@@ -56,8 +56,8 @@ export const EsperaUTITransferencias = ({
                       <AguardandoUTIItem
                         key={paciente.id}
                         paciente={paciente}
-                        onCancelar={onCancelarUTI}
-                        onRegular={onRegularUTI}
+                        onCancel={() => onCancelarUTI(paciente)}
+                        onRegular={() => onRegularUTI(paciente)}
                       />
                     ))}
                   </div>
@@ -80,8 +80,8 @@ export const EsperaUTITransferencias = ({
                       <AguardandoTransferenciaItem
                         key={paciente.id}
                         paciente={paciente}
-                        onTransferir={onTransferirExterna}
-                        onGerenciar={onGerenciarTransferencia}
+                        onTransferir={() => onTransferirExterna(paciente)}
+                        onGerenciar={() => onGerenciarTransferencia(paciente)}
                       />
                     ))}
                   </div>
