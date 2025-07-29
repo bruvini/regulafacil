@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,12 +8,14 @@ import SetorCard from '@/components/SetorCard';
 import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
 import { IndicadoresGerais } from '@/components/IndicadoresGerais';
+import { LimpezaPacientesModal } from '@/components/modals/LimpezaPacientesModal';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
 import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
-import { Settings, ShieldQuestion, ClipboardList } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Settings, ShieldQuestion, ClipboardList, Broom } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
@@ -40,9 +41,11 @@ const MapaLeitos = () => {
   const [relatorioIsolamentoOpen, setRelatorioIsolamentoOpen] = useState(false);
   const [relatorioVagosOpen, setRelatorioVagosOpen] = useState(false);
   const [obsModalOpen, setObsModalOpen] = useState(false);
+  const [limpezaModalOpen, setLimpezaModalOpen] = useState(false);
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
   const { toast } = useToast();
+  const { userData } = useAuth();
 
   // --- Hooks de Dados (Nova Arquitetura) ---
   const { setores, loading: setoresLoading } = useSetores();
@@ -86,6 +89,9 @@ const MapaLeitos = () => {
   const { setoresEnriquecidos } = dadosCombinados;
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
   const { filteredSetores, filtrosAvancados, setFiltrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
+
+  // Verificar se o usuário é administrador
+  const isAdmin = userData?.tipoAcesso === 'Administrador';
 
   // --- OBJETO CENTRALIZADO DE AÇÕES ---
   const leitoActions = {
@@ -264,6 +270,21 @@ const MapaLeitos = () => {
                         <TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => setRelatorioVagosOpen(true)}><ClipboardList className="h-4 w-4" /></Button></TooltipTrigger>
                         <TooltipContent><p>Relatório de Leitos Vagos</p></TooltipContent>
                       </Tooltip>
+                      {isAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              onClick={() => setLimpezaModalOpen(true)}
+                              className="border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30"
+                            >
+                              <Broom className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Limpar Lista de Pacientes</p></TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </TooltipProvider>
                 </CardContent>
@@ -326,6 +347,7 @@ const MapaLeitos = () => {
       <RelatorioIsolamentosModal open={relatorioIsolamentoOpen} onOpenChange={setRelatorioIsolamentoOpen}/>
       <RelatorioVagosModal open={relatorioVagosOpen} onOpenChange={setRelatorioVagosOpen}/>
       <ObservacoesModal open={obsModalOpen} onOpenChange={setObsModalOpen} pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''} observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []} onConfirm={handleConfirmObs}/>
+      <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
     </div>
   );
 };
