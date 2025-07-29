@@ -136,6 +136,8 @@ export const useRegulacaoLogic = () => {
   const sugestoesDeRegulacao = useMemo(() => {
     if (setoresLoading || leitosLoading || pacientesLoading) return [];
 
+    const mapaPacientes = new Map(pacientes.map(p => [p.id, p]));
+
     const setoresPermitidos = [
       "UNID. CIRURGICA",
       "UNID. CLINICA MEDICA",
@@ -183,11 +185,13 @@ export const useRegulacaoLogic = () => {
         );
 
         const pacientesDoQuarto = leitosDoQuarto
-          .map((l) => {
-            const historico = l.historicoMovimentacao[l.historicoMovimentacao.length - 1];
-            return historico.statusLeito === 'Ocupado' ? pacientesComDadosCompletos.find(p => p.id === historico.pacienteId) : null;
-          })
-          .filter(Boolean);
+  .map((l) => {
+    const historico = l.historicoMovimentacao[l.historicoMovimentacao.length - 1];
+    const pacienteId = historico?.pacienteId;
+    // Agora usamos o mapa para uma busca direta e mais confiável!
+    return (historico?.statusLeito === 'Ocupado' && pacienteId) ? mapaPacientes.get(pacienteId) : null;
+  })
+  .filter(Boolean);
 
         const temIsolamentoNoQuarto = pacientesDoQuarto.some(p =>
           p?.isolamentosVigentes && p.isolamentosVigentes.length > 0
