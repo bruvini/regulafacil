@@ -439,12 +439,17 @@ const registrarHistoricoRegulacao = async (
   observacoes: string,
   motivoAlteracao?: string
 ) => {
+    // GUARDA DE SEGURANÇA: Garante que o usuário esteja carregado.
+    if (!userData) {
+        toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
+        return;
+    }
     if (!pacienteParaRegular) return;
 
     let regulacaoIdParaHistorico: string | null = null;
     let logMessage = '';
 
-    // LÓGICA DE ALTERAÇÃO (Já estava correta, mas mantemos para consistência)
+    // LÓGICA DE ALTERAÇÃO
     if (isAlteracaoMode && pacienteParaRegular.regulacao?.regulacaoId) {
         regulacaoIdParaHistorico = pacienteParaRegular.regulacao.regulacaoId;
         const regAnterior = pacienteParaRegular.regulacao;
@@ -454,17 +459,14 @@ const registrarHistoricoRegulacao = async (
         }
 
         logMessage = `Regulação de ${pacienteParaRegular.nomeCompleto} alterada de ${regAnterior.paraLeito} para ${leitoDestino.codigoLeito}. Motivo: ${motivoAlteracao}`;
-        // Chamada correta com 3 argumentos
         await registrarHistoricoRegulacao(regulacaoIdParaHistorico, 'alterada', {
             leitoDestino: leitoDestino,
             detalhesLog: logMessage,
         });
     }
 
-    // LÓGICA DE CRIAÇÃO (se não for alteração)
+    // LÓGICA DE CRIAÇÃO
     if (!isAlteracaoMode) {
-        // <<< AQUI ESTÁ A CORREÇÃO PRINCIPAL >>>
-        // Agora passamos null como primeiro argumento, 'criada' como segundo, e os dados como terceiro.
         regulacaoIdParaHistorico = await registrarHistoricoRegulacao(null, 'criada', {
             paciente: pacienteParaRegular,
             leitoDestino: leitoDestino,
@@ -473,7 +475,7 @@ const registrarHistoricoRegulacao = async (
         });
     }
 
-    // O restante da função permanece igual, pois agora `regulacaoIdParaHistorico` terá o valor correto.
+    // ATUALIZAÇÃO DOS LEITOS
     await atualizarStatusLeito(pacienteParaRegular.leitoId, "Regulado", {
         pacienteId: pacienteParaRegular.id,
         infoRegulacao: {
@@ -505,6 +507,11 @@ const registrarHistoricoRegulacao = async (
 };
 
   const handleConcluir = async (paciente: any) => {
+    // GUARDA DE SEGURANÇA: Garante que o usuário esteja carregado.
+    if (!userData) {
+        toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
+        return;
+    }
     if (!paciente.regulacao || !paciente.regulacao.regulacaoId) {
         toast({ title: "Erro", description: "Dados da regulação incompletos para concluir.", variant: "destructive" });
         return;
@@ -514,12 +521,10 @@ const registrarHistoricoRegulacao = async (
     if (leitoDestino) {
         const logMessage = `Regulação de ${paciente.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
         
-        // Registra no novo histórico
         await registrarHistoricoRegulacao(paciente.regulacao.regulacaoId, 'concluida', {
             detalhesLog: logMessage,
         });
 
-        // Lógica original de atualização de leitos e paciente
         await atualizarStatusLeito(paciente.leitoId, "Vago");
         await atualizarStatusLeito(leitoDestino.id, "Ocupado", {
             pacienteId: paciente.id,
@@ -547,15 +552,14 @@ const registrarHistoricoRegulacao = async (
   };
 
   const onConfirmarCancelamento = async (motivo: string) => {
+    // GUARDA DE SEGURANÇA: Garante que o usuário esteja carregado.
+    if (!userData) {
+        toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
+        return;
+    }
     if (!pacienteParaAcao) return;
 
-    // <<< AQUI ESTÁ A CORREÇÃO PRINCIPAL >>>
-    // Em vez de usar a lista 'leitos', usamos 'pacientesComDadosCompletos'
-    // para garantir que estamos pegando a informação de regulação mais recente
-    // que já foi processada pelo hook.
     const pacienteAtualizado = pacientesComDadosCompletos.find(p => p.id === pacienteParaAcao.id);
-
-    // Agora, usamos 'pacienteAtualizado.regulacao' que é a fonte mais confiável do 'regulacaoId'.
     if (!pacienteAtualizado?.regulacao?.regulacaoId) {
         toast({ title: "Erro", description: "Não foi possível encontrar o ID da regulação para cancelar.", variant: "destructive" });
         return;
@@ -566,13 +570,11 @@ const registrarHistoricoRegulacao = async (
     
     const logMessage = `Cancelou regulação de ${pacienteParaAcao.nomeCompleto} para o leito ${leitoDestino.codigoLeito}. Motivo: ${motivo}`;
 
-    // Registra o cancelamento no novo histórico
     await registrarHistoricoRegulacao(regulacaoId, 'cancelada', {
         motivo: motivo,
         detalhesLog: logMessage,
     });
 
-    // A lógica original para atualizar os leitos permanece a mesma
     await atualizarStatusLeito(pacienteParaAcao.leitoId, "Ocupado", {
         pacienteId: pacienteParaAcao.id,
     });
