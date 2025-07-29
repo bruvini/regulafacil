@@ -178,7 +178,7 @@ export const useRegulacaoLogic = () => {
       'UNID. NEFROLOGIA TRANSPLANTE': ['NEFROLOGIA']
     };
 
-    const leitosDisponiveis = leitosEnriquecidos.filter((leito) => {
+    const leitosDisponiveis = leitosEnriquecidos.filter(leito => {
       const setor = mapaSetores.get(leito.setorId);
       return (
         (leito.statusLeito === 'Vago' || leito.statusLeito === 'Higienizacao') &&
@@ -189,43 +189,30 @@ export const useRegulacaoLogic = () => {
 
     const sugestoesPorLeito: Array<{ setorNome: string; sugestao: any }> = [];
 
-    leitosDisponiveis.forEach((leito) => {
+    leitosDisponiveis.forEach(leito => {
       const setorNome = mapaSetores.get(leito.setorId)?.nomeSetor ?? '';
       const quartoId = getQuartoId(leito.codigoLeito);
 
       const leitosDoQuarto = leitosEnriquecidos.filter(
-        (l) => l.setorId === leito.setorId && getQuartoId(l.codigoLeito) === quartoId
+        l => l.setorId === leito.setorId && getQuartoId(l.codigoLeito) === quartoId
       );
 
       const ocupados = leitosDoQuarto.filter(
-        (l) => l.statusLeito === 'Ocupado' && l.dadosPaciente
+        l => l.statusLeito === 'Ocupado' && l.dadosPaciente
       );
 
-      const ocupanteComIsolamento = ocupados.find(
-        (o) => o.dadosPaciente?.isolamentosVigentes && o.dadosPaciente.isolamentosVigentes.length > 0
+      const sexoCompativel: 'Masculino' | 'Feminino' | 'Ambos' =
+        ocupados.length > 0
+          ? (ocupados[0].dadosPaciente!.sexoPaciente as 'Masculino' | 'Feminino')
+          : 'Ambos';
+
+      const temIsolamentoNoQuarto = ocupados.some(o =>
+        o.dadosPaciente?.isolamentosVigentes &&
+        o.dadosPaciente.isolamentosVigentes.length > 0
       );
-
-      let sexoCompativel: 'Masculino' | 'Feminino' | 'Ambos' = 'Ambos';
-      let isolamentoCompativel = '';
-
-      if (ocupanteComIsolamento) {
-        sexoCompativel = ocupanteComIsolamento.dadosPaciente!.sexoPaciente as 'Masculino' | 'Feminino';
-        isolamentoCompativel = ocupanteComIsolamento.dadosPaciente!.isolamentosVigentes!
-          .map((i: any) => i.sigla)
-          .sort()
-          .join(',');
-      } else if (ocupados.length > 0) {
-        sexoCompativel = ocupados[0].dadosPaciente!.sexoPaciente as 'Masculino' | 'Feminino';
-      }
-
-      const temIsolamentoNoQuarto = ocupados.some(
-        (o) => o.dadosPaciente?.isolamentosVigentes && o.dadosPaciente.isolamentosVigentes.length > 0
-      );
-
-      const isCoorte = isolamentoCompativel !== '';
 
       const pacientesElegiveis = pacientesRelevantes
-        .filter((p) => {
+        .filter(p => {
           const especs = especialidadesCompativeis[setorNome] || [];
           if (especs.length > 0 && !especs.includes(p.especialidadePaciente || '')) {
             return false;
@@ -235,30 +222,21 @@ export const useRegulacaoLogic = () => {
             return false;
           }
 
-          const isolamentosPacienteStr = p.isolamentosVigentes
-            ? p.isolamentosVigentes.map((i: any) => i.sigla).sort().join(',')
-            : '';
-          const precisaIsol = isolamentosPacienteStr !== '';
+          const precisaIsol = p.isolamentosVigentes && p.isolamentosVigentes.length > 0;
+          if (precisaIsol && !leito.leitoIsolamento) {
+            const quartoLivre = leitosDoQuarto.every(l =>
+              l.statusLeito === 'Vago' || l.statusLeito === 'Higienizacao'
+            );
+            if (!quartoLivre) return false;
+          }
 
-          if (isCoorte) {
-            if (!precisaIsol) return false;
-            if (isolamentosPacienteStr !== isolamentoCompativel) return false;
-          } else {
-            if (precisaIsol) {
-              if (!leito.leitoIsolamento) {
-                const quartoLivre = leitosDoQuarto.every(
-                  (l) => l.statusLeito === 'Vago' || l.statusLeito === 'Higienizacao'
-                );
-                if (!quartoLivre) return false;
-              }
-            } else if (temIsolamentoNoQuarto) {
-              return false;
-            }
+          if (temIsolamentoNoQuarto && !precisaIsol) {
+            return false;
           }
 
           if (leito.leitoPCP) {
             const idade = calcularIdade(p.dataNascimento);
-            if (idade < 18 || idade > 60 || precisaIsol) return false;
+            if (idade < 18 || idade > 60) return false;
           }
 
           return true;
