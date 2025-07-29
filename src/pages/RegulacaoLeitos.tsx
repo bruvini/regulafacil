@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
 import { RegulacaoModals } from "@/components/modals/regulacao/RegulacaoModals";
 import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
-import { useFiltrosRegulacao } from "@/hooks/useFiltrosRegulacao";
 import { useState } from "react";
 
 // Componentes atualizados
@@ -28,14 +27,6 @@ const RegulacaoLeitos = () => {
     filtrosProps,
   } = useRegulacaoLogic();
 
-  // Use the filter hook to get filtered patients
-  const todosPacientesPendentes = [
-    ...listas.decisaoCirurgica,
-    ...listas.decisaoClinica,
-    ...listas.recuperacaoCirurgica
-  ];
-
-  const { filteredPacientes } = useFiltrosRegulacao(todosPacientesPendentes);
 
   // Estados para os novos modais de panorama
   const [panoramaSelecaoOpen, setPanoramaSelecaoOpen] = useState(false);
@@ -125,7 +116,6 @@ const RegulacaoLeitos = () => {
             setResumoModalOpen: handlers.setResumoModalOpen
           }}
           filtrosProps={{
-            filteredPacientes: filteredPacientes,
             sortConfig: filtrosProps.sortConfig
           }}
         />

@@ -23,7 +23,6 @@ interface PacientesAguardandoRegulacaoProps {
     setResumoModalOpen: (open: boolean) => void;
   };
   filtrosProps: {
-    filteredPacientes: any[];
     sortConfig: { key: string; direction: string };
   };
 }
