@@ -135,7 +135,9 @@ export const PanoramaVisualizacaoModal = ({
     const dataFimFormatada = isValid(new Date(dataFim)) ? format(new Date(dataFim), 'dd/MM/yyyy HH:mm') : 'N/A';
     texto += `*PANORAMA DO PERÍODO (${dataInicioFormatada} - ${dataFimFormatada})*\n\n`;
 
-    if (loading) return "Carregando dados do período...";
+    if (loading) {
+      return "Carregando dados do período...";
+    }
 
     const total = dadosHistoricos.length;
     const concluidas = dadosHistoricos.filter(r => r.status === 'Concluída').length;
@@ -153,15 +155,24 @@ export const PanoramaVisualizacaoModal = ({
         dadosHistoricos.forEach(reg => {
             const dataCriacao = new Date(reg.criadaEm);
             const dataCriacaoFormatada = isValid(dataCriacao) ? format(dataCriacao, 'dd/MM HH:mm') : 'N/A';
-            texto += `- *${reg.pacienteNome}* (${reg.setorOrigemNome} -> ${reg.setorDestinoNome} ${reg.leitoDestinoCodigo})\n`;
+            
+            // **MELHORIA**: Extrai a informação inicial da primeira alteração, se houver.
+            const primeiraAlteracao = reg.historicoEventos.find(e => e.evento === 'alterada');
+            const destinoInicial = primeiraAlteracao ? 
+                primeiraAlteracao.detalhes.split(' alterada de ')[1]?.split(' para ')[0] || reg.leitoDestinoCodigo :
+                `${reg.setorDestinoNome} ${reg.leitoDestinoCodigo}`;
+
+            texto += `- *${reg.pacienteNome}* (${reg.setorOrigemNome} -> ${destinoInicial})\n`;
             texto += `  _Iniciada em: ${dataCriacaoFormatada}_\n`;
 
+            // **MELHORIA**: Itera sobre todos os eventos para criar a linha do tempo.
             reg.historicoEventos.forEach(evento => {
                 if (evento.evento === 'alterada') {
                     const dataAlteracao = new Date(evento.timestamp);
                     const dataAlteracaoFormatada = isValid(dataAlteracao) ? format(dataAlteracao, 'dd/MM HH:mm') : 'N/A';
                     const motivo = evento.detalhes.split('Motivo: ')[1] || 'N/A';
-                    texto += `  _Alterada em: ${dataAlteracaoFormatada} - Motivo: ${motivo}_\n`;
+                    const novoDestino = evento.detalhes.split(' para ')[1]?.split('.')[0] || 'N/A';
+                    texto += `  _Alterada em: ${dataAlteracaoFormatada} -> ${novoDestino} (Motivo: ${motivo})_\n`;
                 }
             });
 
@@ -183,7 +194,7 @@ export const PanoramaVisualizacaoModal = ({
     }
 
     return texto;
-  }; // <--- CHAVE FINAL DA FUNÇÃO 'gerarTextoFormatado'
+  };
 
   const handleCopiar = () => {
     const texto = gerarTextoFormatado();
