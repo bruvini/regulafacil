@@ -11,7 +11,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PacientePendenteItem } from './PacientePendenteItem';
-import { parse } from 'date-fns';
 
 interface ListaPacientesPendentesProps {
   titulo: string;
@@ -39,14 +38,7 @@ export const ListaPacientesPendentes = ({
   onAlterar,
   onCancelar
 }: ListaPacientesPendentesProps) => {
-  const pacientesOrdenados = [...pacientes].sort((a, b) => {
-    const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-    const dataB = parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-    return dataA.getTime() - dataB.getTime();
-  });
-
-  console.log('ListaPacientesPendentes - pacientes recebidos:', pacientes);
-  console.log('ListaPacientesPendentes - pacientes ordenados:', pacientesOrdenados);
+  const pacientesOrdenados = pacientes;
 
   return (
     <Card className="flex flex-col">
