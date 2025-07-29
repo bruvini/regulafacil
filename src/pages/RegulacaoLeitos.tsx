@@ -114,7 +114,10 @@ const RegulacaoLeitos = () => {
             altaAposRecuperacao: handlers.altaAposRecuperacao,
             setResumoModalOpen: handlers.setResumoModalOpen
           }}
-          filtrosProps={filtrosProps}
+          filtrosProps={{
+            ...filtrosProps,
+            filteredPacientes: filtrosProps.filteredPacientes
+          }}
         />
 
         {/* 5. Bloco: Pacientes Regulados */}
