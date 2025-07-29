@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -39,10 +38,14 @@ export const RelatorioVagosModal = ({ open, onOpenChange }: Props) => {
                 let bloqueioCoorte = '';
 
                 if (quartoId) {
-                    const ocupantes = todosLeitos.filter(l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado');
-                    if (ocupantes.length > 0) {
-                        sexoQuarto = ocupantes[0].dadosPaciente!.sexoPaciente;
-                        const isolamentosOcupantes = ocupantes[0].dadosPaciente!.isolamentosVigentes;
+                    const ocupantes = todosLeitos.filter(l => 
+                        getQuartoId(l.codigoLeito) === quartoId && 
+                        l.statusLeito === 'Ocupado' &&
+                        l.dadosPaciente
+                    );
+                    if (ocupantes.length > 0 && ocupantes[0].dadosPaciente) {
+                        sexoQuarto = ocupantes[0].dadosPaciente.sexoPaciente;
+                        const isolamentosOcupantes = ocupantes[0].dadosPaciente.isolamentosVigentes;
                         if (isolamentosOcupantes && isolamentosOcupantes.length > 0) {
                             bloqueioCoorte = isolamentosOcupantes.map(i => i.sigla).join(', ');
                         }
