@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +16,7 @@ import { usePacientes } from '@/hooks/usePacientes';
 import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { useAuth } from '@/hooks/useAuth';
-import { Settings, ShieldQuestion, ClipboardList, Broom } from 'lucide-react';
+import { Settings, ShieldQuestion, ClipboardList, Trash2 } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
@@ -279,7 +280,7 @@ const MapaLeitos = () => {
                               onClick={() => setLimpezaModalOpen(true)}
                               className="border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30"
                             >
-                              <Broom className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent><p>Limpar Lista de Pacientes</p></TooltipContent>
