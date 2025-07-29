@@ -444,7 +444,7 @@ const registrarHistoricoRegulacao = async (
     let regulacaoIdParaHistorico: string | null = null;
     let logMessage = '';
 
-    // LÓGICA DE ALTERAÇÃO
+    // LÓGICA DE ALTERAÇÃO (Já estava correta, mas mantemos para consistência)
     if (isAlteracaoMode && pacienteParaRegular.regulacao?.regulacaoId) {
         regulacaoIdParaHistorico = pacienteParaRegular.regulacao.regulacaoId;
         const regAnterior = pacienteParaRegular.regulacao;
@@ -454,6 +454,7 @@ const registrarHistoricoRegulacao = async (
         }
 
         logMessage = `Regulação de ${pacienteParaRegular.nomeCompleto} alterada de ${regAnterior.paraLeito} para ${leitoDestino.codigoLeito}. Motivo: ${motivoAlteracao}`;
+        // Chamada correta com 3 argumentos
         await registrarHistoricoRegulacao(regulacaoIdParaHistorico, 'alterada', {
             leitoDestino: leitoDestino,
             detalhesLog: logMessage,
@@ -462,7 +463,9 @@ const registrarHistoricoRegulacao = async (
 
     // LÓGICA DE CRIAÇÃO (se não for alteração)
     if (!isAlteracaoMode) {
-        regulacaoIdParaHistorico = await registrarHistoricoRegulacao('criada', {
+        // <<< AQUI ESTÁ A CORREÇÃO PRINCIPAL >>>
+        // Agora passamos null como primeiro argumento, 'criada' como segundo, e os dados como terceiro.
+        regulacaoIdParaHistorico = await registrarHistoricoRegulacao(null, 'criada', {
             paciente: pacienteParaRegular,
             leitoDestino: leitoDestino,
             modoRegulacao: modoRegulacao,
@@ -470,11 +473,11 @@ const registrarHistoricoRegulacao = async (
         });
     }
 
-    // ATUALIZAÇÃO DOS LEITOS (com o novo regulacaoId)
+    // O restante da função permanece igual, pois agora `regulacaoIdParaHistorico` terá o valor correto.
     await atualizarStatusLeito(pacienteParaRegular.leitoId, "Regulado", {
         pacienteId: pacienteParaRegular.id,
         infoRegulacao: {
-            regulacaoId: regulacaoIdParaHistorico, // <-- CAMPO ESSENCIAL
+            regulacaoId: regulacaoIdParaHistorico,
             paraSetor: leitoDestino.setorNome,
             paraLeito: leitoDestino.codigoLeito,
             observacoes,
