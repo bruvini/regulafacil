@@ -77,7 +77,7 @@ const registrarHistoricoRegulacao = async (
   tipoEvento: 'criada' | 'alterada' | 'concluida' | 'cancelada',
   dados: any
 ): Promise<string> => {
-    const usuario = userData?.nome || 'Sistema';
+    const usuario = userData?.nomeCompleto || 'Sistema';
     const agora = new Date().toISOString();
     const evento = {
         evento: tipoEvento,
@@ -116,7 +116,6 @@ const registrarHistoricoRegulacao = async (
             dadosUpdate.status = 'Concluída';
             dadosUpdate.concluidaEm = agora;
             dadosUpdate.concluidaPor = usuario;
-            // Opcional: Calcular e salvar o tempo de espera aqui
         } else if (tipoEvento === 'cancelada') {
             dadosUpdate.status = 'Cancelada';
             dadosUpdate.canceladaEm = agora;
@@ -127,7 +126,6 @@ const registrarHistoricoRegulacao = async (
         return regulacaoId;
     }
     
-    // Fallback caso algo dê errado
     console.error("ID da regulação não fornecido para evento de atualização.");
     return '';
 };
@@ -439,7 +437,6 @@ const registrarHistoricoRegulacao = async (
   observacoes: string,
   motivoAlteracao?: string
 ) => {
-    // GUARDA DE SEGURANÇA: Garante que o usuário esteja carregado.
     if (!userData) {
         toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
         return;
@@ -507,7 +504,6 @@ const registrarHistoricoRegulacao = async (
 };
 
   const handleConcluir = async (paciente: any) => {
-    // GUARDA DE SEGURANÇA: Garante que o usuário esteja carregado.
     if (!userData) {
         toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
         return;
@@ -552,7 +548,6 @@ const registrarHistoricoRegulacao = async (
   };
 
   const onConfirmarCancelamento = async (motivo: string) => {
-    // GUARDA DE SEGURANÇA: Garante que o usuário esteja carregado.
     if (!userData) {
         toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
         return;
