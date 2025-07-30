@@ -1,11 +1,12 @@
 
+
 export interface Paciente {
   id: string;
   leitoId: string;
   setorId: string;
   nomeCompleto: string;
   dataNascimento: string;
-  sexoPaciente: string;
+  sexoPaciente: 'Masculino' | 'Feminino';
   dataInternacao: string;
   especialidadePaciente: string;
   isolamentosVigentes?: IsolamentoVigente[];
@@ -43,7 +44,7 @@ export interface Leito {
 }
 
 export interface HistoricoLeito {
-  statusLeito: string;
+  statusLeito: 'Vago' | 'Higienizacao' | 'Ocupado' | 'Reservado' | 'Regulado' | 'Bloqueado';
   dataAtualizacaoStatus: string;
   pacienteId?: string;
   infoRegulacao?: InfoRegulacao;
@@ -80,21 +81,32 @@ export interface SolicitacaoCirurgica {
   id: string;
   nomeCompleto: string;
   dataNascimento: string;
-  sexo: string;
+  sexo: 'Masculino' | 'Feminino';
   especialidade: string;
-  tipoLeitoNecessario: string;
+  medicoSolicitante: string;
+  tipoPreparo?: string;
+  tipoLeitoNecessario: 'Enfermaria' | 'UTI';
   dataPrevistaInternacao: Date;
+  dataPrevisaCirurgia: Date;
+  dataCriacao?: Date;
+  status?: string;
+  leitoReservado?: string;
+  setorReservado?: string;
 }
 
 export interface SolicitacaoCirurgicaFormData {
   nomeCompleto: string;
   dataNascimento: string;
-  sexo: string;
+  sexo: 'Masculino' | 'Feminino';
   especialidade: string;
-  tipoLeitoNecessario: string;
+  medicoSolicitante: string;
+  tipoPreparo?: string;
+  tipoLeitoNecessario: 'Enfermaria' | 'UTI';
   dataPrevistaInternacao: Date;
+  dataPrevisaCirurgia: Date;
 }
 
 // Alias for backward compatibility
 export interface DadosPaciente extends Paciente {}
 export interface HistoricoMovimentacao extends HistoricoLeito {}
+

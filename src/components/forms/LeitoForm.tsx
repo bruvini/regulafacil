@@ -18,7 +18,12 @@ interface LeitoFormProps {
 }
 
 const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading, onReset }: LeitoFormProps) => {
-  const [formData, setFormData] = useState<LeitoFormData>({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+  const [formData, setFormData] = useState<LeitoFormData>({ 
+    codigoLeito: '', 
+    tipoLeito: 'Enfermaria',
+    leitoPCP: false, 
+    leitoIsolamento: false 
+  });
   const [setorId, setSetorId] = useState(selectedSetorId || '');
   const [isBulkAdd, setIsBulkAdd] = useState(false);
   const codigoLeitoRef = useRef<HTMLTextAreaElement>(null);
@@ -27,7 +32,12 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
     if (initialData) {
       setFormData(initialData);
     } else {
-      setFormData({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+      setFormData({ 
+        codigoLeito: '', 
+        tipoLeito: 'Enfermaria',
+        leitoPCP: false, 
+        leitoIsolamento: false 
+      });
     }
   }, [initialData]);
 
@@ -62,7 +72,12 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
   };
 
   const handleReset = () => {
-    setFormData({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+    setFormData({ 
+      codigoLeito: '', 
+      tipoLeito: 'Enfermaria',
+      leitoPCP: false, 
+      leitoIsolamento: false 
+    });
     setIsBulkAdd(false);
     onReset?.();
     setTimeout(() => {

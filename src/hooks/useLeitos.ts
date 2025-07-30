@@ -53,7 +53,7 @@ export const useLeitos = () => {
   const adicionarLeito = async (setorId: string, data: LeitoFormData) => {
     setLoading(true);
     try {
-      const { codigoLeito, leitoPCP, leitoIsolamento } = data;
+      const { codigoLeito, tipoLeito, leitoPCP, leitoIsolamento } = data;
       const agora = new Date().toISOString();
 
       // Verificar se é cadastro em lote (contém vírgulas)
@@ -81,6 +81,7 @@ export const useLeitos = () => {
           const novoLeito: Omit<Leito, 'id'> = {
             setorId,
             codigoLeito: codigo,
+            tipoLeito: tipoLeito || 'Enfermaria', // Default para lote
             leitoPCP: false, // Default para lote
             leitoIsolamento: false, // Default para lote
             historicoMovimentacao: [novoHistorico],
@@ -108,6 +109,7 @@ export const useLeitos = () => {
         const novoLeito: Omit<Leito, 'id'> = {
           setorId,
           codigoLeito: codigoLeito.trim(),
+          tipoLeito: tipoLeito || 'Enfermaria',
           leitoPCP,
           leitoIsolamento,
           historicoMovimentacao: [novoHistorico],
