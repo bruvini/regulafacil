@@ -15,6 +15,7 @@ import { usePacientes } from '@/hooks/usePacientes';
 import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuditoria } from '@/hooks/useAuditoria';
 import { Settings, ShieldQuestion, ClipboardList, Trash2 } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
@@ -47,6 +48,7 @@ const MapaLeitos = () => {
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
   const { toast } = useToast();
   const { userData } = useAuth();
+  const { registrarLog } = useAuditoria();
 
   // --- Hooks de Dados (Nova Arquitetura) ---
   const { setores, loading: setoresLoading } = useSetores();
