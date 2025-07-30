@@ -1,4 +1,12 @@
+
 import { Observacao } from './observacao';
+
+export interface AltaLeitoInfo {
+  status: boolean;
+  pendencia: string;
+  timestamp: string; // Data e hora no formato ISO
+  usuario: string; // Nome do usuário que registrou
+}
 
 export interface Paciente {
   id: string;
@@ -20,6 +28,7 @@ export interface Paciente {
   motivoRemanejamento?: string;
   dataPedidoRemanejamento?: string;
   provavelAlta?: boolean;
+  altaNoLeito?: AltaLeitoInfo;
   origem?: {
     deSetor: string;
     deLeito: string;

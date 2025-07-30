@@ -2,6 +2,7 @@
 import { PacientesAguardandoUTI } from '@/components/huddle/PacientesAguardandoUTI';
 import { AltaProvavel } from '@/components/huddle/AltaProvavel';
 import { InternacaoProlongada } from '@/components/huddle/InternacaoProlongada';
+import { PacientesComObservacoes } from '@/components/huddle/PacientesComObservacoes';
 import { usePacientes } from '@/hooks/usePacientes';
 import { useLeitos } from '@/hooks/useLeitos';
 import { useSetores } from '@/hooks/useSetores';
@@ -148,6 +149,12 @@ const Huddle = () => {
             setores={setores}
             onAdicionarObservacao={handleAdicionarObservacao}
             onRemoverObservacao={handleRemoverObservacao}
+          />
+
+          <PacientesComObservacoes 
+            pacientes={pacientes}
+            leitos={leitos}
+            setores={setores}
           />
         </div>
       </div>

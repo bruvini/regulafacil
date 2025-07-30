@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
 import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
 import { IndicadoresGerais } from '@/components/IndicadoresGerais';
 import { LimpezaPacientesModal } from '@/components/modals/LimpezaPacientesModal';
+import { AltaNoLeitoModal } from '@/components/modals/AltaNoLeitoModal';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -21,7 +23,7 @@ import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
-import { Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital';
+import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -44,8 +46,10 @@ const MapaLeitos = () => {
   const [relatorioVagosOpen, setRelatorioVagosOpen] = useState(false);
   const [obsModalOpen, setObsModalOpen] = useState(false);
   const [limpezaModalOpen, setLimpezaModalOpen] = useState(false);
+  const [altaNoLeitoModalOpen, setAltaNoLeitoModalOpen] = useState(false);
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
+  const [pacienteParaAltaNoLeito, setPacienteParaAltaNoLeito] = useState<LeitoEnriquecido | null>(null);
   const { toast } = useToast();
   const { userData } = useAuth();
   const { registrarLog } = useAuditoria();
@@ -110,6 +114,11 @@ const MapaLeitos = () => {
     onAbrirObs: (leito: LeitoEnriquecido) => {
       setPacienteParaObs(leito);
       setObsModalOpen(true);
+    },
+
+    onAltaNoLeito: (leito: LeitoEnriquecido) => {
+      setPacienteParaAltaNoLeito(leito);
+      setAltaNoLeitoModalOpen(true);
     },
 
     onLiberarLeito: async (leitoId: string, pacienteId: string) => {
@@ -265,6 +274,36 @@ const MapaLeitos = () => {
     }
   };
 
+  const handleConfirmarAltaNoLeito = async (pendencia: string) => {
+    if (pacienteParaAltaNoLeito?.dadosPaciente && userData) {
+      try {
+        const altaLeitoInfo: AltaLeitoInfo = {
+          status: true,
+          pendencia,
+          timestamp: new Date().toISOString(),
+          usuario: userData.nomeCompleto
+        };
+
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaAltaNoLeito.dadosPaciente.id);
+        await updateDoc(pacienteRef, { 
+          altaNoLeito: altaLeitoInfo
+        });
+
+        registrarLog(`Registrou alta no leito para o paciente ${pacienteParaAltaNoLeito.dadosPaciente.nomeCompleto}.`, 'Mapa de Leitos');
+        toast({ title: "Sucesso!", description: "Alta no leito registrada com sucesso." });
+      } catch (error) {
+        console.error('Erro ao registrar alta no leito:', error);
+        toast({ 
+          title: "Erro", 
+          description: "Erro ao registrar alta no leito.", 
+          variant: "destructive" 
+        });
+      }
+    }
+    setAltaNoLeitoModalOpen(false);
+    setPacienteParaAltaNoLeito(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8">
@@ -400,6 +439,12 @@ const MapaLeitos = () => {
         observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []} 
         onConfirm={handleConfirmObs}
         onDelete={handleDeleteObs}
+      />
+      <AltaNoLeitoModal
+        open={altaNoLeitoModalOpen}
+        onOpenChange={setAltaNoLeitoModalOpen}
+        pacienteNome={pacienteParaAltaNoLeito?.dadosPaciente?.nomeCompleto || ''}
+        onConfirm={handleConfirmarAltaNoLeito}
       />
       <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
     </div>

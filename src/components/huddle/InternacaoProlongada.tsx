@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Calendar, MessageSquare } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, parse, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ObservacoesAprimoradaModal } from '@/components/modals/ObservacoesAprimoradaModal';
 import { Paciente, Leito, Setor } from '@/types/hospital';
@@ -18,6 +18,30 @@ interface Props {
   onRemoverObservacao: (pacienteId: string, observacaoId: string, tipo: 'obsInternacaoProlongada') => void;
 }
 
+const parseDataInternacao = (dataStr: string): Date => {
+  // Primeiro tenta como ISO string (formato padrão)
+  let data = new Date(dataStr);
+  if (isValid(data)) {
+    return data;
+  }
+
+  // Se não for válida, tenta como formato brasileiro DD/MM/YYYY
+  data = parse(dataStr, 'dd/MM/yyyy', new Date());
+  if (isValid(data)) {
+    return data;
+  }
+
+  // Como último recurso, tenta DD/MM/YYYY HH:mm
+  data = parse(dataStr, 'dd/MM/yyyy HH:mm', new Date());
+  if (isValid(data)) {
+    return data;
+  }
+
+  // Se ainda não conseguir, retorna data atual como fallback
+  console.warn('Data de internação inválida:', dataStr);
+  return new Date();
+};
+
 export const InternacaoProlongada = ({ 
   pacientes, 
   leitos, 
@@ -29,7 +53,7 @@ export const InternacaoProlongada = ({
   const [pacienteSelecionado, setPacienteSelecionado] = useState<Paciente | null>(null);
 
   const pacientesProlongados = pacientes.filter(p => {
-    const dataInternacao = new Date(p.dataInternacao);
+    const dataInternacao = parseDataInternacao(p.dataInternacao);
     const diasInternado = differenceInDays(new Date(), dataInternacao);
     return diasInternado > 30;
   });
@@ -83,7 +107,8 @@ export const InternacaoProlongada = ({
                   <AccordionContent>
                     <div className="space-y-3">
                       {pacientesDoSetor.map((paciente) => {
-                        const diasInternado = differenceInDays(new Date(), new Date(paciente.dataInternacao));
+                        const dataInternacao = parseDataInternacao(paciente.dataInternacao);
+                        const diasInternado = differenceInDays(new Date(), dataInternacao);
                         return (
                           <div key={paciente.id} className="border rounded-lg p-4 bg-orange-50/50">
                             <div className="flex justify-between items-start">
@@ -93,7 +118,7 @@ export const InternacaoProlongada = ({
                                   Leito: {getLeitoNome(paciente.leitoId)}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
-                                  Internado em: {format(new Date(paciente.dataInternacao), "dd/MM/yyyy", { locale: ptBR })}
+                                  Internado em: {format(dataInternacao, "dd/MM/yyyy", { locale: ptBR })}
                                 </p>
                                 <p className="text-xs font-medium text-orange-700">
                                   {diasInternado} dias de internação
