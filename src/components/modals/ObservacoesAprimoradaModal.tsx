@@ -19,7 +19,7 @@ interface Props {
   onDelete: (observacaoId: string) => void;
 }
 
-export const ObservacoesModal = ({ 
+export const ObservacoesAprimoradaModal = ({ 
   open, 
   onOpenChange, 
   pacienteNome, 

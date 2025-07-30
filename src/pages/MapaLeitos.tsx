@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,9 +21,10 @@ import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamen
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
 import { Leito, Paciente, HistoricoMovimentacao } from '@/types/hospital';
-import { doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { Observacao } from '@/types/observacao';
 
 // Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
 export type LeitoEnriquecido = Leito & {
@@ -211,12 +211,56 @@ const MapaLeitos = () => {
   };
   
   const handleConfirmObs = async (obs: string) => {
-    if (pacienteParaObs?.dadosPaciente) {
+    if (pacienteParaObs?.dadosPaciente && userData) {
+      try {
+        const novaObservacao = {
+          id: crypto.randomUUID(),
+          texto: obs,
+          timestamp: new Date().toISOString(),
+          usuario: userData.nomeCompleto
+        };
+
         const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaObs.dadosPaciente.id);
-        await updateDoc(pacienteRef, { obsPaciente: arrayUnion(obs) });
+        await updateDoc(pacienteRef, { 
+          obsPaciente: arrayUnion(novaObservacao)
+        });
         toast({ title: "Sucesso!", description: "Observação adicionada." });
+      } catch (error) {
+        console.error('Erro ao adicionar observação:', error);
+        toast({ 
+          title: "Erro", 
+          description: "Erro ao adicionar observação.", 
+          variant: "destructive" 
+        });
+      }
     }
     setObsModalOpen(false);
+  };
+
+  const handleDeleteObs = async (observacaoId: string) => {
+    if (pacienteParaObs?.dadosPaciente && userData) {
+      try {
+        const observacoes = pacienteParaObs.dadosPaciente.obsPaciente || [];
+        const observacaoParaRemover = observacoes.find(obs => obs.id === observacaoId);
+        
+        if (!observacaoParaRemover) return;
+
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaObs.dadosPaciente.id);
+        await updateDoc(pacienteRef, {
+          obsPaciente: arrayRemove(observacaoParaRemover)
+        });
+
+        registrarLog(`Excluiu observação do paciente ${pacienteParaObs.dadosPaciente.nomeCompleto}.`, 'Mapa de Leitos');
+        toast({ title: "Sucesso!", description: "Observação removida." });
+      } catch (error) {
+        console.error('Erro ao remover observação:', error);
+        toast({ 
+          title: "Erro", 
+          description: "Erro ao remover observação.", 
+          variant: "destructive" 
+        });
+      }
+    }
   };
 
   return (
@@ -347,7 +391,14 @@ const MapaLeitos = () => {
       <MovimentacaoModal open={movimentacaoModalOpen} onOpenChange={setMovimentacaoModalOpen} pacienteNome={pacienteParaMover?.dados?.nomeCompleto || ''} onConfirm={handleConfirmarMovimentacao}/>
       <RelatorioIsolamentosModal open={relatorioIsolamentoOpen} onOpenChange={setRelatorioIsolamentoOpen}/>
       <RelatorioVagosModal open={relatorioVagosOpen} onOpenChange={setRelatorioVagosOpen}/>
-      <ObservacoesModal open={obsModalOpen} onOpenChange={setObsModalOpen} pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''} observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []} onConfirm={handleConfirmObs}/>
+      <ObservacoesModal 
+        open={obsModalOpen} 
+        onOpenChange={setObsModalOpen} 
+        pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''} 
+        observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []} 
+        onConfirm={handleConfirmObs}
+        onDelete={handleDeleteObs}
+      />
       <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
     </div>
   );

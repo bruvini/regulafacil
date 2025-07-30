@@ -1,4 +1,4 @@
-
+import { Observacao } from './observacao';
 
 export interface Paciente {
   id: string;
@@ -25,6 +25,10 @@ export interface Paciente {
     deLeito: string;
   };
   historicoTransferencia?: any[];
+  obsPaciente?: Observacao[];
+  obsAltaProvavel?: Observacao[];
+  obsInternacaoProlongada?: Observacao[];
+  setorOrigem?: string;
 }
 
 export interface IsolamentoVigente {
@@ -109,4 +113,3 @@ export interface SolicitacaoCirurgicaFormData {
 // Alias for backward compatibility
 export interface DadosPaciente extends Paciente {}
 export interface HistoricoMovimentacao extends HistoricoLeito {}
-
