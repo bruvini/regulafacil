@@ -65,7 +65,7 @@ export const useRegulacaoLogic = () => {
   const [processing, setProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-/**
+  /**
  * Cria ou atualiza um registro na coleção 'regulacoesRegulaFacil'.
  * @param {string | null} regulacaoId - O ID do documento, se já existir.
  * @param {'criada' | 'alterada' | 'concluida' | 'cancelada'} tipoEvento - O tipo de evento.
@@ -234,14 +234,10 @@ const registrarHistoricoRegulacao = async (
       'UNID. ONCOLOGIA'
     ];
 
-    // BUG FIX 1: Filtrar apenas pacientes com statusLeito === 'Ocupado'
     const pacientesRelevantes = pacientesComDadosCompletos.filter(p =>
-      p.statusLeito === 'Ocupado' && 
-      (
-        p.setorOrigem === 'PS DECISÃO CIRURGICA' ||
-        p.setorOrigem === 'PS DECISÃO CLINICA' ||
-        p.setorOrigem === 'CC - RECUPERAÇÃO'
-      )
+      p.setorOrigem === 'PS DECISÃO CIRURGICA' ||
+      p.setorOrigem === 'PS DECISÃO CLINICA' ||
+      p.setorOrigem === 'CC - RECUPERAÇÃO'
     );
 
     const especialidadesCompativeis: Record<string, string[]> = {
@@ -322,10 +318,9 @@ const registrarHistoricoRegulacao = async (
           if (aIso && !bIso) return -1;
           if (!aIso && bIso) return 1;
 
-          // BUG FIX 2: Corrigir ordenação por tempo (maior tempo primeiro)
           const tempoA = new Date(a.dataInternacao).getTime();
           const tempoB = new Date(b.dataInternacao).getTime();
-          if (tempoA !== tempoB) return tempoB - tempoA; // Maior tempo primeiro
+          if (tempoA !== tempoB) return tempoA - tempoB;
 
           const idadeA = calcularIdade(a.dataNascimento);
           const idadeB = calcularIdade(b.dataNascimento);
@@ -363,7 +358,6 @@ const registrarHistoricoRegulacao = async (
 
     return agrupados;
   }, [leitosEnriquecidos, pacientesComDadosCompletos, setores]);
-
   // Filtragem e Listas Derivadas
   const {
     filteredPacientes,
