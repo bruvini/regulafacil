@@ -61,7 +61,7 @@ export const InternacaoProlongada = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-orange-600" />
-            Internação Prolongada (> 30 dias)
+            Internação Prolongada (&gt; 30 dias)
             <Badge variant="secondary">{pacientesProlongados.length}</Badge>
           </CardTitle>
         </CardHeader>
