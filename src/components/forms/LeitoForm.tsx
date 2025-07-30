@@ -53,7 +53,12 @@ const LeitoForm = ({ onSubmit, setores, selectedSetorId, initialData, isLoading,
     
     if (!initialData) {
       // Limpar formulário após cadastro
-      setFormData({ codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+      setFormData({ 
+        codigoLeito: '', 
+        tipoLeito: 'Enfermaria',
+        leitoPCP: false, 
+        leitoIsolamento: false 
+      });
       setIsBulkAdd(false);
       // Focar no primeiro campo
       setTimeout(() => {

@@ -1,3 +1,4 @@
+
 // src/components/modals/GerenciamentoModal.tsx
 
 import { useState } from 'react';
@@ -156,7 +157,12 @@ const GerenciamentoModal = ({ open, onOpenChange }: GerenciamentoModalProps) => 
                   onSubmit={handleLeitoSubmit}
                   setores={setores}
                   selectedSetorId={editingLeito?.setorId || selectedSetorForLeitos}
-                  initialData={editingLeito ? { codigoLeito: editingLeito.codigoLeito, leitoPCP: editingLeito.leitoPCP, leitoIsolamento: editingLeito.leitoIsolamento } : undefined}
+                  initialData={editingLeito ? { 
+                    codigoLeito: editingLeito.codigoLeito, 
+                    tipoLeito: editingLeito.tipoLeito,
+                    leitoPCP: editingLeito.leitoPCP, 
+                    leitoIsolamento: editingLeito.leitoIsolamento 
+                  } : undefined}
                   isLoading={leitosLoading}
                   onReset={handleResetLeitoForm}
                 />
