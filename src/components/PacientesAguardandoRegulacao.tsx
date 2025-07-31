@@ -48,7 +48,7 @@ export const PacientesAguardandoRegulacao = ({
             onRegular={handlers.handleOpenRegulacaoModal}
             onAltaRecuperacao={handlers.altaAposRecuperacao}
             sortConfig={filtrosProps.sortConfig}
-            actingOnPatientId={actingOnPatientId}
+            actingOnPatientId={actingOnPatientId || null}
           />
         )}
 
@@ -60,7 +60,7 @@ export const PacientesAguardandoRegulacao = ({
             onRegular={handlers.handleOpenRegulacaoModal}
             onAltaRecuperacao={handlers.altaAposRecuperacao}
             sortConfig={filtrosProps.sortConfig}
-            actingOnPatientId={actingOnPatientId}
+            actingOnPatientId={actingOnPatientId || null}
           />
         )}
 
@@ -72,7 +72,7 @@ export const PacientesAguardandoRegulacao = ({
             onRegular={handlers.handleOpenRegulacaoModal}
             onAltaRecuperacao={handlers.altaAposRecuperacao}
             sortConfig={filtrosProps.sortConfig}
-            actingOnPatientId={actingOnPatientId}
+            actingOnPatientId={actingOnPatientId || null}
           />
         )}
 

@@ -43,7 +43,7 @@ export const useRegulacaoLogic = () => {
   const { reservarLeitoParaCirurgia } = useCirurgias();
   const { alertas, loading: alertasLoading } = useAlertasIsolamento();
 
-  // MOVED: Define loading early to prevent "before initialization" error
+  // Define loading early to prevent "before initialization" error
   const loading = setoresLoading || leitosLoading || pacientesLoading;
 
   // Estados dos modais
