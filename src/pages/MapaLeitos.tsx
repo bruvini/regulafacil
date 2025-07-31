@@ -22,23 +22,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuditoria } from "@/hooks/useAuditoria";
 import { Search, Users, BedDouble, AlertTriangle, RefreshCcw, Plus } from "lucide-react";
-
-interface Setor {
-  id: string;
-  nomeSetor: string;
-  siglaSetor: string;
-  totalLeitos: number;
-  leitosOcupados: number;
-  leitosDisponiveis: number;
-  leitosBloqueados: number;
-  leitosHigienizacao: number;
-  leitosPCP: number;
-  observacoes?: string;
-}
+import { LeitoEnriquecido } from "@/types/hospital";
+import SetorCard from "@/components/SetorCard";
 
 const MapaLeitos = () => {
-  const { setores, loading: setoresLoading, adicionarSetor } = useSetores();
-  const { leitos, loading: leitosLoading, adicionarLeito, atualizarStatusLeito } = useLeitos();
+  const { setores, loading: setoresLoading, criarSetor } = useSetores();
+  const { leitos, loading: leitosLoading, criarLeito, atualizarStatusLeito } = useLeitos();
   const { pacientes, loading: pacientesLoading } = usePacientes();
   const { registrarLog } = useAuditoria();
   const { toast } = useToast();
@@ -76,7 +65,7 @@ const MapaLeitos = () => {
             ...leito,
             statusLeito: historicoRecente?.statusLeito || 'Vago',
             dadosPaciente: paciente
-        };
+        } as LeitoEnriquecido;
     });
 }, [leitos, pacientes, leitosLoading, pacientesLoading]);
 
@@ -128,7 +117,7 @@ const MapaLeitos = () => {
 
   const handleAdicionarSetor = async () => {
     if (novoSetor.nomeSetor && novoSetor.siglaSetor) {
-      await adicionarSetor(novoSetor.nomeSetor, novoSetor.siglaSetor);
+      await criarSetor(novoSetor);
       setNovoSetor({ nomeSetor: '', siglaSetor: '' });
       setIsSetorModalOpen(false);
       registrarLog(`Adicionou novo setor: ${novoSetor.nomeSetor}`, "Mapa de Leitos");
@@ -138,12 +127,19 @@ const MapaLeitos = () => {
 
   const handleAdicionarLeito = async () => {
     if (novoLeito.setorId && novoLeito.codigoLeito) {
-      await adicionarLeito(novoLeito.setorId, novoLeito.codigoLeito, novoLeito.leitoPCP, novoLeito.leitoIsolamento);
+      await criarLeito({
+        ...novoLeito,
+        tipoLeito: 'Enfermaria'
+      });
       setNovoLeito({ setorId: '', codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
       setIsLeitoModalOpen(false);
       registrarLog(`Adicionou novo leito: ${novoLeito.codigoLeito} no setor ${novoLeito.setorId}`, "Mapa de Leitos");
       toast({ title: "Sucesso!", description: "Leito adicionado com sucesso." });
     }
+  };
+
+  const actions = {
+    atualizarStatusLeito,
   };
 
   return (
@@ -229,13 +225,23 @@ const MapaLeitos = () => {
                       <Label htmlFor="pcp" className="text-right">
                         Leito PCP
                       </Label>
-                      <Checkbox id="pcp" checked={novoLeito.leitoPCP} onCheckedChange={(checked) => setNovoLeito({ ...novoLeito, leitoPCP: checked || false })} className="col-span-3" />
+                      <Checkbox 
+                        id="pcp" 
+                        checked={novoLeito.leitoPCP} 
+                        onCheckedChange={(checked) => setNovoLeito({ ...novoLeito, leitoPCP: !!checked })} 
+                        className="col-span-3" 
+                      />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="isolamento" className="text-right">
                         Leito Isolamento
                       </Label>
-                      <Checkbox id="isolamento" checked={novoLeito.leitoIsolamento} onCheckedChange={(checked) => setNovoLeito({ ...novoLeito, leitoIsolamento: checked || false })} className="col-span-3" />
+                      <Checkbox 
+                        id="isolamento" 
+                        checked={novoLeito.leitoIsolamento} 
+                        onCheckedChange={(checked) => setNovoLeito({ ...novoLeito, leitoIsolamento: !!checked })} 
+                        className="col-span-3" 
+                      />
                     </div>
                   </div>
                   <Button onClick={handleAdicionarLeito}>Adicionar Leito</Button>
@@ -298,77 +304,12 @@ const MapaLeitos = () => {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <Card className="mb-4">
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          <div>
-                            <div className="text-xs font-semibold">Total de Leitos:</div>
-                            <div className="text-sm">{setor.totalLeitos}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs font-semibold">Leitos Ocupados:</div>
-                            <div className="text-sm">{setor.leitosOcupados}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs font-semibold">Leitos Disponíveis:</div>
-                            <div className="text-sm">{setor.leitosDisponiveis}</div>
-                          </div>
-                           <div>
-                            <div className="text-xs font-semibold">Leitos em Higienização:</div>
-                            <div className="text-sm">{setor.leitosHigienizacao}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs font-semibold">Leitos Bloqueados:</div>
-                            <div className="text-sm">{setor.leitosBloqueados}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs font-semibold">Leitos PCP:</div>
-                            <div className="text-sm">{setor.leitosPCP}</div>
-                          </div>
-                          {setor.observacoes && (
-                            <div className="col-span-2 md:col-span-4">
-                              <div className="text-xs font-semibold">Observações:</div>
-                              <div className="text-sm">{setor.observacoes}</div>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {setor.leitos.map(leito => (
-                        <Card key={leito.id} className="shadow-sm">
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="text-sm font-semibold">{leito.codigoLeito}</div>
-                              {leito.leitoPCP && (
-                                <Badge variant="outline">PCP</Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Status: {leito.statusLeito}
-                            </div>
-                            {leito.dadosPaciente && (
-                              <>
-                                <Separator className="my-2" />
-                                <div className="text-xs">
-                                  Paciente: {leito.dadosPaciente.nomeCompleto}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  Internado em: {new Date(leito.dadosPaciente.dataInternacao).toLocaleDateString()}
-                                </div>
-                              </>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                    <SetorCard setor={setor} actions={actions} />
                   </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
           </div>
-
-          {/* Listas Laterais e Modais (se necessário) */}
         </div>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import { Observacao } from './observacao';
 
 export interface AltaLeitoInfo {
@@ -122,3 +121,8 @@ export interface SolicitacaoCirurgicaFormData {
 // Alias for backward compatibility
 export interface DadosPaciente extends Paciente {}
 export interface HistoricoMovimentacao extends HistoricoLeito {}
+
+export interface LeitoEnriquecido extends Leito {
+  statusLeito: 'Vago' | 'Higienizacao' | 'Ocupado' | 'Reservado' | 'Regulado' | 'Bloqueado';
+  dadosPaciente?: Paciente;
+}
