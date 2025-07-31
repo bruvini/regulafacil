@@ -2,7 +2,7 @@
 import { DadosPaciente } from '@/types/hospital';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Settings, CheckCircle, X } from 'lucide-react';
+import { Clock, Settings, CheckCircle, X, Loader2 } from 'lucide-react';
 import { formatarDuracao } from '@/lib/utils';
 
 interface Props {
@@ -10,13 +10,26 @@ interface Props {
   onConcluir: (paciente: any) => void;
   onAlterar: (paciente: any) => void;
   onCancelar: (paciente: any) => void;
+  isActing?: boolean;
 }
 
-export const PacienteReguladoItem = ({ paciente, onConcluir, onAlterar, onCancelar }: Props) => {
+export const PacienteReguladoItem = ({ 
+  paciente, 
+  onConcluir, 
+  onAlterar, 
+  onCancelar, 
+  isActing = false 
+}: Props) => {
   const tempoRegulado = formatarDuracao(paciente.regulacao?.dataAtualizacaoStatus || paciente.regulacao?.data);
   
   return (
-    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+    <div className={`flex items-center justify-between p-3 bg-muted/30 rounded-lg border relative ${isActing ? 'opacity-75' : ''}`}>
+      {isActing && (
+        <div className="absolute inset-0 bg-background/50 flex items-center justify-center rounded-lg z-10">
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </div>
+      )}
+      
       <div className="flex-1">
         <div className="flex items-center gap-2 mb-1">
           <p className="font-semibold text-sm">{paciente.nomeCompleto}</p>
@@ -39,16 +52,32 @@ export const PacienteReguladoItem = ({ paciente, onConcluir, onAlterar, onCancel
           </p>
         )}
       </div>
+      
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" onClick={() => onConcluir(paciente)}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => onConcluir(paciente)}
+          disabled={isActing}
+        >
           <CheckCircle className="h-4 w-4 mr-1" />
           Concluir
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => onAlterar(paciente)}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => onAlterar(paciente)}
+          disabled={isActing}
+        >
           <Settings className="h-4 w-4 mr-1" />
           Alterar
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => onCancelar(paciente)}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => onCancelar(paciente)}
+          disabled={isActing}
+        >
           <X className="h-4 w-4 mr-1" />
           Cancelar
         </Button>

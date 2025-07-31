@@ -43,6 +43,9 @@ export const useRegulacaoLogic = () => {
   const { reservarLeitoParaCirurgia } = useCirurgias();
   const { alertas, loading: alertasLoading } = useAlertasIsolamento();
 
+  // MOVED: Define loading early to prevent "before initialization" error
+  const loading = setoresLoading || leitosLoading || pacientesLoading;
+
   // Estados dos modais
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
@@ -364,6 +367,7 @@ const registrarHistoricoRegulacao = async (
 
     return agrupados;
   }, [leitosEnriquecidos, pacientesComDadosCompletos, setores]);
+
   // Filtragem e Listas Derivadas
   const {
     filteredPacientes,
@@ -1133,8 +1137,6 @@ const registrarHistoricoRegulacao = async (
       }
     });
   }, [alertas, todosPacientesPendentes, loading, alertasLoading, solicitarRemanejamento, cancelarPedidoRemanejamento]);
-
-  const loading = setoresLoading || leitosLoading || pacientesLoading;
 
   return {
     // Estados de loading
