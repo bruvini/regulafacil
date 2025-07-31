@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
@@ -16,7 +17,6 @@ import { RemanejamentosPendentesBloco } from "@/components/RemanejamentosPendent
 // Novos modals
 import { PanoramaSelecaoPeriodoModal } from "@/components/modals/PanoramaSelecaoPeriodoModal";
 import { PanoramaVisualizacaoModal } from "@/components/modals/PanoramaVisualizacaoModal";
-import { ConfirmacaoAltaModal } from "@/components/modals/ConfirmacaoAltaModal";
 
 const RegulacaoLeitos = () => {
   const { loading, listas, modals, handlers, filtrosProps } =
@@ -114,7 +114,6 @@ const RegulacaoLeitos = () => {
             handleCancelar: handlers.handleCancelar,
             altaAposRecuperacao: handlers.altaAposRecuperacao,
             setResumoModalOpen: handlers.setResumoModalOpen,
-            handleAbrirConfirmacaoAlta: handlers.handleAbrirConfirmacaoAlta,
           }}
           filtrosProps={{
             sortConfig: filtrosProps.sortConfig,
@@ -216,14 +215,6 @@ const RegulacaoLeitos = () => {
           pacientesRegulados={listas.pacientesJaRegulados}
           dataInicio={periodoSelecionado.inicio}
           dataFim={periodoSelecionado.fim}
-        />
-
-        {/* Modal de Confirmação de Alta */}
-        <ConfirmacaoAltaModal
-          open={modals.confirmacaoAltaModalOpen}
-          onOpenChange={handlers.setConfirmacaoAltaModalOpen}
-          paciente={modals.pacienteParaAlta}
-          onConfirmar={handlers.handleConfirmarAltaAguardando}
         />
       </div>
     </div>

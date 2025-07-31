@@ -18,7 +18,6 @@ interface PacientesAguardandoRegulacaoProps {
     handleCancelar: (paciente: any) => void;
     altaAposRecuperacao: (leitoId: string) => void;
     setResumoModalOpen: (open: boolean) => void;
-    handleAbrirConfirmacaoAlta: (paciente: any) => void;
   };
   filtrosProps: {
     sortConfig: { key: string; direction: string };
@@ -47,12 +46,10 @@ export const PacientesAguardandoRegulacao = ({
             titulo="PS - DECISÃO CIRÚRGICA"
             pacientes={listas.decisaoCirurgica}
             onRegularClick={handlers.handleOpenRegulacaoModal}
-            onAltaClick={handlers.handleAbrirConfirmacaoAlta}
             onAlta={handlers.altaAposRecuperacao}
             onConcluir={handlers.handleConcluir}
             onAlterar={handlers.handleAlterar}
             onCancelar={handlers.handleCancelar}
-            actingOnPatientId={actingOnPatientId}
           />
         )}
 
@@ -62,12 +59,10 @@ export const PacientesAguardandoRegulacao = ({
             titulo="PS - DECISÃO CLÍNICA"
             pacientes={listas.decisaoClinica}
             onRegularClick={handlers.handleOpenRegulacaoModal}
-            onAltaClick={handlers.handleAbrirConfirmacaoAlta}
             onAlta={handlers.altaAposRecuperacao}
             onConcluir={handlers.handleConcluir}
             onAlterar={handlers.handleAlterar}
             onCancelar={handlers.handleCancelar}
-            actingOnPatientId={actingOnPatientId}
           />
         )}
 
@@ -77,12 +72,10 @@ export const PacientesAguardandoRegulacao = ({
             titulo="CC - RECUPERAÇÃO"
             pacientes={listas.recuperacaoCirurgica}
             onRegularClick={handlers.handleOpenRegulacaoModal}
-            onAltaClick={handlers.handleAbrirConfirmacaoAlta}
             onAlta={handlers.altaAposRecuperacao}
             onConcluir={handlers.handleConcluir}
             onAlterar={handlers.handleAlterar}
             onCancelar={handlers.handleCancelar}
-            actingOnPatientId={actingOnPatientId}
           />
         )}
 
