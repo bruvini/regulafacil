@@ -1,124 +1,452 @@
-import { useState, useEffect, useMemo } from 'react';
+
+import { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import SetorCard from '@/components/SetorCard';
+import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
+import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
+import { IndicadoresGerais } from '@/components/IndicadoresGerais';
+import { LimpezaPacientesModal } from '@/components/modals/LimpezaPacientesModal';
+import { AltaNoLeitoModal } from '@/components/modals/AltaNoLeitoModal';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
-import { Button } from '@/components/ui/button';
-import { Plus, Lock, Sparkles, UserPlus } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import SetorCard from '@/components/SetorCard';
-import { Leito, Setor } from '@/types/hospital';
-import { useRegulacaoLogic } from '@/hooks/useRegulacaoLogic';
-import { Skeleton } from '@/components/ui/skeleton';
-import AdicionarPacienteModal from '@/components/modals/AdicionarPacienteModal';
+import { usePacientes } from '@/hooks/usePacientes';
+import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
+import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
+import { useAuth } from '@/hooks/useAuth';
+import { useAuditoria } from '@/hooks/useAuditoria';
+import { Settings, ShieldQuestion, ClipboardList, Trash2 } from 'lucide-react';
+import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
+import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
+import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
+import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
+import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo } from '@/types/hospital';
+import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { Observacao } from '@/types/observacao';
 
-export interface LeitoEnriquecido extends Leito {
-  setorNome: string;
-  statusLeito: string;
-  sexoCompativel?: 'Masculino' | 'Feminino' | 'Ambos';
-}
+// Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
+export type LeitoEnriquecido = Leito & {
+  statusLeito: HistoricoMovimentacao['statusLeito'];
+  dataAtualizacaoStatus?: string;
+  motivoBloqueio?: string;
+  regulacao?: any;
+  dadosPaciente?: Paciente | null;
+};
 
 const MapaLeitos = () => {
+  // --- Estados de Modais e Ações ---
+  const [modalOpen, setModalOpen] = useState(false);
+  const [movimentacaoModalOpen, setMovimentacaoModalOpen] = useState(false);
+  const [relatorioIsolamentoOpen, setRelatorioIsolamentoOpen] = useState(false);
+  const [relatorioVagosOpen, setRelatorioVagosOpen] = useState(false);
+  const [obsModalOpen, setObsModalOpen] = useState(false);
+  const [limpezaModalOpen, setLimpezaModalOpen] = useState(false);
+  const [altaNoLeitoModalOpen, setAltaNoLeitoModalOpen] = useState(false);
+  const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
+  const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
+  const [pacienteParaAltaNoLeito, setPacienteParaAltaNoLeito] = useState<LeitoEnriquecido | null>(null);
+  const { toast } = useToast();
+  const { userData } = useAuth();
+  const { registrarLog } = useAuditoria();
+
+  // --- Hooks de Dados (Nova Arquitetura) ---
   const { setores, loading: setoresLoading } = useSetores();
   const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
+  const { pacientes, loading: pacientesLoading } = usePacientes();
+  const loading = setoresLoading || leitosLoading || pacientesLoading;
 
-  // Novos estados para adicionar paciente
-  const [adicionarPacienteModalOpen, setAdicionarPacienteModalOpen] = useState(false);
-  const [leitoParaAdicionarPaciente, setLeitoParaAdicionarPaciente] = useState<LeitoEnriquecido | null>(null);
-
-  const {
-    handlers: {
-      handleAbrirAdicionarPacienteModal,
-      handleConfirmarAdicaoPaciente,
-      setAdicionarPacienteModalOpen,
-    },
-    modals: {
-      leitoParaAdicionarPaciente,
-    },
-  } = useRegulacaoLogic();
-
-  useEffect(() => {
-    document.title = 'Mapa de Leitos | Regula Fácil';
-  }, []);
-
-  const setoresComLeitos = useMemo(() => {
-    if (setoresLoading || leitosLoading) {
-      return [];
+  // --- Lógica Central de Combinação de Dados ---
+  const dadosCombinados = useMemo(() => {
+    if (loading) {
+      return { setoresEnriquecidos: [], todosLeitosEnriquecidos: [] };
     }
 
-    return setores.map((setor) => ({
-      ...setor,
-      leitos: leitos.filter((leito) => leito.setorId === setor.id),
-    }));
-  }, [setores, leitos, setoresLoading, leitosLoading]);
-
-  const handleBloquear = async (setorId: string, leitoId: string) => {
-    await atualizarStatusLeito(leitoId, 'Bloqueado', {
-      motivoBloqueio: 'Manutenção',
+    const mapaPacientes = new Map(pacientes.map(p => [p.id, p]));
+    const todosLeitosEnriquecidos: LeitoEnriquecido[] = leitos.map(leito => {
+      const historicoRecente = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
+      const pacienteId = historicoRecente?.pacienteId;
+      return {
+        ...leito,
+        statusLeito: historicoRecente.statusLeito,
+        dataAtualizacaoStatus: historicoRecente.dataAtualizacaoStatus,
+        motivoBloqueio: historicoRecente.motivoBloqueio,
+        regulacao: historicoRecente.infoRegulacao,
+        dadosPaciente: pacienteId ? mapaPacientes.get(pacienteId) : null
+      };
     });
+
+    const mapaLeitosPorSetor = todosLeitosEnriquecidos.reduce((acc, leito) => {
+      (acc[leito.setorId] = acc[leito.setorId] || []).push(leito);
+      return acc;
+    }, {} as Record<string, LeitoEnriquecido[]>);
+
+    const setoresEnriquecidos = setores.map(setor => ({
+      ...setor,
+      leitos: mapaLeitosPorSetor[setor.id!] || []
+    }));
+
+    return { setoresEnriquecidos, todosLeitosEnriquecidos };
+  }, [setores, leitos, pacientes, loading]);
+
+  const { setoresEnriquecidos } = dadosCombinados;
+  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
+  const { filteredSetores, filtrosAvancados, setFiltrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
+
+  // Verificar se o usuário é administrador
+  const isAdmin = userData?.tipoAcesso === 'Administrador';
+
+  // --- OBJETO CENTRALIZADO DE AÇÕES ---
+  const leitoActions = {
+    onMoverPaciente: (leito: LeitoEnriquecido) => {
+      setPacienteParaMover({
+        dados: leito.dadosPaciente,
+        leitoOrigemId: leito.id,
+        setorOrigemId: leito.setorId,
+      });
+      setMovimentacaoModalOpen(true);
+    },
+
+    onAbrirObs: (leito: LeitoEnriquecido) => {
+      setPacienteParaObs(leito);
+      setObsModalOpen(true);
+    },
+
+    onAltaNoLeito: (leito: LeitoEnriquecido) => {
+      setPacienteParaAltaNoLeito(leito);
+      setAltaNoLeitoModalOpen(true);
+    },
+
+    onLiberarLeito: async (leitoId: string, pacienteId: string) => {
+      await deleteDoc(doc(db, 'pacientesRegulaFacil', pacienteId));
+      await atualizarStatusLeito(leitoId, 'Higienizacao');
+      toast({ title: "Sucesso!", description: "Paciente recebeu alta." });
+    },
+
+    onAtualizarStatus: atualizarStatusLeito,
+
+    onSolicitarUTI: async (pacienteId: string) => {
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+      await updateDoc(pacienteRef, { 
+        aguardaUTI: true, 
+        dataPedidoUTI: new Date().toISOString()
+      });
+      toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
+    },
+
+    onSolicitarRemanejamento: async (pacienteId: string, motivo: string) => {
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+      await updateDoc(pacienteRef, { 
+        remanejarPaciente: true, 
+        motivoRemanejamento: motivo,
+        dataPedidoRemanejamento: new Date().toISOString()
+      });
+      toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
+    },
+
+    onTransferirPaciente: async (pacienteId: string, destino: string, motivo: string) => {
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+      await updateDoc(pacienteRef, { 
+        transferirPaciente: true, 
+        destinoTransferencia: destino, 
+        motivoTransferencia: motivo,
+        dataTransferencia: new Date().toISOString()
+      });
+      toast({ title: "Sucesso!", description: "Solicitação de transferência externa registrada." });
+    },
+
+    onCancelarReserva: async (leitoId: string) => {
+      try {
+        await atualizarStatusLeito(leitoId, 'Vago');
+        toast({ title: "Sucesso!", description: "Reserva cancelada." });
+      } catch (error) {
+        console.error('Erro ao cancelar reserva:', error);
+        toast({ title: "Erro", description: "Erro ao cancelar reserva.", variant: "destructive" });
+      }
+    },
+
+    onConcluirTransferencia: async (leito: LeitoEnriquecido) => {
+      try {
+        await atualizarStatusLeito(leito.id, 'Ocupado');
+        toast({ title: "Sucesso!", description: "Transferência concluída." });
+      } catch (error) {
+        console.error('Erro ao concluir transferência:', error);
+        toast({ title: "Erro", description: "Erro ao concluir transferência.", variant: "destructive" });
+      }
+    },
+
+    onToggleProvavelAlta: async (pacienteId: string, valorAtual: boolean) => {
+      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { provavelAlta: !valorAtual });
+    },
+
+    onFinalizarHigienizacao: async (leitoId: string) => {
+      await atualizarStatusLeito(leitoId, 'Vago');
+      toast({ title: "Sucesso!", description: "Leito liberado e pronto para uso." });
+    },
+
+    onBloquearLeito: async (leitoId: string, motivo: string) => {
+      try {
+        await atualizarStatusLeito(leitoId, 'Bloqueado', { motivoBloqueio: motivo });
+        toast({ title: "Sucesso!", description: "Leito bloqueado." });
+      } catch (error) {
+        console.error('Erro ao bloquear leito:', error);
+        toast({ title: "Erro", description: "Erro ao bloquear leito.", variant: "destructive" });
+      }
+    },
+
+    onEnviarParaHigienizacao: async (leitoId: string) => {
+      try {
+        await atualizarStatusLeito(leitoId, 'Higienizacao');
+        toast({ title: "Sucesso!", description: "Leito enviado para higienização." });
+      } catch (error) {
+        console.error('Erro ao enviar para higienização:', error);
+        toast({ title: "Erro", description: "Erro ao enviar para higienização.", variant: "destructive" });
+      }
+    }
   };
 
-  const handleLimpeza = async (setorId: string, leitoId: string) => {
-    await atualizarStatusLeito(leitoId, 'Higienizacao');
+  const handleConfirmarMovimentacao = async (leitoDestino: Leito) => {
+    if (pacienteParaMover && leitoDestino) {
+        await atualizarStatusLeito(pacienteParaMover.leitoOrigemId, 'Higienizacao');
+        await atualizarStatusLeito(leitoDestino.id, 'Ocupado', { pacienteId: pacienteParaMover.dados.id });
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaMover.dados.id);
+        await updateDoc(pacienteRef, { leitoId: leitoDestino.id, setorId: leitoDestino.setorId });
+        toast({ title: "Sucesso!", description: "Paciente movido com sucesso." });
+    }
+    setMovimentacaoModalOpen(false);
+    setPacienteParaMover(null);
+  };
+  
+  const handleConfirmObs = async (obs: string) => {
+    if (pacienteParaObs?.dadosPaciente && userData) {
+      try {
+        const novaObservacao = {
+          id: crypto.randomUUID(),
+          texto: obs,
+          timestamp: new Date().toISOString(),
+          usuario: userData.nomeCompleto
+        };
+
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaObs.dadosPaciente.id);
+        await updateDoc(pacienteRef, { 
+          obsPaciente: arrayUnion(novaObservacao)
+        });
+        toast({ title: "Sucesso!", description: "Observação adicionada." });
+      } catch (error) {
+        console.error('Erro ao adicionar observação:', error);
+        toast({ 
+          title: "Erro", 
+          description: "Erro ao adicionar observação.", 
+          variant: "destructive" 
+        });
+      }
+    }
+    setObsModalOpen(false);
   };
 
-  const actions = {
-    onBloquear: handleBloquear,
-    onLimpeza: handleLimpeza,
-    onAdicionarPaciente: handleAbrirAdicionarPacienteModal,
+  const handleDeleteObs = async (observacaoId: string) => {
+    if (pacienteParaObs?.dadosPaciente && userData) {
+      try {
+        const observacoes = pacienteParaObs.dadosPaciente.obsPaciente || [];
+        const observacaoParaRemover = observacoes.find(obs => obs.id === observacaoId);
+        
+        if (!observacaoParaRemover) return;
+
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaObs.dadosPaciente.id);
+        await updateDoc(pacienteRef, {
+          obsPaciente: arrayRemove(observacaoParaRemover)
+        });
+
+        registrarLog(`Excluiu observação do paciente ${pacienteParaObs.dadosPaciente.nomeCompleto}.`, 'Mapa de Leitos');
+        toast({ title: "Sucesso!", description: "Observação removida." });
+      } catch (error) {
+        console.error('Erro ao remover observação:', error);
+        toast({ 
+          title: "Erro", 
+          description: "Erro ao remover observação.", 
+          variant: "destructive" 
+        });
+      }
+    }
+  };
+
+  const handleConfirmarAltaNoLeito = async (pendencia: string) => {
+    if (pacienteParaAltaNoLeito?.dadosPaciente && userData) {
+      try {
+        const altaLeitoInfo: AltaLeitoInfo = {
+          status: true,
+          pendencia,
+          timestamp: new Date().toISOString(),
+          usuario: userData.nomeCompleto
+        };
+
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaAltaNoLeito.dadosPaciente.id);
+        await updateDoc(pacienteRef, { 
+          altaNoLeito: altaLeitoInfo
+        });
+
+        registrarLog(`Registrou alta no leito para o paciente ${pacienteParaAltaNoLeito.dadosPaciente.nomeCompleto}.`, 'Mapa de Leitos');
+        toast({ title: "Sucesso!", description: "Alta no leito registrada com sucesso." });
+      } catch (error) {
+        console.error('Erro ao registrar alta no leito:', error);
+        toast({ 
+          title: "Erro", 
+          description: "Erro ao registrar alta no leito.", 
+          variant: "destructive" 
+        });
+      }
+    }
+    setAltaNoLeitoModalOpen(false);
+    setPacienteParaAltaNoLeito(null);
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Mapa de Leitos</CardTitle>
-          <CardDescription>
-            Visualize e gerencie os leitos disponíveis.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+    <div className="min-h-screen bg-gradient-subtle">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col space-y-8">
+          <header className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
+              <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
+            </div>
+          </header>
 
-      {setoresLoading || leitosLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="shadow-sm">
-              <CardHeader>
-                <CardTitle>
-                  <Skeleton className="h-6 w-40" />
-                </CardTitle>
-                <CardDescription>
-                  <Skeleton className="h-4 w-24" />
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-24 w-full" />
-              </CardContent>
+          {loading ? (
+             <Card className="shadow-card border border-border/50">
+              <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
+              <CardContent><div className="space-y-4"><Skeleton className="h-8 w-full" /></div></CardContent>
             </Card>
-          ))}
+          ) : (
+            <IndicadoresGerais 
+              contagem={contagemPorStatus} 
+              taxa={taxaOcupacao} 
+              tempos={tempoMedioStatus}
+              nivelPCP={nivelPCP}
+            />
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <FiltrosMapaLeitos 
+                setores={setores} 
+                filtrosAvancados={filtrosAvancados}
+                setFiltrosAvancados={setFiltrosAvancados}
+                {...filtrosProps} 
+              />
+            </div>
+            <div className="lg:col-span-1">
+              <Card className="shadow-card border border-border/50">
+                <CardHeader><CardTitle className="text-xl font-semibold text-medical-primary">Ações Rápidas</CardTitle></CardHeader>
+                <CardContent>
+                  <TooltipProvider>
+                    <div className="flex space-x-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => setModalOpen(true)}><Settings className="h-4 w-4" /></Button></TooltipTrigger>
+                        <TooltipContent><p>Gerenciar Setores e Leitos</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => setRelatorioIsolamentoOpen(true)}><ShieldQuestion className="h-4 w-4" /></Button></TooltipTrigger>
+                        <TooltipContent><p>Relatório de Isolamentos</p></TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => setRelatorioVagosOpen(true)}><ClipboardList className="h-4 w-4" /></Button></TooltipTrigger>
+                        <TooltipContent><p>Relatório de Leitos Vagos</p></TooltipContent>
+                      </Tooltip>
+                      {isAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              onClick={() => setLimpezaModalOpen(true)}
+                              className="border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Limpar Lista de Pacientes</p></TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TooltipProvider>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+          
+          <Card className="shadow-card border border-border/50">
+            <CardHeader>
+              <h2 className="text-2xl font-bold text-medical-primary">Mapa de Setores</h2>
+              <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
+              ) : filteredSetores.length > 0 ? (
+                <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={filteredSetores[0]?.id}>
+                  {filteredSetores.map((setor) => {
+                    // Calcular indicadores do setor aqui
+                    const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
+                    const totalLeitos = setor.leitos.length;
+                    const taxaOcupacao = totalLeitos > 0 ? Math.round(((totalLeitos - leitosVagos) / totalLeitos) * 100) : 0;
+                    
+                    return (
+                      <AccordionItem key={setor.id} value={setor.id!} className="border border-border/50 rounded-lg">
+                        <AccordionTrigger className="hover:no-underline px-4">
+                          <div className="flex justify-between items-center w-full pr-4">
+                            <div className="flex flex-col items-start">
+                              <h3 className="text-lg font-semibold text-foreground">{setor.nomeSetor}</h3>
+                              <p className="text-sm text-muted-foreground font-mono">{setor.siglaSetor}</p>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-medical-primary">
+                                {taxaOcupacao}%
+                              </div>
+                              <p className="text-xs text-muted-foreground">{leitosVagos}/{totalLeitos} Vagos</p>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-4">
+                          <SetorCard 
+                            setor={setor}
+                            actions={leitoActions}
+                          />
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              ) : (
+                 <div className="text-center py-12"><p className="text-lg text-muted-foreground">Nenhum resultado encontrado.</p></div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {setoresComLeitos.map((setor) => (
-            <SetorCard key={setor.id} setor={setor as any} actions={actions} />
-          ))}
-        </div>
-      )}
-      
-      {/* Novo Modal para Adicionar Paciente */}
-      <AdicionarPacienteModal
-        open={adicionarPacienteModalOpen || false}
-        onClose={() => setAdicionarPacienteModalOpen(false)}
-        onConfirm={handleConfirmarAdicaoPaciente}
-        leitoInfo={leitoParaAdicionarPaciente ? {
-          codigoLeito: leitoParaAdicionarPaciente.codigoLeito,
-          setorNome: setores.find(s => s.id === leitoParaAdicionarPaciente.setorId)?.nomeSetor || 'Setor não encontrado'
-        } : null}
+      </div>
+
+      <GerenciamentoModal open={modalOpen} onOpenChange={setModalOpen} />
+      <MovimentacaoModal open={movimentacaoModalOpen} onOpenChange={setMovimentacaoModalOpen} pacienteNome={pacienteParaMover?.dados?.nomeCompleto || ''} onConfirm={handleConfirmarMovimentacao}/>
+      <RelatorioIsolamentosModal open={relatorioIsolamentoOpen} onOpenChange={setRelatorioIsolamentoOpen}/>
+      <RelatorioVagosModal open={relatorioVagosOpen} onOpenChange={setRelatorioVagosOpen}/>
+      <ObservacoesModal 
+        open={obsModalOpen} 
+        onOpenChange={setObsModalOpen} 
+        pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''} 
+        observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []} 
+        onConfirm={handleConfirmObs}
+        onDelete={handleDeleteObs}
       />
+      <AltaNoLeitoModal
+        open={altaNoLeitoModalOpen}
+        onOpenChange={setAltaNoLeitoModalOpen}
+        pacienteNome={pacienteParaAltaNoLeito?.dadosPaciente?.nomeCompleto || ''}
+        onConfirm={handleConfirmarAltaNoLeito}
+      />
+      <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
     </div>
   );
 };

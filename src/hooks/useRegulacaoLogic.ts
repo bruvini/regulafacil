@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { useCirurgiasEletivas } from "@/hooks/useCirurgiasEletivas";
 import { useCirurgias } from "@/hooks/useCirurgias";
@@ -44,6 +43,9 @@ export const useRegulacaoLogic = () => {
   const { reservarLeitoParaCirurgia } = useCirurgias();
   const { alertas, loading: alertasLoading } = useAlertasIsolamento();
 
+  // Define loading early to prevent "before initialization" error
+  const loading = setoresLoading || leitosLoading || pacientesLoading;
+
   // Estados dos modais
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
@@ -53,13 +55,11 @@ export const useRegulacaoLogic = () => {
   const [gerenciarTransferenciaOpen, setGerenciarTransferenciaOpen] = useState(false);
   const [resumoModalOpen, setResumoModalOpen] = useState(false);
   const [sugestoesModalOpen, setSugestoesModalOpen] = useState(false);
-  const [adicionarPacienteModalOpen, setAdicionarPacienteModalOpen] = useState(false);
 
   // Estados de dados
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
   const [pacienteParaAcao, setPacienteParaAcao] = useState<any | null>(null);
   const [cirurgiaParaAlocar, setCirurgiaParaAlocar] = useState<any | null>(null);
-  const [leitoParaAdicionarPaciente, setLeitoParaAdicionarPaciente] = useState<any | null>(null);
   const [isAlteracaoMode, setIsAlteracaoMode] = useState(false);
   const [validationResult, setValidationResult] = useState<ResultadoValidacao | null>(null);
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
@@ -71,10 +71,7 @@ export const useRegulacaoLogic = () => {
   // Estado para eliminar flickering
   const [actingOnPatientId, setActingOnPatientId] = useState<string | null>(null);
 
-  // Define loading early to prevent "before initialization" error
-  const loading = setoresLoading || leitosLoading || pacientesLoading;
-
-/**
+  /**
  * Cria ou atualiza um registro na coleção 'regulacoesRegulaFacil'.
  * @param {string | null} regulacaoId - O ID do documento, se já existir.
  * @param {'criada' | 'alterada' | 'concluida' | 'cancelada'} tipoEvento - O tipo de evento.
@@ -609,66 +606,6 @@ const registrarHistoricoRegulacao = async (
       setPacienteParaAcao(null);
     } finally {
       setActingOnPatientId(null);
-    }
-  };
-
-  // Nova função para adicionar paciente manualmente
-  const handleAbrirAdicionarPacienteModal = (leito: any) => {
-    setLeitoParaAdicionarPaciente(leito);
-    setAdicionarPacienteModalOpen(true);
-  };
-
-  const handleConfirmarAdicaoPaciente = async (formData: any) => {
-    if (!userData) {
-      toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
-      return;
-    }
-    
-    if (!leitoParaAdicionarPaciente) {
-      toast({ title: "Erro", description: "Leito não selecionado.", variant: "destructive" });
-      return;
-    }
-
-    try {
-      // Criar o novo paciente
-      const novoPaciente = {
-        leitoId: leitoParaAdicionarPaciente.id,
-        setorId: leitoParaAdicionarPaciente.setorId,
-        ...formData
-      };
-
-      const docRef = await addDoc(collection(db, "pacientesRegulaFacil"), novoPaciente);
-      const newPatientId = docRef.id;
-
-      // Atualizar o leito para ocupado
-      await atualizarStatusLeito(leitoParaAdicionarPaciente.id, "Ocupado", {
-        pacienteId: newPatientId,
-      });
-
-      // Buscar o nome do setor para o log
-      const setor = setores.find(s => s.id === leitoParaAdicionarPaciente.setorId);
-      const setorNome = setor?.nomeSetor || 'Setor não encontrado';
-
-      // Log de auditoria
-      const logMessage = `${userData.nomeCompleto} adicionou manualmente o paciente ${formData.nomeCompleto} ao leito ${leitoParaAdicionarPaciente.codigoLeito} do setor ${setorNome}.`;
-      registrarLog(logMessage, "Adição Manual de Paciente");
-
-      // Feedback e limpeza
-      toast({ 
-        title: "Sucesso!", 
-        description: "Paciente adicionado com sucesso ao leito." 
-      });
-
-      setAdicionarPacienteModalOpen(false);
-      setLeitoParaAdicionarPaciente(null);
-
-    } catch (error) {
-      console.error("Erro ao adicionar paciente:", error);
-      toast({ 
-        title: "Erro", 
-        description: "Não foi possível adicionar o paciente.", 
-        variant: "destructive" 
-      });
     }
   };
 
@@ -1233,11 +1170,9 @@ const registrarHistoricoRegulacao = async (
       gerenciarTransferenciaOpen,
       resumoModalOpen,
       sugestoesModalOpen,
-      adicionarPacienteModalOpen,
       pacienteParaRegular,
       pacienteParaAcao,
       cirurgiaParaAlocar,
-      leitoParaAdicionarPaciente,
       isAlteracaoMode,
       validationResult,
       syncSummary,
@@ -1265,8 +1200,6 @@ const registrarHistoricoRegulacao = async (
       handleConfirmSync,
       handlePassagemPlantao,
       handleAbrirSugestoes,
-      handleAbrirAdicionarPacienteModal,
-      handleConfirmarAdicaoPaciente,
       setImportModalOpen,
       setRegulacaoModalOpen,
       setCancelamentoModalOpen,
@@ -1275,7 +1208,6 @@ const registrarHistoricoRegulacao = async (
       setGerenciarTransferenciaOpen,
       setResumoModalOpen,
       setSugestoesModalOpen,
-      setAdicionarPacienteModalOpen,
     },
 
     // Props para filtros
