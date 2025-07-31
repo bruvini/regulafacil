@@ -1,12 +1,14 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lock, Sparkles, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLeitos } from '@/hooks/useLeitos';
 import { LeitoEnriquecido } from '@/pages/MapaLeitos';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle } from 'lucide-react';
+import {
+  BadgeCheck,
+  BadgeInfo,
+  BadgeAlert,
+} from '@/components/ui/badge';
 
 interface LeitoCardProps {
   leito: LeitoEnriquecido;
@@ -91,19 +93,19 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
   const getStatusBadge = () => {
     switch (leito.statusLeito) {
       case 'Vago':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">Vago</Badge>;
+        return <BadgeCheck variant="outline">Vago</BadgeCheck>;
       case 'Ocupado':
-        return <Badge variant="destructive">Ocupado</Badge>;
+        return <BadgeAlert>Ocupado</BadgeAlert>;
       case 'Reservado':
-        return <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-300">Reservado</Badge>;
+        return <BadgeInfo>Reservado</BadgeInfo>;
       case 'Regulado':
-        return <Badge variant="default" className="bg-purple-100 text-purple-800 border-purple-300">Regulado</Badge>;
+        return <BadgeInfo>Regulado</BadgeInfo>;
       case 'Higienizacao':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">Higienização</Badge>;
+        return <BadgeAlert variant="outline">Higienização</BadgeAlert>;
       case 'Bloqueado':
-        return <Badge variant="destructive">Bloqueado</Badge>;
+        return <BadgeAlert variant="destructive">Bloqueado</BadgeAlert>;
       default:
-        return <Badge variant="secondary">Desconhecido</Badge>;
+        return <BadgeInfo>Desconhecido</BadgeInfo>;
     }
   };
 
@@ -166,7 +168,7 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                 className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600"
                 title="Liberar Leito"
               >
-                <CheckCircle className="h-3.5 w-3.5" />
+                <BadgeCheck className="h-3.5 w-3.5" />
               </Button>
             )}
 
@@ -178,7 +180,7 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                 className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600"
                 title="Liberar Leito"
               >
-                <CheckCircle className="h-3.5 w-3.5" />
+                <BadgeCheck className="h-3.5 w-3.5" />
               </Button>
             )}
 
@@ -190,7 +192,7 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                 className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-600"
                 title="Desocupar Leito"
               >
-                <CheckCircle className="h-3.5 w-3.5" />
+                <BadgeCheck className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
@@ -198,13 +200,13 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
 
         {/* Informações adicionais do leito */}
         <div>
-          {leito.statusLeito === 'Ocupado' && leito.paciente && (
+          {leito.statusLeito === 'Ocupado' && leito.dadosPaciente && (
             <>
               <p className="text-xs text-muted-foreground">
-                Paciente: {leito.paciente.nomeCompleto}
+                Paciente: {leito.dadosPaciente.nomeCompleto}
               </p>
               <p className="text-xs text-muted-foreground">
-                Especialidade: {leito.paciente.especialidadePaciente}
+                Especialidade: {leito.dadosPaciente.especialidadePaciente}
               </p>
             </>
           )}

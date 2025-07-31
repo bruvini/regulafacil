@@ -17,7 +17,7 @@ interface QuartoCardProps {
 
 const QuartoCard = ({ nomeQuarto, leitos, todosLeitosDoSetor, actions }: QuartoCardProps) => {
   const hasMixedGenders = useMemo(() => {
-    const genders = new Set(leitos.filter(l => l.paciente).map(l => l.paciente?.sexoPaciente));
+    const genders = new Set(leitos.filter(l => l.dadosPaciente).map(l => l.dadosPaciente?.sexoPaciente));
     return genders.size > 1;
   }, [leitos]);
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
@@ -12,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import SetorCard from '@/components/SetorCard';
-import { Leito, Setor, Paciente } from '@/types/hospital';
+import { Leito, Setor } from '@/types/hospital';
 import { useRegulacaoLogic } from '@/hooks/useRegulacaoLogic';
 import { Skeleton } from '@/components/ui/skeleton';
 import AdicionarPacienteModal from '@/components/modals/AdicionarPacienteModal';
@@ -21,22 +20,24 @@ export interface LeitoEnriquecido extends Leito {
   setorNome: string;
   statusLeito: string;
   sexoCompativel?: 'Masculino' | 'Feminino' | 'Ambos';
-  paciente?: Paciente;
 }
 
 const MapaLeitos = () => {
   const { setores, loading: setoresLoading } = useSetores();
   const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
 
+  // Novos estados para adicionar paciente
+  const [adicionarPacienteModalOpen, setAdicionarPacienteModalOpen] = useState(false);
+  const [leitoParaAdicionarPaciente, setLeitoParaAdicionarPaciente] = useState<LeitoEnriquecido | null>(null);
+
   const {
     handlers: {
       handleAbrirAdicionarPacienteModal,
       handleConfirmarAdicaoPaciente,
+      setAdicionarPacienteModalOpen,
     },
     modals: {
-      adicionarPacienteModalOpen,
       leitoParaAdicionarPaciente,
-      setAdicionarPacienteModalOpen,
     },
   } = useRegulacaoLogic();
 
@@ -108,7 +109,7 @@ const MapaLeitos = () => {
         </div>
       )}
       
-      {/* Modal para Adicionar Paciente */}
+      {/* Novo Modal para Adicionar Paciente */}
       <AdicionarPacienteModal
         open={adicionarPacienteModalOpen || false}
         onClose={() => setAdicionarPacienteModalOpen(false)}
