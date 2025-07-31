@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PacienteReguladoItem } from "@/components/PacienteReguladoItem";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, BarChart3 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
 interface PacientesReguladosBlocoProps {
@@ -13,7 +13,7 @@ interface PacientesReguladosBlocoProps {
   onAlterar: (paciente: any) => void;
   onCancelar: (paciente: any) => void;
   onVerResumo: () => void;
-  onAbrirPanorama: () => void;
+  actingOnPatientId?: string | null;
 }
 
 export const PacientesReguladosBloco = ({ 
@@ -22,7 +22,7 @@ export const PacientesReguladosBloco = ({
   onAlterar, 
   onCancelar, 
   onVerResumo,
-  onAbrirPanorama
+  actingOnPatientId
 }: PacientesReguladosBlocoProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -46,15 +46,7 @@ export const PacientesReguladosBloco = ({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-4">
-            <div className="flex justify-end gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onAbrirPanorama}
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Panorama Atual
-              </Button>
+            <div className="flex justify-end">
               <Button
                 size="sm"
                 variant="outline"
@@ -71,6 +63,7 @@ export const PacientesReguladosBloco = ({
                   onConcluir={onConcluir}
                   onAlterar={onAlterar}
                   onCancelar={onCancelar}
+                  isActing={actingOnPatientId === paciente.id}
                 />
               ))}
             </div>

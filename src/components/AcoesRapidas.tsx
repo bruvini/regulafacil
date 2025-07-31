@@ -6,23 +6,27 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Download, FileText, Lightbulb } from 'lucide-react';
+import { Download, FileText, Lightbulb, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AcoesRapidasProps {
   onImportarClick: () => void;
   onPassagemClick?: () => void;
   onSugestoesClick?: () => void;
+  onPanoramaClick?: () => void;
   showAllButtons?: boolean;
   sugestoesDisponiveis?: boolean;
+  panoramaDisponivel?: boolean;
 }
 
 export const AcoesRapidas = ({ 
   onImportarClick, 
   onPassagemClick, 
   onSugestoesClick,
+  onPanoramaClick,
   showAllButtons = false,
-  sugestoesDisponiveis = false
+  sugestoesDisponiveis = false,
+  panoramaDisponivel = false
 }: AcoesRapidasProps) => {
   return (
     <div className="flex items-center gap-2">
@@ -77,6 +81,23 @@ export const AcoesRapidas = ({
                 <p>Ver Sugestões de Regulação</p>
               </TooltipContent>
             </Tooltip>
+
+            {panoramaDisponivel && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onPanoramaClick}
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Panorama Atual</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </>
         )}
       </TooltipProvider>

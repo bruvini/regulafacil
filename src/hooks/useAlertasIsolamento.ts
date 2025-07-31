@@ -12,12 +12,18 @@ export interface AlertaIncompatibilidade {
 }
 
 export const useAlertasIsolamento = () => {
-  const { setores } = useSetores();
+  const { setores, loading: setoresLoading } = useSetores();
   const [alertas, setAlertas] = useState<AlertaIncompatibilidade[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (setoresLoading) {
+        setLoading(true);
+        return;
+    }
+
     if (setores.length === 0) {
+        setAlertas([]);
         setLoading(false);
         return;
     };
@@ -71,7 +77,7 @@ export const useAlertasIsolamento = () => {
     setAlertas(novosAlertas);
     setLoading(false);
 
-  }, [setores]);
+  }, [setores, setoresLoading]);
 
   return { alertas, loading };
 };

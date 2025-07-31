@@ -180,10 +180,9 @@ export const useCirurgias = () => {
 
       console.log('Reserva concluída com sucesso');
 
-      registrarLog(
-        `Leito ${leito.codigoLeito} reservado para cirurgia de ${cirurgiaData.nomeCompleto} (${cirurgiaData.especialidade}).`, 
-        'Marcação Cirúrgica'
-      );
+      // Log de auditoria
+      const logMessage = `Leito ${leito.codigoLeito} reservado para cirurgia de ${cirurgiaData.nomeCompleto} (${cirurgiaData.especialidade}).`;
+      await registrarLog(logMessage, 'Cirurgias Eletivas');
 
       toast({ 
         title: "Sucesso!", 

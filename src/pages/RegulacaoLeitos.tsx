@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
@@ -73,8 +74,10 @@ const RegulacaoLeitos = () => {
             onImportarClick={() => handlers.setImportModalOpen(true)}
             onPassagemClick={handlers.handlePassagemPlantao}
             onSugestoesClick={handlers.handleAbrirSugestoes}
+            onPanoramaClick={handleAbrirPanorama}
             showAllButtons={true}
             sugestoesDisponiveis={listas.sugestoesDeRegulacao.length > 0}
+            panoramaDisponivel={listas.pacientesJaRegulados.length > 0}
           />
         </header>
 
@@ -115,6 +118,7 @@ const RegulacaoLeitos = () => {
           filtrosProps={{
             sortConfig: filtrosProps.sortConfig,
           }}
+          actingOnPatientId={modals.actingOnPatientId}
         />
 
         {/* 5. Bloco: Pacientes Regulados */}
@@ -124,7 +128,7 @@ const RegulacaoLeitos = () => {
           onAlterar={handlers.handleAlterar}
           onCancelar={handlers.handleCancelar}
           onVerResumo={() => handlers.setResumoModalOpen(true)}
-          onAbrirPanorama={handleAbrirPanorama}
+          actingOnPatientId={modals.actingOnPatientId}
         />
 
         {/* 6. Bloco Agrupador: Espera por UTI e Transferências Externas */}

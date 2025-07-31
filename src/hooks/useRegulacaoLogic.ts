@@ -41,7 +41,7 @@ export const useRegulacaoLogic = () => {
   const { toast } = useToast();
   const { cirurgias, loading: cirurgiasLoading } = useCirurgias();
   const { reservarLeitoParaCirurgia } = useCirurgias();
-  const { alertas } = useAlertasIsolamento();
+  const { alertas, loading: alertasLoading } = useAlertasIsolamento();
 
   // Estados dos modais
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -64,6 +64,9 @@ export const useRegulacaoLogic = () => {
   const [modoRegulacao, setModoRegulacao] = useState<"normal" | "uti">("normal");
   const [processing, setProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Estado para eliminar flickering
+  const [actingOnPatientId, setActingOnPatientId] = useState<string | null>(null);
 
   /**
  * Cria ou atualiza um registro na coleção 'regulacoesRegulaFacil'.
@@ -235,9 +238,12 @@ const registrarHistoricoRegulacao = async (
     ];
 
     const pacientesRelevantes = pacientesComDadosCompletos.filter(p =>
-      p.setorOrigem === 'PS DECISÃO CIRURGICA' ||
-      p.setorOrigem === 'PS DECISÃO CLINICA' ||
-      p.setorOrigem === 'CC - RECUPERAÇÃO'
+      p.statusLeito === 'Ocupado' && 
+      (
+        p.setorOrigem === 'PS DECISÃO CIRURGICA' ||
+        p.setorOrigem === 'PS DECISÃO CLINICA' ||
+        p.setorOrigem === 'CC - RECUPERAÇÃO'
+      )
     );
 
     const especialidadesCompativeis: Record<string, string[]> = {
@@ -320,7 +326,7 @@ const registrarHistoricoRegulacao = async (
 
           const tempoA = new Date(a.dataInternacao).getTime();
           const tempoB = new Date(b.dataInternacao).getTime();
-          if (tempoA !== tempoB) return tempoA - tempoB;
+          if (tempoA !== tempoB) return tempoB - tempoA;
 
           const idadeA = calcularIdade(a.dataNascimento);
           const idadeB = calcularIdade(b.dataNascimento);
@@ -433,75 +439,81 @@ const registrarHistoricoRegulacao = async (
   };
 
   const handleConfirmarRegulacao = async (
-  leitoDestino: any,
-  observacoes: string,
-  motivoAlteracao?: string
-) => {
-    if (!userData) {
-        toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
-        return;
-    }
-    if (!pacienteParaRegular) return;
+    leitoDestino: any,
+    observacoes: string,
+    motivoAlteracao?: string
+  ) => {
+      if (!userData) {
+          toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
+          return;
+      }
+      if (!pacienteParaRegular) return;
 
-    let regulacaoIdParaHistorico: string | null = null;
-    let logMessage = '';
+      setActingOnPatientId(pacienteParaRegular.id);
 
-    // LÓGICA DE ALTERAÇÃO
-    if (isAlteracaoMode && pacienteParaRegular.regulacao?.regulacaoId) {
-        regulacaoIdParaHistorico = pacienteParaRegular.regulacao.regulacaoId;
-        const regAnterior = pacienteParaRegular.regulacao;
-        const leitoAntigo = leitos.find(l => l.codigoLeito === regAnterior.paraLeito);
-        if (leitoAntigo) {
-            await atualizarStatusLeito(leitoAntigo.id, "Vago");
+      try {
+        let regulacaoIdParaHistorico: string | null = null;
+        let logMessage = '';
+
+        // LÓGICA DE ALTERAÇÃO
+        if (isAlteracaoMode && pacienteParaRegular.regulacao?.regulacaoId) {
+            regulacaoIdParaHistorico = pacienteParaRegular.regulacao.regulacaoId;
+            const regAnterior = pacienteParaRegular.regulacao;
+            const leitoAntigo = leitos.find(l => l.codigoLeito === regAnterior.paraLeito);
+            if (leitoAntigo) {
+                await atualizarStatusLeito(leitoAntigo.id, "Vago");
+            }
+
+            logMessage = `Regulação de ${pacienteParaRegular.nomeCompleto} alterada de ${regAnterior.paraLeito} para ${leitoDestino.codigoLeito}. Motivo: ${motivoAlteracao}`;
+            await registrarHistoricoRegulacao(regulacaoIdParaHistorico, 'alterada', {
+                leitoDestino: leitoDestino,
+                detalhesLog: logMessage,
+            });
         }
 
-        logMessage = `Regulação de ${pacienteParaRegular.nomeCompleto} alterada de ${regAnterior.paraLeito} para ${leitoDestino.codigoLeito}. Motivo: ${motivoAlteracao}`;
-        await registrarHistoricoRegulacao(regulacaoIdParaHistorico, 'alterada', {
-            leitoDestino: leitoDestino,
-            detalhesLog: logMessage,
+        // LÓGICA DE CRIAÇÃO
+        if (!isAlteracaoMode) {
+            regulacaoIdParaHistorico = await registrarHistoricoRegulacao(null, 'criada', {
+                paciente: pacienteParaRegular,
+                leitoDestino: leitoDestino,
+                modoRegulacao: modoRegulacao,
+                detalhesLog: `Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`,
+            });
+        }
+
+        // ATUALIZAÇÃO DOS LEITOS
+        await atualizarStatusLeito(pacienteParaRegular.leitoId, "Regulado", {
+            pacienteId: pacienteParaRegular.id,
+            infoRegulacao: {
+                regulacaoId: regulacaoIdParaHistorico,
+                paraSetor: leitoDestino.setorNome,
+                paraLeito: leitoDestino.codigoLeito,
+                observacoes,
+            },
         });
-    }
-
-    // LÓGICA DE CRIAÇÃO
-    if (!isAlteracaoMode) {
-        regulacaoIdParaHistorico = await registrarHistoricoRegulacao(null, 'criada', {
-            paciente: pacienteParaRegular,
-            leitoDestino: leitoDestino,
-            modoRegulacao: modoRegulacao,
-            detalhesLog: `Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`,
+        await atualizarStatusLeito(leitoDestino.id, "Reservado", {
+            pacienteId: pacienteParaRegular.id,
         });
-    }
 
-    // ATUALIZAÇÃO DOS LEITOS
-    await atualizarStatusLeito(pacienteParaRegular.leitoId, "Regulado", {
-        pacienteId: pacienteParaRegular.id,
-        infoRegulacao: {
-            regulacaoId: regulacaoIdParaHistorico,
-            paraSetor: leitoDestino.setorNome,
-            paraLeito: leitoDestino.codigoLeito,
-            observacoes,
-        },
-    });
-    await atualizarStatusLeito(leitoDestino.id, "Reservado", {
-        pacienteId: pacienteParaRegular.id,
-    });
+        if (pacienteParaRegular.remanejarPaciente) {
+            const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteParaRegular.id);
+            await updateDoc(pacienteRef, {
+                remanejarPaciente: false,
+                motivoRemanejamento: null,
+                dataPedidoRemanejamento: null,
+            });
+        }
 
-    if (pacienteParaRegular.remanejarPaciente) {
-        const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteParaRegular.id);
-        await updateDoc(pacienteRef, {
-            remanejarPaciente: false,
-            motivoRemanejamento: null,
-            dataPedidoRemanejamento: null,
-        });
-    }
+        registrarLog(logMessage || `Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`, "Regulação de Leitos");
+        toast({ title: isAlteracaoMode ? "Alteração Confirmada!" : "Regulação Confirmada!", description: "A mensagem foi copiada para a área de transferência." });
 
-    registrarLog(logMessage || `Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`, "Regulação de Leitos");
-    toast({ title: isAlteracaoMode ? "Alteração Confirmada!" : "Regulação Confirmada!", description: "A mensagem foi copiada para a área de transferência." });
-
-    setRegulacaoModalOpen(false);
-    setPacienteParaRegular(null);
-    setIsAlteracaoMode(false);
-};
+        setRegulacaoModalOpen(false);
+        setPacienteParaRegular(null);
+        setIsAlteracaoMode(false);
+      } finally {
+        setActingOnPatientId(null);
+      }
+  };
 
   const handleConcluir = async (paciente: any) => {
     if (!userData) {
@@ -513,28 +525,34 @@ const registrarHistoricoRegulacao = async (
         return;
     }
 
-    const leitoDestino = leitos.find(l => l.codigoLeito === paciente.regulacao.paraLeito);
-    if (leitoDestino) {
-        const logMessage = `Regulação de ${paciente.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
-        
-        await registrarHistoricoRegulacao(paciente.regulacao.regulacaoId, 'concluida', {
-            detalhesLog: logMessage,
-        });
+    setActingOnPatientId(paciente.id);
 
-        await atualizarStatusLeito(paciente.leitoId, "Vago");
-        await atualizarStatusLeito(leitoDestino.id, "Ocupado", {
-            pacienteId: paciente.id,
-        });
-        const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
-        await updateDoc(pacienteRef, {
-            leitoId: leitoDestino.id,
-            setorId: leitoDestino.setorId,
-        });
+    try {
+      const leitoDestino = leitos.find(l => l.codigoLeito === paciente.regulacao.paraLeito);
+      if (leitoDestino) {
+          const logMessage = `Regulação de ${paciente.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
+          
+          await registrarHistoricoRegulacao(paciente.regulacao.regulacaoId, 'concluida', {
+              detalhesLog: logMessage,
+          });
 
-        registrarLog(logMessage, "Regulação de Leitos");
-        toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado." });
+          await atualizarStatusLeito(paciente.leitoId, "Vago");
+          await atualizarStatusLeito(leitoDestino.id, "Ocupado", {
+              pacienteId: paciente.id,
+          });
+          const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
+          await updateDoc(pacienteRef, {
+              leitoId: leitoDestino.id,
+              setorId: leitoDestino.setorId,
+          });
+
+          registrarLog(logMessage, "Regulação de Leitos");
+          toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado." });
+      }
+    } finally {
+      setActingOnPatientId(null);
     }
-};
+  };
 
   const handleAlterar = (paciente: any) => {
     setPacienteParaRegular(paciente);
@@ -554,32 +572,38 @@ const registrarHistoricoRegulacao = async (
     }
     if (!pacienteParaAcao) return;
 
-    const pacienteAtualizado = pacientesComDadosCompletos.find(p => p.id === pacienteParaAcao.id);
-    if (!pacienteAtualizado?.regulacao?.regulacaoId) {
-        toast({ title: "Erro", description: "Não foi possível encontrar o ID da regulação para cancelar.", variant: "destructive" });
-        return;
+    setActingOnPatientId(pacienteParaAcao.id);
+
+    try {
+      const pacienteAtualizado = pacientesComDadosCompletos.find(p => p.id === pacienteParaAcao.id);
+      if (!pacienteAtualizado?.regulacao?.regulacaoId) {
+          toast({ title: "Erro", description: "Não foi possível encontrar o ID da regulação para cancelar.", variant: "destructive" });
+          return;
+      }
+
+      const regulacaoId = pacienteAtualizado.regulacao.regulacaoId;
+      const leitoDestino = leitos.find(l => l.codigoLeito === pacienteAtualizado.regulacao.paraLeito)!;
+      
+      const logMessage = `Cancelou regulação de ${pacienteParaAcao.nomeCompleto} para o leito ${leitoDestino.codigoLeito}. Motivo: ${motivo}`;
+
+      await registrarHistoricoRegulacao(regulacaoId, 'cancelada', {
+          motivo: motivo,
+          detalhesLog: logMessage,
+      });
+
+      await atualizarStatusLeito(pacienteParaAcao.leitoId, "Ocupado", {
+          pacienteId: pacienteParaAcao.id,
+      });
+      await atualizarStatusLeito(leitoDestino.id, "Vago");
+
+      registrarLog(logMessage, "Regulação de Leitos");
+      toast({ title: "Cancelado!", description: "A regulação foi desfeita com sucesso." });
+      setCancelamentoModalOpen(false);
+      setPacienteParaAcao(null);
+    } finally {
+      setActingOnPatientId(null);
     }
-
-    const regulacaoId = pacienteAtualizado.regulacao.regulacaoId;
-    const leitoDestino = leitos.find(l => l.codigoLeito === pacienteAtualizado.regulacao.paraLeito)!;
-    
-    const logMessage = `Cancelou regulação de ${pacienteParaAcao.nomeCompleto} para o leito ${leitoDestino.codigoLeito}. Motivo: ${motivo}`;
-
-    await registrarHistoricoRegulacao(regulacaoId, 'cancelada', {
-        motivo: motivo,
-        detalhesLog: logMessage,
-    });
-
-    await atualizarStatusLeito(pacienteParaAcao.leitoId, "Ocupado", {
-        pacienteId: pacienteParaAcao.id,
-    });
-    await atualizarStatusLeito(leitoDestino.id, "Vago");
-
-    registrarLog(logMessage, "Regulação de Leitos");
-    toast({ title: "Cancelado!", description: "A regulação foi desfeita com sucesso." });
-    setCancelamentoModalOpen(false);
-    setPacienteParaAcao(null);
-};
+  };
 
   const cancelarPedidoUTI = async (paciente: Paciente) => {
     const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
@@ -1069,8 +1093,13 @@ const registrarHistoricoRegulacao = async (
     setSugestoesModalOpen(true);
   };
 
-  // Integração com alertas de isolamento
+  // Integração com alertas de isolamento - COM GUARDA DE CARREGAMENTO
   useEffect(() => {
+    // GUARDA DE CARREGAMENTO
+    if (loading || alertasLoading) {
+      return;
+    }
+
     const mapaRemanejamentoContaminacao = new Map();
     todosPacientesPendentes.forEach((p) => {
       if (
@@ -1103,7 +1132,7 @@ const registrarHistoricoRegulacao = async (
         cancelarPedidoRemanejamento(paciente.setorId, paciente.leitoId);
       }
     });
-  }, [alertas, todosPacientesPendentes, solicitarRemanejamento, cancelarPedidoRemanejamento]);
+  }, [alertas, todosPacientesPendentes, loading, alertasLoading, solicitarRemanejamento, cancelarPedidoRemanejamento]);
 
   const loading = setoresLoading || leitosLoading || pacientesLoading;
 
@@ -1146,6 +1175,7 @@ const registrarHistoricoRegulacao = async (
       validationResult,
       syncSummary,
       modoRegulacao,
+      actingOnPatientId,
     },
 
     // Handlers
