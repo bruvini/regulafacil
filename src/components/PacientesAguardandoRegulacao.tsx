@@ -45,10 +45,11 @@ export const PacientesAguardandoRegulacao = ({
           <ListaPacientesPendentes
             titulo="PS - DECISÃO CIRÚRGICA"
             pacientes={listas.decisaoCirurgica}
-            onRegular={handlers.handleOpenRegulacaoModal}
-            onAltaRecuperacao={handlers.altaAposRecuperacao}
-            sortConfig={filtrosProps.sortConfig}
-            actingOnPatientId={actingOnPatientId || null}
+            onRegularClick={handlers.handleOpenRegulacaoModal}
+            onAlta={handlers.altaAposRecuperacao}
+            onConcluir={handlers.handleConcluir}
+            onAlterar={handlers.handleAlterar}
+            onCancelar={handlers.handleCancelar}
           />
         )}
 
@@ -57,10 +58,11 @@ export const PacientesAguardandoRegulacao = ({
           <ListaPacientesPendentes
             titulo="PS - DECISÃO CLÍNICA"
             pacientes={listas.decisaoClinica}
-            onRegular={handlers.handleOpenRegulacaoModal}
-            onAltaRecuperacao={handlers.altaAposRecuperacao}
-            sortConfig={filtrosProps.sortConfig}
-            actingOnPatientId={actingOnPatientId || null}
+            onRegularClick={handlers.handleOpenRegulacaoModal}
+            onAlta={handlers.altaAposRecuperacao}
+            onConcluir={handlers.handleConcluir}
+            onAlterar={handlers.handleAlterar}
+            onCancelar={handlers.handleCancelar}
           />
         )}
 
@@ -69,10 +71,11 @@ export const PacientesAguardandoRegulacao = ({
           <ListaPacientesPendentes
             titulo="CC - RECUPERAÇÃO"
             pacientes={listas.recuperacaoCirurgica}
-            onRegular={handlers.handleOpenRegulacaoModal}
-            onAltaRecuperacao={handlers.altaAposRecuperacao}
-            sortConfig={filtrosProps.sortConfig}
-            actingOnPatientId={actingOnPatientId || null}
+            onRegularClick={handlers.handleOpenRegulacaoModal}
+            onAlta={handlers.altaAposRecuperacao}
+            onConcluir={handlers.handleConcluir}
+            onAlterar={handlers.handleAlterar}
+            onCancelar={handlers.handleCancelar}
           />
         )}
 
