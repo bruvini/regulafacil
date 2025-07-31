@@ -1,3 +1,4 @@
+
 import { Observacao } from './observacao';
 
 export interface AltaLeitoInfo {
@@ -116,15 +117,6 @@ export interface SolicitacaoCirurgicaFormData {
   tipoLeitoNecessario: 'Enfermaria' | 'UTI';
   dataPrevistaInternacao: Date;
   dataPrevisaCirurgia: Date;
-}
-
-// Tipo padronizado que será usado por todos os componentes - alinhado com LeitoExtendido
-export interface LeitoEnriquecido extends Leito {
-  statusLeito: HistoricoLeito['statusLeito'];
-  dataAtualizacaoStatus?: string;
-  motivoBloqueio?: string;
-  regulacao?: InfoRegulacao;
-  dadosPaciente?: Paciente | null;
 }
 
 // Alias for backward compatibility

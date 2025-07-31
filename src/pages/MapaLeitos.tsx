@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,7 +11,6 @@ import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
 import { IndicadoresGerais } from '@/components/IndicadoresGerais';
 import { LimpezaPacientesModal } from '@/components/modals/LimpezaPacientesModal';
 import { AltaNoLeitoModal } from '@/components/modals/AltaNoLeitoModal';
-import { AdicionarPacienteModal } from '@/components/modals/AdicionarPacienteModal';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -23,11 +23,20 @@ import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
-import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido } from '@/types/hospital';
-import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, addDoc, collection } from 'firebase/firestore';
+import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo } from '@/types/hospital';
+import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Observacao } from '@/types/observacao';
+
+// Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
+export type LeitoEnriquecido = Leito & {
+  statusLeito: HistoricoMovimentacao['statusLeito'];
+  dataAtualizacaoStatus?: string;
+  motivoBloqueio?: string;
+  regulacao?: any;
+  dadosPaciente?: Paciente | null;
+};
 
 const MapaLeitos = () => {
   // --- Estados de Modais e Ações ---
@@ -38,26 +47,18 @@ const MapaLeitos = () => {
   const [obsModalOpen, setObsModalOpen] = useState(false);
   const [limpezaModalOpen, setLimpezaModalOpen] = useState(false);
   const [altaNoLeitoModalOpen, setAltaNoLeitoModalOpen] = useState(false);
-  const [adicionarPacienteModalOpen, setAdicionarPacienteModalOpen] = useState(false);
-  const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
   const [pacienteParaAltaNoLeito, setPacienteParaAltaNoLeito] = useState<LeitoEnriquecido | null>(null);
-  const [leitoParaAdicionarPaciente, setLeitoParaAdicionarPaciente] = useState<LeitoEnriquecido | null>(null);
   const { toast } = useToast();
   const { userData } = useAuth();
   const { registrarLog } = useAuditoria();
 
   // --- Hooks de Dados (Nova Arquitetura) ---
-  const { setores, loading: setoresLoading, criarSetor } = useSetores();
+  const { setores, loading: setoresLoading } = useSetores();
   const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
   const { pacientes, loading: pacientesLoading } = usePacientes();
   const loading = setoresLoading || leitosLoading || pacientesLoading;
-
-  // Scroll to top on component mount
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
 
   // --- Lógica Central de Combinação de Dados ---
   const dadosCombinados = useMemo(() => {
@@ -74,7 +75,7 @@ const MapaLeitos = () => {
         statusLeito: historicoRecente.statusLeito,
         dataAtualizacaoStatus: historicoRecente.dataAtualizacaoStatus,
         motivoBloqueio: historicoRecente.motivoBloqueio,
-        regulacao: leito.infoRegulacao,
+        regulacao: historicoRecente.infoRegulacao,
         dadosPaciente: pacienteId ? mapaPacientes.get(pacienteId) : null
       };
     });
@@ -98,65 +99,6 @@ const MapaLeitos = () => {
 
   // Verificar se o usuário é administrador
   const isAdmin = userData?.tipoAcesso === 'Administrador';
-
-  // Função para abrir modal de adicionar paciente
-  const handleAbrirAdicionarPacienteModal = (leito: LeitoEnriquecido) => {
-    setLeitoParaAdicionarPaciente(leito);
-    setAdicionarPacienteModalOpen(true);
-  };
-
-  // Função para confirmar adição de paciente
-  const handleConfirmarAdicaoPaciente = async (formData: any) => {
-    if (!leitoParaAdicionarPaciente || !userData) return;
-
-    try {
-      // Criar novo paciente
-      const novoPacienteRef = doc(collection(db, 'pacientesRegulaFacil'));
-      const novoPaciente = {
-        leitoId: leitoParaAdicionarPaciente.id,
-        setorId: leitoParaAdicionarPaciente.setorId,
-        nomeCompleto: formData.nomeCompleto,
-        dataNascimento: formData.dataNascimento.toISOString().split('T')[0],
-        sexoPaciente: formData.sexoPaciente,
-        dataInternacao: formData.dataInternacao.toISOString(),
-        especialidadePaciente: formData.especialidadePaciente
-      };
-
-      await addDoc(collection(db, 'pacientesRegulaFacil'), novoPaciente);
-
-      // Atualizar status do leito para ocupado
-      await atualizarStatusLeito(leitoParaAdicionarPaciente.id, 'Ocupado', {
-        pacienteId: novoPacienteRef.id
-      });
-
-      // Encontrar o setor para o log
-      const setor = setores.find(s => s.id === leitoParaAdicionarPaciente.setorId);
-      const setorNome = setor?.nomeSetor || 'N/A';
-
-      // Registrar log de auditoria
-      registrarLog(
-        `${userData.nomeCompleto} adicionou manualmente o paciente ${formData.nomeCompleto} ao leito ${leitoParaAdicionarPaciente.codigoLeito} do setor ${setorNome}.`,
-        'Mapa de Leitos'
-      );
-
-      toast({
-        title: "Sucesso!",
-        description: `Paciente ${formData.nomeCompleto} adicionado ao leito ${leitoParaAdicionarPaciente.codigoLeito}.`
-      });
-
-      // Fechar modal e limpar estado
-      setAdicionarPacienteModalOpen(false);
-      setLeitoParaAdicionarPaciente(null);
-
-    } catch (error) {
-      console.error('Erro ao adicionar paciente:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível adicionar o paciente.",
-        variant: "destructive"
-      });
-    }
-  };
 
   // --- OBJETO CENTRALIZADO DE AÇÕES ---
   const leitoActions = {
@@ -264,9 +206,7 @@ const MapaLeitos = () => {
         console.error('Erro ao enviar para higienização:', error);
         toast({ title: "Erro", description: "Erro ao enviar para higienização.", variant: "destructive" });
       }
-    },
-
-    onAdicionarPaciente: handleAbrirAdicionarPacienteModal
+    }
   };
 
   const handleConfirmarMovimentacao = async (leitoDestino: Leito) => {
@@ -447,13 +387,7 @@ const MapaLeitos = () => {
               {loading ? (
                 <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
               ) : filteredSetores.length > 0 ? (
-                <Accordion 
-                  type="single" 
-                  collapsible 
-                  className="w-full space-y-2"
-                  value={accordionValue}
-                  onValueChange={setAccordionValue}
-                >
+                <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={filteredSetores[0]?.id}>
                   {filteredSetores.map((setor) => {
                     // Calcular indicadores do setor aqui
                     const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
@@ -513,15 +447,6 @@ const MapaLeitos = () => {
         onConfirm={handleConfirmarAltaNoLeito}
       />
       <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
-      <AdicionarPacienteModal
-        open={adicionarPacienteModalOpen}
-        onOpenChange={setAdicionarPacienteModalOpen}
-        leitoInfo={leitoParaAdicionarPaciente ? {
-          codigoLeito: leitoParaAdicionarPaciente.codigoLeito,
-          setorNome: setores.find(s => s.id === leitoParaAdicionarPaciente.setorId)?.nomeSetor || 'N/A'
-        } : null}
-        onConfirm={handleConfirmarAdicaoPaciente}
-      />
     </div>
   );
 };

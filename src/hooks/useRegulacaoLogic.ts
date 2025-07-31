@@ -1138,40 +1138,6 @@ const registrarHistoricoRegulacao = async (
     });
   }, [alertas, todosPacientesPendentes, loading, alertasLoading, solicitarRemanejamento, cancelarPedidoRemanejamento]);
 
-  // Nova função para confirmar alta de paciente aguardando regulação
-  const handleConfirmarAltaAguardando = async (paciente: any) => {
-    if (!userData) {
-      toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
-      return;
-    }
-
-    try {
-      // Deletar o paciente
-      await deleteDoc(doc(db, 'pacientesRegulaFacil', paciente.id));
-      
-      // Atualizar leito para higienização
-      await atualizarStatusLeito(paciente.leitoId, 'Higienizacao');
-      
-      // Registrar log de auditoria
-      registrarLog(
-        `Alta para o paciente ${paciente.nomeCompleto} que estava no leito ${paciente.leitoCodigo}.`,
-        'Regulação de Leitos'
-      );
-      
-      toast({ 
-        title: "Sucesso!", 
-        description: `Alta registrada para ${paciente.nomeCompleto}.` 
-      });
-    } catch (error) {
-      console.error('Erro ao dar alta para paciente:', error);
-      toast({ 
-        title: "Erro", 
-        description: "Não foi possível registrar a alta.", 
-        variant: "destructive" 
-      });
-    }
-  };
-
   return {
     // Estados de loading
     loading,
@@ -1234,7 +1200,6 @@ const registrarHistoricoRegulacao = async (
       handleConfirmSync,
       handlePassagemPlantao,
       handleAbrirSugestoes,
-      handleConfirmarAltaAguardando,
       setImportModalOpen,
       setRegulacaoModalOpen,
       setCancelamentoModalOpen,
