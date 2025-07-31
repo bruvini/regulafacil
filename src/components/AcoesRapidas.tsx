@@ -82,22 +82,21 @@ export const AcoesRapidas = ({
               </TooltipContent>
             </Tooltip>
 
-            {panoramaDisponivel && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onPanoramaClick}
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Panorama Atual</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+            {/* Botão Panorama sempre visível quando showAllButtons está ativo */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={onPanoramaClick}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Panorama Atual</p>
+              </TooltipContent>
+            </Tooltip>
           </>
         )}
       </TooltipProvider>

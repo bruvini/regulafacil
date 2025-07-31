@@ -1,452 +1,376 @@
+import { useState, useEffect, useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { useSetores } from "@/hooks/useSetores";
+import { useLeitos } from "@/hooks/useLeitos";
+import { usePacientes } from "@/hooks/usePacientes";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast";
+import { useAuditoria } from "@/hooks/useAuditoria";
+import { Search, Users, BedDouble, AlertTriangle, RefreshCcw, Plus } from "lucide-react";
 
-import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import SetorCard from '@/components/SetorCard';
-import GerenciamentoModal from '@/components/modals/GerenciamentoModal';
-import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
-import { IndicadoresGerais } from '@/components/IndicadoresGerais';
-import { LimpezaPacientesModal } from '@/components/modals/LimpezaPacientesModal';
-import { AltaNoLeitoModal } from '@/components/modals/AltaNoLeitoModal';
-import { useSetores } from '@/hooks/useSetores';
-import { useLeitos } from '@/hooks/useLeitos';
-import { usePacientes } from '@/hooks/usePacientes';
-import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
-import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
-import { useAuth } from '@/hooks/useAuth';
-import { useAuditoria } from '@/hooks/useAuditoria';
-import { Settings, ShieldQuestion, ClipboardList, Trash2 } from 'lucide-react';
-import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
-import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
-import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
-import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
-import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo } from '@/types/hospital';
-import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { Observacao } from '@/types/observacao';
-
-// Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
-export type LeitoEnriquecido = Leito & {
-  statusLeito: HistoricoMovimentacao['statusLeito'];
-  dataAtualizacaoStatus?: string;
-  motivoBloqueio?: string;
-  regulacao?: any;
-  dadosPaciente?: Paciente | null;
-};
+interface Setor {
+  id: string;
+  nomeSetor: string;
+  siglaSetor: string;
+  totalLeitos: number;
+  leitosOcupados: number;
+  leitosDisponiveis: number;
+  leitosBloqueados: number;
+  leitosHigienizacao: number;
+  leitosPCP: number;
+  observacoes?: string;
+}
 
 const MapaLeitos = () => {
-  // --- Estados de Modais e Ações ---
-  const [modalOpen, setModalOpen] = useState(false);
-  const [movimentacaoModalOpen, setMovimentacaoModalOpen] = useState(false);
-  const [relatorioIsolamentoOpen, setRelatorioIsolamentoOpen] = useState(false);
-  const [relatorioVagosOpen, setRelatorioVagosOpen] = useState(false);
-  const [obsModalOpen, setObsModalOpen] = useState(false);
-  const [limpezaModalOpen, setLimpezaModalOpen] = useState(false);
-  const [altaNoLeitoModalOpen, setAltaNoLeitoModalOpen] = useState(false);
-  const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
-  const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
-  const [pacienteParaAltaNoLeito, setPacienteParaAltaNoLeito] = useState<LeitoEnriquecido | null>(null);
-  const { toast } = useToast();
-  const { userData } = useAuth();
-  const { registrarLog } = useAuditoria();
-
-  // --- Hooks de Dados (Nova Arquitetura) ---
-  const { setores, loading: setoresLoading } = useSetores();
-  const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
+  const { setores, loading: setoresLoading, adicionarSetor } = useSetores();
+  const { leitos, loading: leitosLoading, adicionarLeito, atualizarStatusLeito } = useLeitos();
   const { pacientes, loading: pacientesLoading } = usePacientes();
+  const { registrarLog } = useAuditoria();
+  const { toast } = useToast();
+
   const loading = setoresLoading || leitosLoading || pacientesLoading;
 
-  // --- Lógica Central de Combinação de Dados ---
-  const dadosCombinados = useMemo(() => {
-    if (loading) {
-      return { setoresEnriquecidos: [], todosLeitosEnriquecidos: [] };
-    }
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showOnlyOccupied, setShowOnlyOccupied] = useState(false);
+  const [showOnlyPCP, setShowOnlyPCP] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
 
-    const mapaPacientes = new Map(pacientes.map(p => [p.id, p]));
-    const todosLeitosEnriquecidos: LeitoEnriquecido[] = leitos.map(leito => {
-      const historicoRecente = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
-      const pacienteId = historicoRecente?.pacienteId;
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  const filteredSetores = useMemo(() => {
+    if (!setores) return [];
+
+    return setores.filter(setor => {
+      const matchesSearchTerm = setor.nomeSetor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                setor.siglaSetor.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearchTerm;
+    });
+  }, [setores, searchTerm]);
+
+  const leitosEnriquecidos = useMemo(() => {
+    if (leitosLoading || pacientesLoading) return [];
+    const mapaPacientes = new Map(pacientes.map(p => [p.leitoId, p]));
+    return leitos.map(leito => {
+        const historicoRecente = leito.historicoMovimentacao[leito.historicoMovimentacao.length - 1];
+        const pacienteId = historicoRecente?.pacienteId;
+        const paciente = pacienteId ? pacientes.find(p => p.id === pacienteId) : null;
+        return {
+            ...leito,
+            statusLeito: historicoRecente?.statusLeito || 'Vago',
+            dadosPaciente: paciente
+        };
+    });
+}, [leitos, pacientes, leitosLoading, pacientesLoading]);
+
+  const setoresComLeitos = useMemo(() => {
+    if (setoresLoading || leitosLoading) return [];
+
+    return filteredSetores.map(setor => {
+      const leitosDoSetor = leitosEnriquecidos.filter(leito => leito.setorId === setor.id);
+      const leitosFiltrados = leitosDoSetor.filter(leito => {
+        if (showOnlyOccupied && leito.statusLeito !== 'Ocupado') return false;
+        if (showOnlyPCP && !leito.leitoPCP) return false;
+        return true;
+      });
+
+      const totalLeitos = leitosDoSetor.length;
+      const leitosOcupados = leitosDoSetor.filter(leito => leito.statusLeito === 'Ocupado').length;
+      const leitosDisponiveis = leitosDoSetor.filter(leito => leito.statusLeito === 'Vago').length;
+      const leitosBloqueados = leitosDoSetor.filter(leito => leito.statusLeito === 'Bloqueado').length;
+      const leitosHigienizacao = leitosDoSetor.filter(leito => leito.statusLeito === 'Higienizacao').length;
+      const leitosPCP = leitosDoSetor.filter(leito => leito.leitoPCP).length;
+
       return {
-        ...leito,
-        statusLeito: historicoRecente.statusLeito,
-        dataAtualizacaoStatus: historicoRecente.dataAtualizacaoStatus,
-        motivoBloqueio: historicoRecente.motivoBloqueio,
-        regulacao: historicoRecente.infoRegulacao,
-        dadosPaciente: pacienteId ? mapaPacientes.get(pacienteId) : null
+        ...setor,
+        leitos: leitosFiltrados,
+        totalLeitos,
+        leitosOcupados,
+        leitosDisponiveis,
+        leitosBloqueados,
+        leitosHigienizacao,
+        leitosPCP
       };
     });
+  }, [filteredSetores, leitosEnriquecidos, showOnlyOccupied, showOnlyPCP, setoresLoading, leitosLoading]);
 
-    const mapaLeitosPorSetor = todosLeitosEnriquecidos.reduce((acc, leito) => {
-      (acc[leito.setorId] = acc[leito.setorId] || []).push(leito);
-      return acc;
-    }, {} as Record<string, LeitoEnriquecido[]>);
+  const [novoSetor, setNovoSetor] = useState({
+    nomeSetor: '',
+    siglaSetor: '',
+  });
 
-    const setoresEnriquecidos = setores.map(setor => ({
-      ...setor,
-      leitos: mapaLeitosPorSetor[setor.id!] || []
-    }));
+  const [novoLeito, setNovoLeito] = useState({
+    setorId: '',
+    codigoLeito: '',
+    leitoPCP: false,
+    leitoIsolamento: false,
+  });
 
-    return { setoresEnriquecidos, todosLeitosEnriquecidos };
-  }, [setores, leitos, pacientes, loading]);
+  const [isSetorModalOpen, setIsSetorModalOpen] = useState(false);
+  const [isLeitoModalOpen, setIsLeitoModalOpen] = useState(false);
 
-  const { setoresEnriquecidos } = dadosCombinados;
-  const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
-  const { filteredSetores, filtrosAvancados, setFiltrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
-
-  // Verificar se o usuário é administrador
-  const isAdmin = userData?.tipoAcesso === 'Administrador';
-
-  // --- OBJETO CENTRALIZADO DE AÇÕES ---
-  const leitoActions = {
-    onMoverPaciente: (leito: LeitoEnriquecido) => {
-      setPacienteParaMover({
-        dados: leito.dadosPaciente,
-        leitoOrigemId: leito.id,
-        setorOrigemId: leito.setorId,
-      });
-      setMovimentacaoModalOpen(true);
-    },
-
-    onAbrirObs: (leito: LeitoEnriquecido) => {
-      setPacienteParaObs(leito);
-      setObsModalOpen(true);
-    },
-
-    onAltaNoLeito: (leito: LeitoEnriquecido) => {
-      setPacienteParaAltaNoLeito(leito);
-      setAltaNoLeitoModalOpen(true);
-    },
-
-    onLiberarLeito: async (leitoId: string, pacienteId: string) => {
-      await deleteDoc(doc(db, 'pacientesRegulaFacil', pacienteId));
-      await atualizarStatusLeito(leitoId, 'Higienizacao');
-      toast({ title: "Sucesso!", description: "Paciente recebeu alta." });
-    },
-
-    onAtualizarStatus: atualizarStatusLeito,
-
-    onSolicitarUTI: async (pacienteId: string) => {
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      await updateDoc(pacienteRef, { 
-        aguardaUTI: true, 
-        dataPedidoUTI: new Date().toISOString()
-      });
-      toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
-    },
-
-    onSolicitarRemanejamento: async (pacienteId: string, motivo: string) => {
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      await updateDoc(pacienteRef, { 
-        remanejarPaciente: true, 
-        motivoRemanejamento: motivo,
-        dataPedidoRemanejamento: new Date().toISOString()
-      });
-      toast({ title: "Sucesso!", description: "Solicitação de remanejamento registrada." });
-    },
-
-    onTransferirPaciente: async (pacienteId: string, destino: string, motivo: string) => {
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      await updateDoc(pacienteRef, { 
-        transferirPaciente: true, 
-        destinoTransferencia: destino, 
-        motivoTransferencia: motivo,
-        dataTransferencia: new Date().toISOString()
-      });
-      toast({ title: "Sucesso!", description: "Solicitação de transferência externa registrada." });
-    },
-
-    onCancelarReserva: async (leitoId: string) => {
-      try {
-        await atualizarStatusLeito(leitoId, 'Vago');
-        toast({ title: "Sucesso!", description: "Reserva cancelada." });
-      } catch (error) {
-        console.error('Erro ao cancelar reserva:', error);
-        toast({ title: "Erro", description: "Erro ao cancelar reserva.", variant: "destructive" });
-      }
-    },
-
-    onConcluirTransferencia: async (leito: LeitoEnriquecido) => {
-      try {
-        await atualizarStatusLeito(leito.id, 'Ocupado');
-        toast({ title: "Sucesso!", description: "Transferência concluída." });
-      } catch (error) {
-        console.error('Erro ao concluir transferência:', error);
-        toast({ title: "Erro", description: "Erro ao concluir transferência.", variant: "destructive" });
-      }
-    },
-
-    onToggleProvavelAlta: async (pacienteId: string, valorAtual: boolean) => {
-      await updateDoc(doc(db, 'pacientesRegulaFacil', pacienteId), { provavelAlta: !valorAtual });
-    },
-
-    onFinalizarHigienizacao: async (leitoId: string) => {
-      await atualizarStatusLeito(leitoId, 'Vago');
-      toast({ title: "Sucesso!", description: "Leito liberado e pronto para uso." });
-    },
-
-    onBloquearLeito: async (leitoId: string, motivo: string) => {
-      try {
-        await atualizarStatusLeito(leitoId, 'Bloqueado', { motivoBloqueio: motivo });
-        toast({ title: "Sucesso!", description: "Leito bloqueado." });
-      } catch (error) {
-        console.error('Erro ao bloquear leito:', error);
-        toast({ title: "Erro", description: "Erro ao bloquear leito.", variant: "destructive" });
-      }
-    },
-
-    onEnviarParaHigienizacao: async (leitoId: string) => {
-      try {
-        await atualizarStatusLeito(leitoId, 'Higienizacao');
-        toast({ title: "Sucesso!", description: "Leito enviado para higienização." });
-      } catch (error) {
-        console.error('Erro ao enviar para higienização:', error);
-        toast({ title: "Erro", description: "Erro ao enviar para higienização.", variant: "destructive" });
-      }
+  const handleAdicionarSetor = async () => {
+    if (novoSetor.nomeSetor && novoSetor.siglaSetor) {
+      await adicionarSetor(novoSetor.nomeSetor, novoSetor.siglaSetor);
+      setNovoSetor({ nomeSetor: '', siglaSetor: '' });
+      setIsSetorModalOpen(false);
+      registrarLog(`Adicionou novo setor: ${novoSetor.nomeSetor}`, "Mapa de Leitos");
+      toast({ title: "Sucesso!", description: "Setor adicionado com sucesso." });
     }
   };
 
-  const handleConfirmarMovimentacao = async (leitoDestino: Leito) => {
-    if (pacienteParaMover && leitoDestino) {
-        await atualizarStatusLeito(pacienteParaMover.leitoOrigemId, 'Higienizacao');
-        await atualizarStatusLeito(leitoDestino.id, 'Ocupado', { pacienteId: pacienteParaMover.dados.id });
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaMover.dados.id);
-        await updateDoc(pacienteRef, { leitoId: leitoDestino.id, setorId: leitoDestino.setorId });
-        toast({ title: "Sucesso!", description: "Paciente movido com sucesso." });
+  const handleAdicionarLeito = async () => {
+    if (novoLeito.setorId && novoLeito.codigoLeito) {
+      await adicionarLeito(novoLeito.setorId, novoLeito.codigoLeito, novoLeito.leitoPCP, novoLeito.leitoIsolamento);
+      setNovoLeito({ setorId: '', codigoLeito: '', leitoPCP: false, leitoIsolamento: false });
+      setIsLeitoModalOpen(false);
+      registrarLog(`Adicionou novo leito: ${novoLeito.codigoLeito} no setor ${novoLeito.setorId}`, "Mapa de Leitos");
+      toast({ title: "Sucesso!", description: "Leito adicionado com sucesso." });
     }
-    setMovimentacaoModalOpen(false);
-    setPacienteParaMover(null);
-  };
-  
-  const handleConfirmObs = async (obs: string) => {
-    if (pacienteParaObs?.dadosPaciente && userData) {
-      try {
-        const novaObservacao = {
-          id: crypto.randomUUID(),
-          texto: obs,
-          timestamp: new Date().toISOString(),
-          usuario: userData.nomeCompleto
-        };
-
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaObs.dadosPaciente.id);
-        await updateDoc(pacienteRef, { 
-          obsPaciente: arrayUnion(novaObservacao)
-        });
-        toast({ title: "Sucesso!", description: "Observação adicionada." });
-      } catch (error) {
-        console.error('Erro ao adicionar observação:', error);
-        toast({ 
-          title: "Erro", 
-          description: "Erro ao adicionar observação.", 
-          variant: "destructive" 
-        });
-      }
-    }
-    setObsModalOpen(false);
-  };
-
-  const handleDeleteObs = async (observacaoId: string) => {
-    if (pacienteParaObs?.dadosPaciente && userData) {
-      try {
-        const observacoes = pacienteParaObs.dadosPaciente.obsPaciente || [];
-        const observacaoParaRemover = observacoes.find(obs => obs.id === observacaoId);
-        
-        if (!observacaoParaRemover) return;
-
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaObs.dadosPaciente.id);
-        await updateDoc(pacienteRef, {
-          obsPaciente: arrayRemove(observacaoParaRemover)
-        });
-
-        registrarLog(`Excluiu observação do paciente ${pacienteParaObs.dadosPaciente.nomeCompleto}.`, 'Mapa de Leitos');
-        toast({ title: "Sucesso!", description: "Observação removida." });
-      } catch (error) {
-        console.error('Erro ao remover observação:', error);
-        toast({ 
-          title: "Erro", 
-          description: "Erro ao remover observação.", 
-          variant: "destructive" 
-        });
-      }
-    }
-  };
-
-  const handleConfirmarAltaNoLeito = async (pendencia: string) => {
-    if (pacienteParaAltaNoLeito?.dadosPaciente && userData) {
-      try {
-        const altaLeitoInfo: AltaLeitoInfo = {
-          status: true,
-          pendencia,
-          timestamp: new Date().toISOString(),
-          usuario: userData.nomeCompleto
-        };
-
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaAltaNoLeito.dadosPaciente.id);
-        await updateDoc(pacienteRef, { 
-          altaNoLeito: altaLeitoInfo
-        });
-
-        registrarLog(`Registrou alta no leito para o paciente ${pacienteParaAltaNoLeito.dadosPaciente.nomeCompleto}.`, 'Mapa de Leitos');
-        toast({ title: "Sucesso!", description: "Alta no leito registrada com sucesso." });
-      } catch (error) {
-        console.error('Erro ao registrar alta no leito:', error);
-        toast({ 
-          title: "Erro", 
-          description: "Erro ao registrar alta no leito.", 
-          variant: "destructive" 
-        });
-      }
-    }
-    setAltaNoLeitoModalOpen(false);
-    setPacienteParaAltaNoLeito(null);
   };
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col space-y-8">
+      <div className="p-4 sm:p-6 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
           <header className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
-              <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
+              <p className="text-muted-foreground">Visão geral e gerenciamento dos leitos.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Novo Setor
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Novo Setor</DialogTitle>
+                    <DialogDescription>
+                      Preencha os campos abaixo para adicionar um novo setor ao mapa de leitos.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="nome" className="text-right">
+                        Nome
+                      </Label>
+                      <Input id="nome" value={novoSetor.nomeSetor} onChange={(e) => setNovoSetor({ ...novoSetor, nomeSetor: e.target.value })} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="sigla" className="text-right">
+                        Sigla
+                      </Label>
+                      <Input id="sigla" value={novoSetor.siglaSetor} onChange={(e) => setNovoSetor({ ...novoSetor, siglaSetor: e.target.value })} className="col-span-3" />
+                    </div>
+                  </div>
+                  <Button onClick={handleAdicionarSetor}>Adicionar Setor</Button>
+                </DialogContent>
+              </Dialog>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Novo Leito
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Novo Leito</DialogTitle>
+                    <DialogDescription>
+                      Preencha os campos abaixo para adicionar um novo leito ao mapa.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="setor" className="text-right">
+                        Setor
+                      </Label>
+                      <select
+                        id="setor"
+                        className="col-span-3 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={novoLeito.setorId}
+                        onChange={(e) => setNovoLeito({ ...novoLeito, setorId: e.target.value })}
+                      >
+                        <option value="">Selecione um setor</option>
+                        {setores?.map(setor => (
+                          <option key={setor.id} value={setor.id}>{setor.nomeSetor}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="codigo" className="text-right">
+                        Código
+                      </Label>
+                      <Input id="codigo" value={novoLeito.codigoLeito} onChange={(e) => setNovoLeito({ ...novoLeito, codigoLeito: e.target.value })} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="pcp" className="text-right">
+                        Leito PCP
+                      </Label>
+                      <Checkbox id="pcp" checked={novoLeito.leitoPCP} onCheckedChange={(checked) => setNovoLeito({ ...novoLeito, leitoPCP: checked || false })} className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="isolamento" className="text-right">
+                        Leito Isolamento
+                      </Label>
+                      <Checkbox id="isolamento" checked={novoLeito.leitoIsolamento} onCheckedChange={(checked) => setNovoLeito({ ...novoLeito, leitoIsolamento: checked || false })} className="col-span-3" />
+                    </div>
+                  </div>
+                  <Button onClick={handleAdicionarLeito}>Adicionar Leito</Button>
+                </DialogContent>
+              </Dialog>
             </div>
           </header>
 
-          {loading ? (
-             <Card className="shadow-card border border-border/50">
-              <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
-              <CardContent><div className="space-y-4"><Skeleton className="h-8 w-full" /></div></CardContent>
-            </Card>
-          ) : (
-            <IndicadoresGerais 
-              contagem={contagemPorStatus} 
-              taxa={taxaOcupacao} 
-              tempos={tempoMedioStatus}
-              nivelPCP={nivelPCP}
-            />
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <FiltrosMapaLeitos 
-                setores={setores} 
-                filtrosAvancados={filtrosAvancados}
-                setFiltrosAvancados={setFiltrosAvancados}
-                {...filtrosProps} 
-              />
+          {/* Filtros */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="col-span-1 md:col-span-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Buscar por setor..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
-            <div className="lg:col-span-1">
-              <Card className="shadow-card border border-border/50">
-                <CardHeader><CardTitle className="text-xl font-semibold text-medical-primary">Ações Rápidas</CardTitle></CardHeader>
-                <CardContent>
-                  <TooltipProvider>
-                    <div className="flex space-x-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => setModalOpen(true)}><Settings className="h-4 w-4" /></Button></TooltipTrigger>
-                        <TooltipContent><p>Gerenciar Setores e Leitos</p></TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => setRelatorioIsolamentoOpen(true)}><ShieldQuestion className="h-4 w-4" /></Button></TooltipTrigger>
-                        <TooltipContent><p>Relatório de Isolamentos</p></TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => setRelatorioVagosOpen(true)}><ClipboardList className="h-4 w-4" /></Button></TooltipTrigger>
-                        <TooltipContent><p>Relatório de Leitos Vagos</p></TooltipContent>
-                      </Tooltip>
-                      {isAdmin && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon" 
-                              onClick={() => setLimpezaModalOpen(true)}
-                              className="border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>Limpar Lista de Pacientes</p></TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                  </TooltipProvider>
-                </CardContent>
-              </Card>
+            <div className="flex items-center gap-4">
+              <Label htmlFor="occupied">Ocupados</Label>
+              <Switch id="occupied" checked={showOnlyOccupied} onCheckedChange={setShowOnlyOccupied} />
+              <Label htmlFor="pcp">Leitos PCP</Label>
+              <Switch id="pcp" checked={showOnlyPCP} onCheckedChange={setShowOnlyPCP} />
             </div>
           </div>
-          
-          <Card className="shadow-card border border-border/50">
-            <CardHeader>
-              <h2 className="text-2xl font-bold text-medical-primary">Mapa de Setores</h2>
-              <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
-              ) : filteredSetores.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={filteredSetores[0]?.id}>
-                  {filteredSetores.map((setor) => {
-                    // Calcular indicadores do setor aqui
-                    const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
-                    const totalLeitos = setor.leitos.length;
-                    const taxaOcupacao = totalLeitos > 0 ? Math.round(((totalLeitos - leitosVagos) / totalLeitos) * 100) : 0;
-                    
-                    return (
-                      <AccordionItem key={setor.id} value={setor.id!} className="border border-border/50 rounded-lg">
-                        <AccordionTrigger className="hover:no-underline px-4">
-                          <div className="flex justify-between items-center w-full pr-4">
-                            <div className="flex flex-col items-start">
-                              <h3 className="text-lg font-semibold text-foreground">{setor.nomeSetor}</h3>
-                              <p className="text-sm text-muted-foreground font-mono">{setor.siglaSetor}</p>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-medical-primary">
-                                {taxaOcupacao}%
-                              </div>
-                              <p className="text-xs text-muted-foreground">{leitosVagos}/{totalLeitos} Vagos</p>
-                            </div>
+
+          {/* Mapa dos Setores */}
+          <div className="space-y-4">
+            <Accordion 
+              type="single" 
+              collapsible 
+              value={accordionValue} 
+              onValueChange={setAccordionValue}
+              className="space-y-4"
+            >
+              {setoresComLeitos.map(setor => (
+                <AccordionItem key={setor.id} value={setor.id}>
+                  <AccordionTrigger>
+                    <div className="flex justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-muted-foreground" />
+                        {setor.nomeSetor} ({setor.siglaSetor})
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <BedDouble className="w-4 h-4" />
+                          {setor.leitosOcupados} / {setor.totalLeitos}
+                        </div>
+                        {setor.leitosBloqueados > 0 && (
+                          <div className="flex items-center gap-1 text-destructive">
+                            <AlertTriangle className="w-4 h-4" />
+                            {setor.leitosBloqueados}
                           </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-4">
-                          <SetorCard 
-                            setor={setor}
-                            actions={leitoActions}
-                          />
-                        </AccordionContent>
-                      </AccordionItem>
-                    );
-                  })}
-                </Accordion>
-              ) : (
-                 <div className="text-center py-12"><p className="text-lg text-muted-foreground">Nenhum resultado encontrado.</p></div>
-              )}
-            </CardContent>
-          </Card>
+                        )}
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Card className="mb-4">
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div>
+                            <div className="text-xs font-semibold">Total de Leitos:</div>
+                            <div className="text-sm">{setor.totalLeitos}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold">Leitos Ocupados:</div>
+                            <div className="text-sm">{setor.leitosOcupados}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold">Leitos Disponíveis:</div>
+                            <div className="text-sm">{setor.leitosDisponiveis}</div>
+                          </div>
+                           <div>
+                            <div className="text-xs font-semibold">Leitos em Higienização:</div>
+                            <div className="text-sm">{setor.leitosHigienizacao}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold">Leitos Bloqueados:</div>
+                            <div className="text-sm">{setor.leitosBloqueados}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold">Leitos PCP:</div>
+                            <div className="text-sm">{setor.leitosPCP}</div>
+                          </div>
+                          {setor.observacoes && (
+                            <div className="col-span-2 md:col-span-4">
+                              <div className="text-xs font-semibold">Observações:</div>
+                              <div className="text-sm">{setor.observacoes}</div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {setor.leitos.map(leito => (
+                        <Card key={leito.id} className="shadow-sm">
+                          <CardContent className="p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-sm font-semibold">{leito.codigoLeito}</div>
+                              {leito.leitoPCP && (
+                                <Badge variant="outline">PCP</Badge>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Status: {leito.statusLeito}
+                            </div>
+                            {leito.dadosPaciente && (
+                              <>
+                                <Separator className="my-2" />
+                                <div className="text-xs">
+                                  Paciente: {leito.dadosPaciente.nomeCompleto}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Internado em: {new Date(leito.dadosPaciente.dataInternacao).toLocaleDateString()}
+                                </div>
+                              </>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+
+          {/* Listas Laterais e Modais (se necessário) */}
         </div>
       </div>
-
-      <GerenciamentoModal open={modalOpen} onOpenChange={setModalOpen} />
-      <MovimentacaoModal open={movimentacaoModalOpen} onOpenChange={setMovimentacaoModalOpen} pacienteNome={pacienteParaMover?.dados?.nomeCompleto || ''} onConfirm={handleConfirmarMovimentacao}/>
-      <RelatorioIsolamentosModal open={relatorioIsolamentoOpen} onOpenChange={setRelatorioIsolamentoOpen}/>
-      <RelatorioVagosModal open={relatorioVagosOpen} onOpenChange={setRelatorioVagosOpen}/>
-      <ObservacoesModal 
-        open={obsModalOpen} 
-        onOpenChange={setObsModalOpen} 
-        pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''} 
-        observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []} 
-        onConfirm={handleConfirmObs}
-        onDelete={handleDeleteObs}
-      />
-      <AltaNoLeitoModal
-        open={altaNoLeitoModalOpen}
-        onOpenChange={setAltaNoLeitoModalOpen}
-        pacienteNome={pacienteParaAltaNoLeito?.dadosPaciente?.nomeCompleto || ''}
-        onConfirm={handleConfirmarAltaNoLeito}
-      />
-      <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
     </div>
   );
 };

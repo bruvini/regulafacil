@@ -55,6 +55,8 @@ export const useRegulacaoLogic = () => {
   const [gerenciarTransferenciaOpen, setGerenciarTransferenciaOpen] = useState(false);
   const [resumoModalOpen, setResumoModalOpen] = useState(false);
   const [sugestoesModalOpen, setSugestoesModalOpen] = useState(false);
+  const [confirmacaoAltaModalOpen, setConfirmacaoAltaModalOpen] = useState(false);
+  const [pacienteParaAlta, setPacienteParaAlta] = useState<any | null>(null);
 
   // Estados de dados
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
@@ -1097,6 +1099,53 @@ const registrarHistoricoRegulacao = async (
     setSugestoesModalOpen(true);
   };
 
+  const handleAbrirConfirmacaoAlta = (paciente: any) => {
+    setPacienteParaAlta(paciente);
+    setConfirmacaoAltaModalOpen(true);
+  };
+
+  const handleConfirmarAltaAguardando = async () => {
+    if (!userData) {
+      toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
+      return;
+    }
+    if (!pacienteParaAlta) return;
+
+    setActingOnPatientId(pacienteParaAlta.id);
+
+    try {
+      // Deletar o paciente
+      const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteParaAlta.id);
+      await deleteDoc(pacienteRef);
+
+      // Atualizar o leito para higienização
+      await atualizarStatusLeito(pacienteParaAlta.leitoId, "Higienizacao");
+
+      // Registrar auditoria
+      const logMessage = `Alta para o paciente ${pacienteParaAlta.nomeCompleto} que estava no leito ${pacienteParaAlta.leitoCodigo}.`;
+      registrarLog(logMessage, "Regulação de Leitos");
+
+      // Feedback ao usuário
+      toast({ 
+        title: "Alta Confirmada!", 
+        description: `${pacienteParaAlta.nomeCompleto} recebeu alta e o leito foi liberado para higienização.` 
+      });
+
+      // Fechar modal e limpar estados
+      setConfirmacaoAltaModalOpen(false);
+      setPacienteParaAlta(null);
+    } catch (error) {
+      console.error("Erro ao dar alta:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível processar a alta. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setActingOnPatientId(null);
+    }
+  };
+
   // Integração com alertas de isolamento - COM GUARDA DE CARREGAMENTO
   useEffect(() => {
     // GUARDA DE CARREGAMENTO
@@ -1124,7 +1173,7 @@ const registrarHistoricoRegulacao = async (
         if (pacienteParaRemanejar) {
           solicitarRemanejamento(
             pacienteParaRemanejar.setorId,
-            pacienteParaRemanejar.leitoId,
+            pacienteParaRemanejamento.leitoId,
             alerta.motivo
           );
         }
@@ -1170,9 +1219,11 @@ const registrarHistoricoRegulacao = async (
       gerenciarTransferenciaOpen,
       resumoModalOpen,
       sugestoesModalOpen,
+      confirmacaoAltaModalOpen,
       pacienteParaRegular,
       pacienteParaAcao,
       cirurgiaParaAlocar,
+      pacienteParaAlta,
       isAlteracaoMode,
       validationResult,
       syncSummary,
@@ -1200,6 +1251,8 @@ const registrarHistoricoRegulacao = async (
       handleConfirmSync,
       handlePassagemPlantao,
       handleAbrirSugestoes,
+      handleAbrirConfirmacaoAlta,
+      handleConfirmarAltaAguardando,
       setImportModalOpen,
       setRegulacaoModalOpen,
       setCancelamentoModalOpen,
@@ -1208,6 +1261,7 @@ const registrarHistoricoRegulacao = async (
       setGerenciarTransferenciaOpen,
       setResumoModalOpen,
       setSugestoesModalOpen,
+      setConfirmacaoAltaModalOpen,
     },
 
     // Props para filtros
