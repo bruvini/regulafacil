@@ -38,7 +38,9 @@ export const AlocacaoCirurgiaModal = ({ open, onOpenChange, cirurgia, onAlocarLe
 
   useEffect(() => {
     if (open && cirurgia) {
-      setLeitosDisponiveis(findLeitosParaCirurgia(cirurgia));
+      const leitosEncontrados = findLeitosParaCirurgia(cirurgia);
+      console.log('Leitos encontrados para cirurgia:', leitosEncontrados);
+      setLeitosDisponiveis(leitosEncontrados);
     }
     if (!open) {
       setLeitoSelecionado(null);
@@ -51,13 +53,28 @@ export const AlocacaoCirurgiaModal = ({ open, onOpenChange, cirurgia, onAlocarLe
   }, {} as Record<string, any[]>);
 
   const handleSelectLeito = (leito: any) => {
+    console.log('Leito selecionado:', leito);
     setLeitoSelecionado(leito);
   };
 
   const handleConfirmar = () => {
     if (cirurgia && leitoSelecionado) {
-      onAlocarLeito(cirurgia, leitoSelecionado);
+      console.log('Confirmando alocação:', { cirurgia, leitoSelecionado });
+      
+      // Garantir que o leito tenha todas as informações necessárias
+      const leitoCompleto = {
+        ...leitoSelecionado,
+        id: leitoSelecionado.id,
+        codigoLeito: leitoSelecionado.codigoLeito,
+        setorNome: leitoSelecionado.setorNome,
+        setorId: leitoSelecionado.setorId
+      };
+
+      console.log('Leito completo preparado:', leitoCompleto);
+      onAlocarLeito(cirurgia, leitoCompleto);
       onOpenChange(false);
+    } else {
+      console.error('Dados incompletos para confirmação:', { cirurgia, leitoSelecionado });
     }
   };
 

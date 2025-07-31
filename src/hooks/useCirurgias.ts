@@ -114,43 +114,96 @@ export const useCirurgias = () => {
   const reservarLeitoParaCirurgia = async (cirurgiaId: string, leito: any) => {
     setLoading(true);
     try {
+      console.log('Iniciando reserva de leito para cirurgia:', { cirurgiaId, leito });
+
+      // Validação de dados de entrada
+      if (!cirurgiaId || !leito || !leito.id) {
+        throw new Error('Dados incompletos: cirurgiaId ou informações do leito estão faltando');
+      }
+
       const cirurgiaRef = doc(db, 'cirurgiasRegulaFacil', cirurgiaId);
-      const setorRef = doc(db, 'setoresRegulaFacil', leito.setorId);
+      const leitoRef = doc(db, 'leitosRegulaFacil', leito.id);
 
-      const setorDoc = await getDoc(setorRef);
-      if (!setorDoc.exists()) throw new Error("Setor não encontrado");
+      // Buscar dados da cirurgia para incluir no histórico
+      const cirurgiaDoc = await getDoc(cirurgiaRef);
+      if (!cirurgiaDoc.exists()) {
+        throw new Error('Cirurgia não encontrada no banco de dados');
+      }
 
-      const setorData = setorDoc.data();
-      const leitosAtualizados = setorData.leitos.map((l: any) => {
-        if (l.id === leito.id) {
-          return {
-            ...l,
-            statusLeito: 'Reservado' as const,
-            dataAtualizacaoStatus: new Date().toISOString(),
-            observacoes: `Reservado para cirurgia - ${cirurgiaId}`
-          };
+      const cirurgiaData = cirurgiaDoc.data() as SolicitacaoCirurgica;
+      console.log('Dados da cirurgia encontrados:', cirurgiaData);
+
+      // Buscar dados atuais do leito
+      const leitoDoc = await getDoc(leitoRef);
+      if (!leitoDoc.exists()) {
+        throw new Error('Leito não encontrado no banco de dados');
+      }
+
+      const leitoData = leitoDoc.data();
+      const historicoAtual = leitoData.historicoMovimentacao || [];
+      
+      console.log('Histórico atual do leito:', historicoAtual);
+
+      // Criar novo registro no histórico do leito
+      const novoHistorico = {
+        statusLeito: 'Reservado' as const,
+        dataAtualizacaoStatus: new Date().toISOString(),
+        infoCirurgia: {
+          cirurgiaId: cirurgiaId,
+          nomePaciente: cirurgiaData.nomeCompleto,
+          especialidade: cirurgiaData.especialidade,
+          dataPrevisaCirurgia: cirurgiaData.dataPrevisaCirurgia,
+          dataPrevistaInternacao: cirurgiaData.dataPrevistaInternacao
         }
-        return l;
-      });
+      };
 
+      console.log('Novo registro de histórico:', novoHistorico);
+
+      // Usar writeBatch para garantir atomicidade
       const batch = writeBatch(db);
+
+      // Atualizar cirurgia com informações do leito reservado
       batch.update(cirurgiaRef, { 
         leitoReservado: leito.codigoLeito, 
         setorReservado: leito.setorNome,
-        status: 'Agendada' 
+        status: 'Agendada',
+        leitoReservadoId: leito.id
       });
-      batch.update(setorRef, { leitos: leitosAtualizados });
+
+      // Atualizar leito com novo histórico
+      batch.update(leitoRef, { 
+        historicoMovimentacao: [...historicoAtual, novoHistorico]
+      });
+
+      console.log('Executando batch commit...');
       await batch.commit();
+
+      console.log('Reserva concluída com sucesso');
+
+      registrarLog(
+        `Leito ${leito.codigoLeito} reservado para cirurgia de ${cirurgiaData.nomeCompleto} (${cirurgiaData.especialidade}).`, 
+        'Marcação Cirúrgica'
+      );
 
       toast({ 
         title: "Sucesso!", 
-        description: `Leito ${leito.codigoLeito} reservado para cirurgia.` 
+        description: `Leito ${leito.codigoLeito} reservado para cirurgia.`,
+        variant: "default"
       });
+
     } catch (error) {
-      console.error('Erro ao reservar leito:', error);
+      console.error('Erro detalhado ao reservar leito:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
+      
+      let errorMessage = "Erro ao reservar leito. Tente novamente.";
+      
+      if (error instanceof Error) {
+        errorMessage = `Erro ao reservar leito: ${error.message}`;
+      }
+
       toast({
         title: "Erro",
-        description: "Erro ao reservar leito. Tente novamente.",
+        description: errorMessage,
         variant: "destructive"
       });
       throw error;

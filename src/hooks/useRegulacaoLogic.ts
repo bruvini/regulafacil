@@ -684,11 +684,40 @@ const registrarHistoricoRegulacao = async (
 
   const handleConfirmarAlocacaoCirurgia = async (cirurgia: any, leito: any) => {
     try {
+      console.log('handleConfirmarAlocacaoCirurgia chamado com:', { cirurgia, leito });
+
+      // Validação de dados antes de chamar a função
+      if (!cirurgia || !cirurgia.id) {
+        console.error('Dados da cirurgia incompletos:', cirurgia);
+        toast({
+          title: "Erro",
+          description: "Dados da cirurgia estão incompletos.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!leito || !leito.id || !leito.codigoLeito) {
+        console.error('Dados do leito incompletos:', leito);
+        toast({
+          title: "Erro", 
+          description: "Dados do leito estão incompletos.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Chamando reservarLeitoParaCirurgia...');
       await reservarLeitoParaCirurgia(cirurgia.id, leito);
+      
+      console.log('Reserva concluída, fechando modais...');
       setAlocacaoCirurgiaModalOpen(false);
       setCirurgiaParaAlocar(null);
+
     } catch (error) {
-      console.error("Erro ao alocar leito para cirurgia:", error);
+      console.error("Erro em handleConfirmarAlocacaoCirurgia:", error);
+      // O erro já foi tratado na função reservarLeitoParaCirurgia
+      // Não precisa exibir outro toast aqui
     }
   };
 
