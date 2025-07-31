@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
@@ -27,22 +26,23 @@ export interface LeitoEnriquecido extends Leito {
 const MapaLeitos = () => {
   const { setores, loading: setoresLoading } = useSetores();
   const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
+  const [adicionarPacienteModalOpen, setAdicionarPacienteModalOpen] = useState(false);
+  const [leitoParaAdicionarPaciente, setLeitoParaAdicionarPaciente] = useState<LeitoEnriquecido | null>(null);
 
   const {
     handlers: {
-      handleAbrirAdicionarPacienteModal,
       handleConfirmarAdicaoPaciente,
-    },
-    modals: {
-      adicionarPacienteModalOpen,
-      leitoParaAdicionarPaciente,
-      setAdicionarPacienteModalOpen,
     },
   } = useRegulacaoLogic();
 
   useEffect(() => {
     document.title = 'Mapa de Leitos | Regula Fácil';
   }, []);
+
+  const handleAbrirAdicionarPacienteModal = (leito: LeitoEnriquecido) => {
+    setLeitoParaAdicionarPaciente(leito);
+    setAdicionarPacienteModalOpen(true);
+  };
 
   const setoresComLeitos = useMemo(() => {
     if (setoresLoading || leitosLoading) {
@@ -110,7 +110,7 @@ const MapaLeitos = () => {
       
       {/* Modal para Adicionar Paciente */}
       <AdicionarPacienteModal
-        open={adicionarPacienteModalOpen || false}
+        open={adicionarPacienteModalOpen}
         onClose={() => setAdicionarPacienteModalOpen(false)}
         onConfirm={handleConfirmarAdicaoPaciente}
         leitoInfo={leitoParaAdicionarPaciente ? {
