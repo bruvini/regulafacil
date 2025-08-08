@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +29,7 @@ import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove } from 'firebase/fir
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Observacao } from '@/types/observacao';
+import { ConfirmarInternacaoExternaModal } from '@/components/modals/ConfirmarInternacaoExternaModal';
 
 const MapaLeitos = () => {
   // --- Estados de Modais e Ações ---
@@ -47,6 +47,7 @@ const MapaLeitos = () => {
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
   const [pacienteParaAltaNoLeito, setPacienteParaAltaNoLeito] = useState<LeitoEnriquecido | null>(null);
   const [leitoParaAcao, setLeitoParaAcao] = useState<LeitoEnriquecido | null>(null);
+  const [confirmarModalExternoOpen, setConfirmarModalExternoOpen] = useState(false);
 
   const { toast } = useToast();
   const { userData } = useAuth();
@@ -168,6 +169,40 @@ const MapaLeitos = () => {
     }
   };
 
+  const handleConfirmarInternacaoExterna = async (dadosForm: { dataInternacao: string, especialidade: string }) => {
+    if (!leitoParaAcao || !leitoParaAcao.dadosPaciente?.id) return;
+    
+    try {
+      // Atualizar dados do paciente
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', leitoParaAcao.dadosPaciente.id);
+      await updateDoc(pacienteRef, {
+        dataInternacao: dadosForm.dataInternacao,
+        especialidadePaciente: dadosForm.especialidade,
+      });
+
+      await atualizarStatusLeito(leitoParaAcao.id, 'Ocupado', {
+        pacienteId: leitoParaAcao.dadosPaciente.id,
+      });
+      
+      registrarLog(`Confirmou internação do paciente externo ${leitoParaAcao.dadosPaciente.nomeCompleto} no leito ${leitoParaAcao.codigoLeito}.`, 'Mapa de Leitos');
+      
+      toast({ 
+        title: "Sucesso!", 
+        description: "Internação de paciente externo confirmada." 
+      });
+      
+      setConfirmarModalExternoOpen(false);
+      setLeitoParaAcao(null);
+    } catch (error) {
+      console.error('Erro ao confirmar internação externa:', error);
+      toast({ 
+        title: "Erro", 
+        description: "Erro ao confirmar internação externa.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   // --- OBJETO CENTRALIZADO DE AÇÕES ---
   const leitoActions = {
     onMoverPaciente: (leito: LeitoEnriquecido) => {
@@ -197,6 +232,11 @@ const MapaLeitos = () => {
     onReservarExterno: (leito: LeitoEnriquecido) => {
       setLeitoParaAcao(leito);
       setReservaModalOpen(true);
+    },
+
+    onConfirmarReservaExterna: (leito: LeitoEnriquecido) => {
+      setLeitoParaAcao(leito);
+      setConfirmarModalExternoOpen(true);
     },
 
     onLiberarLeito: async (leitoId: string, pacienteId: string) => {
@@ -543,6 +583,12 @@ const MapaLeitos = () => {
         leito={leitoParaAcao}
       />
       <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
+      <ConfirmarInternacaoExternaModal
+        open={confirmarModalExternoOpen}
+        onOpenChange={setConfirmarModalExternoOpen}
+        onConfirm={handleConfirmarInternacaoExterna}
+        leito={leitoParaAcao}
+      />
     </div>
   );
 };
