@@ -18,6 +18,7 @@ interface PacientesAguardandoRegulacaoProps {
     handleCancelar: (paciente: any) => void;
     altaAposRecuperacao: (leitoId: string) => void;
     setResumoModalOpen: (open: boolean) => void;
+    handleAltaDireta?: (paciente: any) => void; // Nova prop adicionada
   };
   filtrosProps: {
     sortConfig: { key: string; direction: string };
@@ -51,6 +52,7 @@ export const PacientesAguardandoRegulacao = ({
               onConcluir={handlers.handleConcluir}
               onAlterar={handlers.handleAlterar}
               onCancelar={handlers.handleCancelar}
+              onAltaDireta={handlers.handleAltaDireta} // Nova prop
             />
           )}
 
@@ -64,6 +66,7 @@ export const PacientesAguardandoRegulacao = ({
               onConcluir={handlers.handleConcluir}
               onAlterar={handlers.handleAlterar}
               onCancelar={handlers.handleCancelar}
+              onAltaDireta={handlers.handleAltaDireta} // Nova prop
             />
           )}
 
@@ -77,6 +80,7 @@ export const PacientesAguardandoRegulacao = ({
               onConcluir={handlers.handleConcluir}
               onAlterar={handlers.handleAlterar}
               onCancelar={handlers.handleCancelar}
+              onAltaDireta={handlers.handleAltaDireta} // Nova prop
             />
           )}
         </div>

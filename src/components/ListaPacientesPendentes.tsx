@@ -27,6 +27,7 @@ interface ListaPacientesPendentesProps {
   onConcluir: (paciente: Paciente) => void;
   onAlterar: (paciente: Paciente) => void;
   onCancelar: (paciente: Paciente) => void;
+  onAltaDireta?: (paciente: any) => void; // Nova prop adicionada
 }
 
 export const ListaPacientesPendentes = ({
@@ -36,7 +37,8 @@ export const ListaPacientesPendentes = ({
   onAlta,
   onConcluir,
   onAlterar,
-  onCancelar
+  onCancelar,
+  onAltaDireta
 }: ListaPacientesPendentesProps) => {
   const pacientesOrdenados = pacientes;
 
@@ -63,6 +65,7 @@ export const ListaPacientesPendentes = ({
                   onConcluir={onConcluir}
                   onAlterar={onAlterar}
                   onCancelar={onCancelar}
+                  onAltaDireta={onAltaDireta} // Passando a nova prop
                 />
               ))}
             </div>

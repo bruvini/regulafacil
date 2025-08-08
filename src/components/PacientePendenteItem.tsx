@@ -59,6 +59,7 @@ interface PacientePendenteItemProps {
   onConcluir?: (paciente: Paciente) => void;
   onAlterar?: (paciente: Paciente) => void;
   onCancelar?: (paciente: Paciente) => void;
+  onAltaDireta?: (paciente: any) => void; // Nova prop adicionada
 }
 
 export const PacientePendenteItem = ({
@@ -67,7 +68,8 @@ export const PacientePendenteItem = ({
   onAlta,
   onConcluir,
   onAlterar,
-  onCancelar
+  onCancelar,
+  onAltaDireta
 }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
   
@@ -173,6 +175,40 @@ export const PacientePendenteItem = ({
               </TooltipTrigger>
               <TooltipContent><p>Regular Leito</p></TooltipContent>
             </Tooltip>
+
+            {/* Nova ação de Alta Direta */}
+            {onAltaDireta && (
+              <AlertDialog>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        aria-label="Dar Alta"
+                      >
+                        <LogOut className="h-4 w-4 text-green-600" />
+                      </Button>
+                    </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Dar Alta</p></TooltipContent>
+                </Tooltip>
+
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Alta do Paciente?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação removerá {paciente.nomeCompleto} do sistema e liberará o leito {paciente.leitoCodigo} para higienização. Deseja continuar?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onAltaDireta(paciente)}>Confirmar Alta</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </TooltipProvider>
         )}
 

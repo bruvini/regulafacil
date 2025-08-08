@@ -1138,6 +1138,34 @@ const registrarHistoricoRegulacao = async (
     });
   }, [alertas, todosPacientesPendentes, loading, alertasLoading, solicitarRemanejamento, cancelarPedidoRemanejamento]);
 
+  const handleAltaDireta = async (paciente: any) => {
+    if (!userData) {
+      toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
+      return;
+    }
+
+    setActingOnPatientId(paciente.id);
+
+    try {
+      // 1. Deletar o documento do paciente
+      await deleteDoc(doc(db, 'pacientesRegulaFacil', paciente.id));
+
+      // 2. Atualizar o leito para Higienização
+      await atualizarStatusLeito(paciente.leitoId, 'Higienizacao');
+
+      // 3. Registrar no log de auditoria
+      const logMessage = `Deu alta para o paciente ${paciente.nomeCompleto} que estava no leito ${paciente.leitoCodigo}.`;
+      registrarLog(logMessage, 'Regulação de Leitos');
+
+      toast({ title: "Sucesso!", description: "Paciente recebeu alta e o leito foi liberado." });
+    } catch (error) {
+      console.error("Erro ao dar alta direta:", error);
+      toast({ title: "Erro", description: "Não foi possível dar alta ao paciente.", variant: "destructive" });
+    } finally {
+      setActingOnPatientId(null);
+    }
+  };
+
   return {
     // Estados de loading
     loading,
@@ -1208,6 +1236,7 @@ const registrarHistoricoRegulacao = async (
       setGerenciarTransferenciaOpen,
       setResumoModalOpen,
       setSugestoesModalOpen,
+      handleAltaDireta,
     },
 
     // Props para filtros

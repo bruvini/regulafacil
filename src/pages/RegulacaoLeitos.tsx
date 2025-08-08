@@ -4,6 +4,10 @@ import { AcoesRapidas } from "@/components/AcoesRapidas";
 import { RegulacaoModals } from "@/components/modals/regulacao/RegulacaoModals";
 import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
 import { useState } from "react";
+import { useRegulacoes } from "@/hooks/useRegulacoes";
+import { IndicadoresRegulacao } from "@/components/IndicadoresRegulacao";
+import { differenceInMinutes } from 'date-fns';
+import { useMemo } from "react";
 
 // Componentes atualizados
 import { FiltrosBlocoRegulacao } from "@/components/FiltrosBlocoRegulacao";
@@ -18,8 +22,8 @@ import { PanoramaSelecaoPeriodoModal } from "@/components/modals/PanoramaSelecao
 import { PanoramaVisualizacaoModal } from "@/components/modals/PanoramaVisualizacaoModal";
 
 const RegulacaoLeitos = () => {
-  const { loading, listas, modals, handlers, filtrosProps } =
-    useRegulacaoLogic();
+  const { loading, listas, modals, handlers, filtrosProps } = useRegulacaoLogic();
+  const { regulacoes, loading: regulacoesLoading } = useRegulacoes();
 
   // Estados para os novos modais de panorama
   const [panoramaSelecaoOpen, setPanoramaSelecaoOpen] = useState(false);
@@ -38,6 +42,58 @@ const RegulacaoLeitos = () => {
     setPeriodoSelecionado({ inicio: dataInicio, fim: dataFim });
     setPanoramaVisualizacaoOpen(true);
   };
+
+  // Cálculo dos indicadores
+  const indicadores = useMemo(() => {
+    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length + listas.recuperacaoCirurgica.length + listas.pacientesAguardandoUTI.length;
+    
+    // Tempo médio de internação
+    const pacientesAguardando = [...listas.decisaoCirurgica, ...listas.decisaoClinica, ...listas.recuperacaoCirurgica];
+    let tempoMedioInternacao = "N/A";
+    if (pacientesAguardando.length > 0) {
+      const totalMinutos = pacientesAguardando.reduce((acc, p) => acc + differenceInMinutes(new Date(), new Date(p.dataInternacao)), 0);
+      const mediaMinutos = totalMinutos / pacientesAguardando.length;
+      const dias = Math.floor(mediaMinutos / 1440);
+      const horas = Math.floor((mediaMinutos % 1440) / 60);
+      tempoMedioInternacao = `${dias}d ${horas}h`;
+    }
+
+    // Contagem de status
+    const contagemStatus = {
+      Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
+      Concluidas: regulacoes.filter(r => r.status === 'Concluída').length,
+      Canceladas: regulacoes.filter(r => r.status === 'Cancelada').length,
+      Alteradas: regulacoes.filter(r => r.historicoEventos.some(e => e.evento === 'alterada')).length,
+    };
+    
+    // Tempo médio pendente
+    let tempoMedioRegulacaoPendente = "N/A";
+    const regulacoesPendentes = regulacoes.filter(r => r.status === 'Pendente');
+    if (regulacoesPendentes.length > 0) {
+      const totalMinutosPendentes = regulacoesPendentes.reduce((acc, r) => acc + differenceInMinutes(new Date(), new Date(r.criadaEm)), 0);
+      const mediaMinutosPendentes = totalMinutosPendentes / regulacoesPendentes.length;
+      const horas = Math.floor(mediaMinutosPendentes / 60);
+      const minutos = Math.floor(mediaMinutosPendentes % 60);
+      tempoMedioRegulacaoPendente = `${horas}h ${minutos}m`;
+    }
+
+    // Funções para tops
+    const getTop = (arr: string[]) => arr.length ? Object.entries(arr.reduce((acc, val) => ({...acc, [val]: (acc[val] || 0) + 1}), {} as Record<string, number>)).sort((a,b) => b[1] - a[1])[0][0] : 'N/A';
+    
+    const topOrigem = getTop(regulacoes.map(r => r.setorOrigemNome));
+    const topDestino = getTop(regulacoes.map(r => r.setorDestinoNome));
+    
+    // Top Turno
+    const turnos = regulacoes.map(r => {
+      const hora = new Date(r.criadaEm).getHours() + new Date(r.criadaEm).getMinutes() / 60;
+      if (hora >= 6.5 && hora < 12.5) return 'Manhã';
+      if (hora >= 12.5 && hora < 18.5) return 'Tarde';
+      return 'Noite';
+    });
+    const topTurno = getTop(turnos);
+
+    return { aguardandoLeito, tempoMedioInternacao, contagemStatus, tempoMedioRegulacaoPendente, topOrigem, topDestino, topTurno };
+  }, [listas, regulacoes]);
 
   if (loading) {
     return (
@@ -81,18 +137,7 @@ const RegulacaoLeitos = () => {
         </header>
 
         {/* 2. Bloco de Indicadores */}
-        <Card className="shadow-card border border-border/50">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-medical-primary">
-              Indicadores
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground italic">
-              Funcionalidade em desenvolvimento.
-            </p>
-          </CardContent>
-        </Card>
+        <IndicadoresRegulacao indicadores={indicadores} />
 
         {/* 3. Bloco de Filtros */}
         <FiltrosBlocoRegulacao filtrosProps={filtrosProps} />
@@ -113,6 +158,7 @@ const RegulacaoLeitos = () => {
             handleCancelar: handlers.handleCancelar,
             altaAposRecuperacao: handlers.altaAposRecuperacao,
             setResumoModalOpen: handlers.setResumoModalOpen,
+            handleAltaDireta: handlers.handleAltaDireta,
           }}
           filtrosProps={{
             sortConfig: filtrosProps.sortConfig,
