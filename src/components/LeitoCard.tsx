@@ -1,8 +1,7 @@
-
 // src/components/LeitoCard.tsx
 
 import { useState, useMemo } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, MessageSquarePlus } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, MessageSquarePlus, UserPlus, BookMarked } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +14,7 @@ import { RemanejamentoModal } from './modals/RemanejamentoModal';
 import { TransferenciaModal } from './modals/TransferenciaModal';
 import { cn } from '@/lib/utils';
 import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
-import { LeitoEnriquecido } from '@/pages/MapaLeitos';
+import { LeitoEnriquecido } from '@/types/hospital';
 
 interface LeitoCardProps {
   leito: LeitoEnriquecido;
@@ -168,7 +167,11 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                 <Info className="mx-auto h-4 w-4 text-teal-600 mb-1" />
                 <p className="text-xs font-bold text-teal-700">RESERVADO PARA:</p>
                 <p className="text-sm font-medium text-teal-800">{leito.dadosPaciente.nomeCompleto}</p>
-                {leito.dadosPaciente.origem && <p className="text-xs text-teal-600">Vindo de: {leito.dadosPaciente.origem.deSetor} - {leito.dadosPaciente.origem.deLeito}</p>}
+                {leito.regulacao?.tipoReserva === 'externo' ? (
+                  <p className="text-xs text-teal-600">Origem Externa: {leito.regulacao.origemExterna}</p>
+                ) : (
+                  leito.dadosPaciente.origem && <p className="text-xs text-teal-600">Vindo de: {leito.dadosPaciente.origem.deSetor} - {leito.dadosPaciente.origem.deLeito}</p>
+                )}
               </div>
             ) : (
               <div className="h-full w-full"></div>
@@ -184,15 +187,28 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onInternarManualmente(leito)}>
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Internar Paciente Manualmente</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onReservarExterno(leito)}>
+                        <BookMarked className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Reservar Leito (Paciente Externo)</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMotivoBloqueioModalOpen(true)}>
                         <Lock className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent><p>Bloquear Leito</p></TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
-                
-                <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onEnviarParaHigienizacao(leito.id)}>

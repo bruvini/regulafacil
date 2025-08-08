@@ -69,6 +69,8 @@ export interface InfoRegulacao {
   paraSetor: string;
   paraLeito: string;
   observacoes?: string;
+  origemExterna?: string; // Novo campo para origem externa
+  tipoReserva?: 'regulacao' | 'externo'; // Novo campo para tipo de reserva
 }
 
 export interface Setor {
@@ -76,6 +78,15 @@ export interface Setor {
   nomeSetor: string;
   siglaSetor: string;
 }
+
+// Tipo para leito enriquecido com dados do paciente
+export type LeitoEnriquecido = Leito & {
+  statusLeito: HistoricoLeito['statusLeito'];
+  dataAtualizacaoStatus?: string;
+  motivoBloqueio?: string;
+  regulacao?: InfoRegulacao;
+  dadosPaciente?: Paciente | null;
+};
 
 // Form Data Types
 export interface LeitoFormData {

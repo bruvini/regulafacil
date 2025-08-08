@@ -1,3 +1,4 @@
+
 // src/hooks/usePacientes.ts
 
 import { useState, useEffect } from 'react';
@@ -5,6 +6,7 @@ import {
   collection,
   onSnapshot,
   query,
+  addDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Paciente } from '@/types/hospital';
@@ -38,12 +40,24 @@ export const usePacientes = () => {
     return () => unsubscribe();
   }, []);
 
-  // Funções para criar, atualizar e excluir pacientes serão chamadas
-  // pela lógica de sincronização no componente principal.
-  // Por enquanto, o hook se concentra em fornecer a lista atual de pacientes.
+  const criarPacienteManual = async (dadosPaciente: Omit<Paciente, 'id'>): Promise<string> => {
+    try {
+      const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), dadosPaciente);
+      return docRef.id;
+    } catch (error) {
+      console.error("Erro ao criar paciente manualmente:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o paciente.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
 
   return {
     pacientes,
     loading,
+    criarPacienteManual,
   };
 };

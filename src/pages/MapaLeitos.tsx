@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +11,8 @@ import { FiltrosMapaLeitos } from '@/components/FiltrosMapaLeitos';
 import { IndicadoresGerais } from '@/components/IndicadoresGerais';
 import { LimpezaPacientesModal } from '@/components/modals/LimpezaPacientesModal';
 import { AltaNoLeitoModal } from '@/components/modals/AltaNoLeitoModal';
+import { InternacaoManualModal } from '@/components/modals/InternacaoManualModal';
+import { ReservaExternaModal } from '@/components/modals/ReservaExternaModal';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -23,20 +25,11 @@ import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
-import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo } from '@/types/hospital';
+import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Observacao } from '@/types/observacao';
-
-// Tipo padronizado que será usado por todos os componentes filhos - alinhado com LeitoExtendido
-export type LeitoEnriquecido = Leito & {
-  statusLeito: HistoricoMovimentacao['statusLeito'];
-  dataAtualizacaoStatus?: string;
-  motivoBloqueio?: string;
-  regulacao?: any;
-  dadosPaciente?: Paciente | null;
-};
 
 const MapaLeitos = () => {
   // --- Estados de Modais e Ações ---
@@ -47,9 +40,14 @@ const MapaLeitos = () => {
   const [obsModalOpen, setObsModalOpen] = useState(false);
   const [limpezaModalOpen, setLimpezaModalOpen] = useState(false);
   const [altaNoLeitoModalOpen, setAltaNoLeitoModalOpen] = useState(false);
+  const [internacaoModalOpen, setInternacaoModalOpen] = useState(false);
+  const [reservaModalOpen, setReservaModalOpen] = useState(false);
+  const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
   const [pacienteParaAltaNoLeito, setPacienteParaAltaNoLeito] = useState<LeitoEnriquecido | null>(null);
+  const [leitoParaAcao, setLeitoParaAcao] = useState<LeitoEnriquecido | null>(null);
+
   const { toast } = useToast();
   const { userData } = useAuth();
   const { registrarLog } = useAuditoria();
@@ -57,8 +55,13 @@ const MapaLeitos = () => {
   // --- Hooks de Dados (Nova Arquitetura) ---
   const { setores, loading: setoresLoading } = useSetores();
   const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
-  const { pacientes, loading: pacientesLoading } = usePacientes();
+  const { pacientes, loading: pacientesLoading, criarPacienteManual } = usePacientes();
   const loading = setoresLoading || leitosLoading || pacientesLoading;
+
+  // Scroll to top on component mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // --- Lógica Central de Combinação de Dados ---
   const dadosCombinados = useMemo(() => {
@@ -100,6 +103,71 @@ const MapaLeitos = () => {
   // Verificar se o usuário é administrador
   const isAdmin = userData?.tipoAcesso === 'Administrador';
 
+  // Funções de confirmação para internação e reserva
+  const handleConfirmarInternacao = async (dadosForm: any) => {
+    if (!leitoParaAcao) return;
+    
+    try {
+      const pacienteId = await criarPacienteManual({
+        ...dadosForm,
+        leitoId: leitoParaAcao.id,
+        setorId: leitoParaAcao.setorId,
+      });
+      
+      await atualizarStatusLeito(leitoParaAcao.id, 'Ocupado', { pacienteId });
+      
+      registrarLog(`Internou manualmente o paciente ${dadosForm.nomeCompleto} no leito ${leitoParaAcao.codigoLeito}.`, 'Mapa de Leitos');
+      
+      toast({ 
+        title: "Sucesso!", 
+        description: "Paciente internado e leito ocupado." 
+      });
+      
+      setInternacaoModalOpen(false);
+      setLeitoParaAcao(null);
+    } catch (error) {
+      console.error('Erro ao internar paciente:', error);
+    }
+  };
+
+  const handleConfirmarReserva = async (dadosForm: any) => {
+    if (!leitoParaAcao) return;
+    
+    try {
+      const setorInfo = setores.find(s => s.id === leitoParaAcao.setorId);
+      
+      const pacienteId = await criarPacienteManual({
+        ...dadosForm,
+        leitoId: leitoParaAcao.id,
+        setorId: leitoParaAcao.setorId,
+        dataInternacao: new Date().toISOString(),
+        especialidadePaciente: 'Não Informada',
+      });
+      
+      await atualizarStatusLeito(leitoParaAcao.id, 'Reservado', {
+        pacienteId,
+        infoRegulacao: {
+          paraSetor: setorInfo?.nomeSetor || 'Setor não encontrado',
+          paraLeito: leitoParaAcao.codigoLeito,
+          origemExterna: dadosForm.origem,
+          tipoReserva: 'externo',
+        },
+      });
+      
+      registrarLog(`Reservou o leito ${leitoParaAcao.codigoLeito} para o paciente externo ${dadosForm.nomeCompleto} (origem: ${dadosForm.origem}).`, 'Mapa de Leitos');
+      
+      toast({ 
+        title: "Sucesso!", 
+        description: "Leito reservado para paciente externo." 
+      });
+      
+      setReservaModalOpen(false);
+      setLeitoParaAcao(null);
+    } catch (error) {
+      console.error('Erro ao reservar leito:', error);
+    }
+  };
+
   // --- OBJETO CENTRALIZADO DE AÇÕES ---
   const leitoActions = {
     onMoverPaciente: (leito: LeitoEnriquecido) => {
@@ -119,6 +187,16 @@ const MapaLeitos = () => {
     onAltaNoLeito: (leito: LeitoEnriquecido) => {
       setPacienteParaAltaNoLeito(leito);
       setAltaNoLeitoModalOpen(true);
+    },
+
+    onInternarManualmente: (leito: LeitoEnriquecido) => {
+      setLeitoParaAcao(leito);
+      setInternacaoModalOpen(true);
+    },
+
+    onReservarExterno: (leito: LeitoEnriquecido) => {
+      setLeitoParaAcao(leito);
+      setReservaModalOpen(true);
     },
 
     onLiberarLeito: async (leitoId: string, pacienteId: string) => {
@@ -387,7 +465,13 @@ const MapaLeitos = () => {
               {loading ? (
                 <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
               ) : filteredSetores.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full space-y-2" defaultValue={filteredSetores[0]?.id}>
+                <Accordion 
+                  type="single" 
+                  collapsible 
+                  value={accordionValue} 
+                  onValueChange={setAccordionValue}
+                  className="w-full space-y-2"
+                >
                   {filteredSetores.map((setor) => {
                     // Calcular indicadores do setor aqui
                     const leitosVagos = setor.leitos.filter(l => l.statusLeito === 'Vago').length;
@@ -445,6 +529,18 @@ const MapaLeitos = () => {
         onOpenChange={setAltaNoLeitoModalOpen}
         pacienteNome={pacienteParaAltaNoLeito?.dadosPaciente?.nomeCompleto || ''}
         onConfirm={handleConfirmarAltaNoLeito}
+      />
+      <InternacaoManualModal
+        open={internacaoModalOpen}
+        onOpenChange={setInternacaoModalOpen}
+        onConfirm={handleConfirmarInternacao}
+        leito={leitoParaAcao}
+      />
+      <ReservaExternaModal
+        open={reservaModalOpen}
+        onOpenChange={setReservaModalOpen}
+        onConfirm={handleConfirmarReserva}
+        leito={leitoParaAcao}
       />
       <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
     </div>
