@@ -1,4 +1,3 @@
-
 // src/hooks/usePacientes.ts
 
 import { useState, useEffect } from 'react';
@@ -42,7 +41,12 @@ export const usePacientes = () => {
 
   const criarPacienteManual = async (dadosPaciente: Omit<Paciente, 'id'>): Promise<string> => {
     try {
-      const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), dadosPaciente);
+      const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), {
+        ...dadosPaciente,
+        dataNascimento: dadosPaciente.dataNascimento instanceof Date 
+          ? dadosPaciente.dataNascimento.toISOString().split('T')[0]
+          : dadosPaciente.dataNascimento
+      });
       return docRef.id;
     } catch (error) {
       console.error("Erro ao criar paciente manualmente:", error);
