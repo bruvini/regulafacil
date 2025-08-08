@@ -1,4 +1,5 @@
 
+
 // src/hooks/usePacientes.ts
 
 import { useState, useEffect } from 'react';
@@ -44,7 +45,7 @@ export const usePacientes = () => {
     try {
       const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), {
         ...dadosPaciente,
-        dataNascimento: dadosPaciente.dataNascimento && typeof dadosPaciente.dataNascimento === 'object'
+        dataNascimento: dadosPaciente.dataNascimento && typeof dadosPaciente.dataNascimento === 'object' && dadosPaciente.dataNascimento instanceof Date
           ? dadosPaciente.dataNascimento.toISOString().split('T')[0]
           : dadosPaciente.dataNascimento
       });
@@ -66,3 +67,4 @@ export const usePacientes = () => {
     criarPacienteManual,
   };
 };
+
