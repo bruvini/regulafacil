@@ -40,44 +40,47 @@ export const PacientesAguardandoRegulacao = ({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Lista de Decisão Cirúrgica */}
-        {listas.decisaoCirurgica.length > 0 && (
-          <ListaPacientesPendentes
-            titulo="PS - DECISÃO CIRÚRGICA"
-            pacientes={listas.decisaoCirurgica}
-            onRegularClick={handlers.handleOpenRegulacaoModal}
-            onAlta={handlers.altaAposRecuperacao}
-            onConcluir={handlers.handleConcluir}
-            onAlterar={handlers.handleAlterar}
-            onCancelar={handlers.handleCancelar}
-          />
-        )}
+        {/* Grid horizontal para os três sub-blocos */}
+        <div className="grid lg:grid-cols-3 gap-4">
+          {/* Lista de Decisão Cirúrgica */}
+          {listas.decisaoCirurgica.length > 0 && (
+            <ListaPacientesPendentes
+              titulo="PS - DECISÃO CIRÚRGICA"
+              pacientes={listas.decisaoCirurgica}
+              onRegularClick={handlers.handleOpenRegulacaoModal}
+              onAlta={handlers.altaAposRecuperacao}
+              onConcluir={handlers.handleConcluir}
+              onAlterar={handlers.handleAlterar}
+              onCancelar={handlers.handleCancelar}
+            />
+          )}
 
-        {/* Lista de Decisão Clínica */}
-        {listas.decisaoClinica.length > 0 && (
-          <ListaPacientesPendentes
-            titulo="PS - DECISÃO CLÍNICA"
-            pacientes={listas.decisaoClinica}
-            onRegularClick={handlers.handleOpenRegulacaoModal}
-            onAlta={handlers.altaAposRecuperacao}
-            onConcluir={handlers.handleConcluir}
-            onAlterar={handlers.handleAlterar}
-            onCancelar={handlers.handleCancelar}
-          />
-        )}
+          {/* Lista de Decisão Clínica */}
+          {listas.decisaoClinica.length > 0 && (
+            <ListaPacientesPendentes
+              titulo="PS - DECISÃO CLÍNICA"
+              pacientes={listas.decisaoClinica}
+              onRegularClick={handlers.handleOpenRegulacaoModal}
+              onAlta={handlers.altaAposRecuperacao}
+              onConcluir={handlers.handleConcluir}
+              onAlterar={handlers.handleAlterar}
+              onCancelar={handlers.handleCancelar}
+            />
+          )}
 
-        {/* Lista de Recuperação Cirúrgica */}
-        {listas.recuperacaoCirurgica.length > 0 && (
-          <ListaPacientesPendentes
-            titulo="CC - RECUPERAÇÃO"
-            pacientes={listas.recuperacaoCirurgica}
-            onRegularClick={handlers.handleOpenRegulacaoModal}
-            onAlta={handlers.altaAposRecuperacao}
-            onConcluir={handlers.handleConcluir}
-            onAlterar={handlers.handleAlterar}
-            onCancelar={handlers.handleCancelar}
-          />
-        )}
+          {/* Lista de Recuperação Cirúrgica */}
+          {listas.recuperacaoCirurgica.length > 0 && (
+            <ListaPacientesPendentes
+              titulo="CC - RECUPERAÇÃO"
+              pacientes={listas.recuperacaoCirurgica}
+              onRegularClick={handlers.handleOpenRegulacaoModal}
+              onAlta={handlers.altaAposRecuperacao}
+              onConcluir={handlers.handleConcluir}
+              onAlterar={handlers.handleAlterar}
+              onCancelar={handlers.handleCancelar}
+            />
+          )}
+        </div>
 
         {/* Caso não haja pacientes */}
         {listas.totalPendentes === 0 && (
