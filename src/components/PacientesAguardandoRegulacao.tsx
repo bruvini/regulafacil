@@ -39,9 +39,8 @@ export const PacientesAguardandoRegulacao = ({
           <Badge variant="secondary">{listas.totalPendentes}</Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Grid horizontal para os três sub-blocos */}
-        <div className="grid lg:grid-cols-3 gap-4">
+      <CardContent>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Lista de Decisão Cirúrgica */}
           {listas.decisaoCirurgica.length > 0 && (
             <ListaPacientesPendentes

@@ -12,32 +12,19 @@ export const formatarDuracao = (dataISOouString: string | Date | undefined | nul
 
   let dataEntrada: Date;
 
-  // Se já é um objeto Date, usa diretamente
   if (dataISOouString instanceof Date) {
-    if (isValid(dataISOouString)) {
-      dataEntrada = dataISOouString;
-    } else {
-      return 'Data Inválida';
-    }
+    dataEntrada = dataISOouString;
+  } else if (typeof dataISOouString === 'string' && dataISOouString.includes('/')) {
+    // Tenta parsear o formato 'dd/MM/yyyy HH:mm' primeiro
+    dataEntrada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
   } else {
-    // Se é string, tenta fazer o parse
-    // Primeiro, tenta como ISO (formato padrão do JS)
-    const dataPotencial = new Date(dataISOouString);
-    if (isValid(dataPotencial)) {
-      dataEntrada = dataPotencial;
-    } else {
-      // Tenta o formato brasileiro como fallback - mas só se for string
-      if (typeof dataISOouString === 'string') {
-        const dataParseada = parse(dataISOouString, 'dd/MM/yyyy HH:mm', new Date());
-        if (isValid(dataParseada)) {
-          dataEntrada = dataParseada;
-        } else {
-          return 'Data Inválida';
-        }
-      } else {
-        return 'Data Inválida';
-      }
-    }
+    // Tenta como uma string ISO padrão
+    dataEntrada = new Date(dataISOouString);
+  }
+
+  if (!isValid(dataEntrada)) {
+    console.error('Data de entrada inválida para formatarDuracao:', dataISOouString);
+    return 'Data Inválida';
   }
 
   try {
@@ -45,13 +32,13 @@ export const formatarDuracao = (dataISOouString: string | Date | undefined | nul
     const partes = [];
     if (duracao.days && duracao.days > 0) partes.push(`${duracao.days}d`);
     if (duracao.hours && duracao.hours > 0) partes.push(`${duracao.hours}h`);
-    if (duracao.minutes && duracao.minutes >= 0) partes.push(`${duracao.minutes}m`);
+    if (duracao.minutes !== undefined && duracao.minutes >= 0) partes.push(`${duracao.minutes}m`);
 
     if (partes.length === 0) return 'Recente';
 
     return partes.join(' ');
   } catch (error) {
-    console.error('Error calculating duration:', error, 'Input was:', dataISOouString);
-    return 'Erro de Cálculo';
+    console.error('Erro ao calcular duração:', error, 'Input:', dataISOouString);
+    return 'Erro';
   }
 };
