@@ -16,12 +16,11 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { LeitoEnriquecido } from '@/types/hospital';
 
 interface LeitoCardProps {
-  setor: any;
   leito: LeitoEnriquecido;
   actions: any;
 }
 
-const LeitoCard: React.FC<LeitoCardProps> = ({ setor, leito, actions }) => {
+const LeitoCard: React.FC<LeitoCardProps> = ({ leito, actions }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Vago': return 'text-green-500';
@@ -56,7 +55,7 @@ const LeitoCard: React.FC<LeitoCardProps> = ({ setor, leito, actions }) => {
           <div className="space-y-1">
             <h3 className="text-xl font-semibold">{leito.codigoLeito}</h3>
             <p className="text-sm text-muted-foreground">
-              {setor.nomeSetor} - {statusLabel}
+              {statusLabel}
             </p>
           </div>
           <DropdownMenu>
@@ -88,7 +87,7 @@ const LeitoCard: React.FC<LeitoCardProps> = ({ setor, leito, actions }) => {
                   </DropdownMenuItem>
                 </>
               )}
-              {leito.statusLeito === 'Ocupado' && (
+              {leito.statusLeito === 'Ocupado' && leito.dadosPaciente && (
                 <>
                   <DropdownMenuItem onClick={() => actions.onMoverPaciente(leito)}>
                     <Users className="mr-2 h-4 w-4" />
