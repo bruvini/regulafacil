@@ -77,7 +77,7 @@ const RegulacaoLeitos = () => {
             onPanoramaClick={handleAbrirPanorama}
             showAllButtons={true}
             sugestoesDisponiveis={listas.sugestoesDeRegulacao.length > 0}
-            panoramaDisponivel={listas.pacientesJaRegulados.length > 0}
+            panoramaDisponivel={true}
           />
         </header>
 
@@ -98,28 +98,30 @@ const RegulacaoLeitos = () => {
         {/* 3. Bloco de Filtros */}
         <FiltrosBlocoRegulacao filtrosProps={filtrosProps} />
 
-        {/* 4. Bloco Principal: Pacientes Aguardando Regulação */}
-        <PacientesAguardandoRegulacao
-          listas={{
-            decisaoCirurgica: listas.decisaoCirurgica,
-            decisaoClinica: listas.decisaoClinica,
-            recuperacaoCirurgica: listas.recuperacaoCirurgica,
-            totalPendentes: listas.totalPendentes,
-            pacientesJaRegulados: listas.pacientesJaRegulados,
-          }}
-          handlers={{
-            handleOpenRegulacaoModal: handlers.handleOpenRegulacaoModal,
-            handleConcluir: handlers.handleConcluir,
-            handleAlterar: handlers.handleAlterar,
-            handleCancelar: handlers.handleCancelar,
-            altaAposRecuperacao: handlers.altaAposRecuperacao,
-            setResumoModalOpen: handlers.setResumoModalOpen,
-          }}
-          filtrosProps={{
-            sortConfig: filtrosProps.sortConfig,
-          }}
-          actingOnPatientId={modals.actingOnPatientId}
-        />
+        {/* 4. Bloco Principal: Pacientes Aguardando Regulação - Layout horizontal em desktop */}
+        <div className="grid lg:grid-cols-3 gap-4">
+          <PacientesAguardandoRegulacao
+            listas={{
+              decisaoCirurgica: listas.decisaoCirurgica,
+              decisaoClinica: listas.decisaoClinica,
+              recuperacaoCirurgica: listas.recuperacaoCirurgica,
+              totalPendentes: listas.totalPendentes,
+              pacientesJaRegulados: listas.pacientesJaRegulados,
+            }}
+            handlers={{
+              handleOpenRegulacaoModal: handlers.handleOpenRegulacaoModal,
+              handleConcluir: handlers.handleConcluir,
+              handleAlterar: handlers.handleAlterar,
+              handleCancelar: handlers.handleCancelar,
+              altaAposRecuperacao: handlers.altaAposRecuperacao,
+              setResumoModalOpen: handlers.setResumoModalOpen,
+            }}
+            filtrosProps={{
+              sortConfig: filtrosProps.sortConfig,
+            }}
+            actingOnPatientId={modals.actingOnPatientId}
+          />
+        </div>
 
         {/* 5. Bloco: Pacientes Regulados */}
         <PacientesReguladosBloco
