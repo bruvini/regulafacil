@@ -1,5 +1,4 @@
 
-
 // src/hooks/usePacientes.ts
 
 import { useState, useEffect } from 'react';
@@ -43,19 +42,7 @@ export const usePacientes = () => {
 
   const criarPacienteManual = async (dadosPaciente: Omit<Paciente, 'id'>): Promise<string> => {
     try {
-      // Handle date conversion properly
-      let dataNascimentoFormatted = dadosPaciente.dataNascimento;
-      
-      if (dadosPaciente.dataNascimento && typeof dadosPaciente.dataNascimento === 'object') {
-        // If it's a Date object, convert to string format
-        const dateObj = dadosPaciente.dataNascimento as Date;
-        dataNascimentoFormatted = dateObj.toISOString().split('T')[0];
-      }
-
-      const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), {
-        ...dadosPaciente,
-        dataNascimento: dataNascimentoFormatted
-      });
+      const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), dadosPaciente);
       return docRef.id;
     } catch (error) {
       console.error("Erro ao criar paciente manualmente:", error);

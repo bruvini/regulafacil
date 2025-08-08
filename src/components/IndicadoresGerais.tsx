@@ -1,93 +1,67 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BedDouble, User2, Users, PercentCircle, Clock } from "lucide-react";
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
+import { Clock } from 'lucide-react';
 
 interface IndicadoresGeraisProps {
-  contagem: any;
+  contagem: Record<string, number>;
   taxa: number;
-  tempos: any;
-  nivelPCP: any;
-  setoresEnriquecidos?: Array<{
-    id: string;
-    nomeSetor: string;
-    leitos: Array<{
-      statusLeito: string;
-      leitoIsolamento: boolean;
-    }>;
-  }>;
+  tempos: Record<string, string>;
+  nivelPCP: { nivel: string; cor: string; count: number };
 }
 
-export function IndicadoresGerais({ 
-  contagem, 
-  taxa, 
-  tempos, 
-  nivelPCP, 
-  setoresEnriquecidos = [] 
-}: IndicadoresGeraisProps) {
-  // Setores específicos para contagem de leitos vagos
-  const setoresContagem = [
-    "UNID. CIRURGICA", "UNID. CLINICA MEDICA", "UNID. INT. GERAL - UIG",
-    "UNID. JS ORTOPEDIA", "UNID. NEFROLOGIA TRANSPLANTE", "UNID. ONCOLOGIA", "UTI"
-  ];
+export const IndicadoresGerais = ({ contagem, taxa, tempos, nivelPCP }: IndicadoresGeraisProps) => {
+  const getProgressColor = (value: number) => {
+    const hue = Math.max(0, 120 * (1 - value / 100));
+    return `hsl(${hue}, 80%, 45%)`;
+  };
 
-  // Calcular leitos vagos considerando apenas setores específicos
-  const leitosVagosFiltrados = setoresEnriquecidos
-    .filter(setor => setoresContagem.includes(setor.nomeSetor))
-    .flatMap(setor => setor.leitos.filter(leito => leito.statusLeito === 'Vago'));
-
-  const totalVagos = leitosVagosFiltrados.length;
-  const vagosSemIsolamento = leitosVagosFiltrados.filter(leito => !leito.leitoIsolamento).length;
+  const statusOrder = ['Ocupado', 'Vago', 'Bloqueado', 'Higienizacao', 'Regulado', 'Reservado'];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {/* Card de Leitos Vagos Atualizado */}
-      <Card className="shadow-card border border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-medical-primary">Vagos</CardTitle>
-          <BedDouble className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-medical-primary">{totalVagos}</div>
-          <p className="text-xs text-muted-foreground">
-            {vagosSemIsolamento} vagos (sem isolamento por coorte)
-          </p>
-        </CardContent>
-      </Card>
+    <Card className="shadow-card border border-border/50">
+      <CardHeader>
+        <CardTitle className="text-xl font-semibold text-medical-primary">Indicadores Gerais</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div>
+          <div className="flex justify-between items-center mb-1">
+            <h4 className="text-sm font-medium text-muted-foreground">Taxa de Ocupação</h4>
+            <span className="font-bold text-lg text-medical-primary">{taxa}%</span>
+          </div>
+          <Progress 
+            value={taxa} 
+            className="h-3"
+            indicatorStyle={{ backgroundColor: getProgressColor(taxa) }} 
+          />
+        </div>
 
-      {/* Card de Taxa de Ocupação */}
-      <Card className="shadow-card border border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-medical-primary">Ocupação</CardTitle>
-          <PercentCircle className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-medical-primary">{taxa}%</div>
-          <p className="text-xs text-muted-foreground">Taxa de ocupação geral</p>
-        </CardContent>
-      </Card>
+        <div className={cn("p-4 rounded-lg text-white text-center transition-colors", nivelPCP.cor)}>
+          <p className="font-bold text-lg">PCP {nivelPCP.nivel}</p>
+          <p className="text-sm opacity-90">{nivelPCP.count} pacientes internados no Pronto Socorro (DCX + DCL)</p>
+        </div>
 
-      {/* Card de Tempo Médio de Internação */}
-      <Card className="shadow-card border border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-medical-primary">Tempo Médio</CardTitle>
-          <Clock className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-medical-primary">{tempos?.internacao}</div>
-          <p className="text-xs text-muted-foreground">Tempo médio de internação</p>
-        </CardContent>
-      </Card>
-
-      {/* Card de Nível de Pacientes Críticos (PCP) */}
-       <Card className="shadow-card border border-border/50">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-medical-primary">Nível PCP</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-medical-primary">{nivelPCP?.totalPacientesPCP}</div>
-          <p className="text-xs text-muted-foreground">Total de pacientes nível PCP</p>
-        </CardContent>
-      </Card>
-    </div>
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">Status dos Leitos</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
+            {statusOrder.map((status) => (
+              <Card key={status} className="p-3 flex flex-col justify-between">
+                <div>
+                  <p className="font-bold text-2xl">{contagem[status] ?? 0}</p>
+                  <p className="text-sm font-semibold text-foreground">{status}</p>
+                </div>
+                {(tempos[status] && status !== 'Regulado' && status !== 'Reservado') && (
+                   <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mt-2">
+                     <Clock className="h-3 w-3" />
+                     <span>{tempos[status]}</span>
+                   </div>
+                )}
+              </Card>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
-}
+};

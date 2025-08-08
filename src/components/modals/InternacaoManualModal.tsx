@@ -3,8 +3,6 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format } from 'date-fns';
-import { CalendarIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,8 +23,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -34,22 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 import { LeitoEnriquecido } from '@/types/hospital';
-
-const especialidades = [
-  "CIRURGIA CABECA E PESCOCO", "CIRURGIA GERAL", "CIRURGIA TORACICA",
-  "CIRURGIA VASCULAR", "CLINICA GERAL", "HEMATOLOGIA", "INTENSIVISTA",
-  "NEFROLOGIA", "NEUROCIRURGIA", "NEUROLOGIA", "ODONTOLOGIA C.TRAUM.B.M.F.",
-  "ONCOLOGIA CIRURGICA", "ONCOLOGIA CLINICA/CANCEROLOGIA",
-  "ORTOPEDIA/TRAUMATOLOGIA", "PROCTOLOGIA", "UROLOGIA"
-];
 
 const formSchema = z.object({
   nomeCompleto: z.string().min(1, 'Nome completo é obrigatório'),
-  dataNascimento: z.date({
-    required_error: "A data de nascimento é obrigatória.",
-  }),
+  dataNascimento: z.string().min(1, 'Data de nascimento é obrigatória'),
   sexoPaciente: z.enum(['Masculino', 'Feminino'], {
     required_error: 'Sexo é obrigatório',
   }),
@@ -66,11 +51,27 @@ interface InternacaoManualModalProps {
   leito: LeitoEnriquecido | null;
 }
 
+const especialidades = [
+  'Cardiologia',
+  'Cirurgia Geral',
+  'Clínica Médica',
+  'Endocrinologia',
+  'Gastroenterologia',
+  'Ginecologia',
+  'Neurologia',
+  'Obstetrícia',
+  'Ortopedia',
+  'Pediatria',
+  'Pneumologia',
+  'Urologia',
+];
+
 export function InternacaoManualModal({ open, onOpenChange, onConfirm, leito }: InternacaoManualModalProps) {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nomeCompleto: '',
+      dataNascimento: '',
       sexoPaciente: 'Masculino',
       dataInternacao: '',
       especialidadePaciente: '',
@@ -117,40 +118,14 @@ export function InternacaoManualModal({ open, onOpenChange, onConfirm, leito }: 
               control={form.control}
               name="dataNascimento"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Data de Nascimento *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "dd/MM/yyyy")
-                          ) : (
-                            <span>Escolha uma data</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date > new Date() || date < new Date("1900-01-01")
-                        }
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl>
+                    <Input 
+                      placeholder="DD/MM/AAAA"
+                      {...field}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
