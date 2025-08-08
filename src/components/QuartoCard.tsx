@@ -1,4 +1,3 @@
-
 // src/components/QuartoCard.tsx
 
 import { useMemo } from 'react';
@@ -6,7 +5,7 @@ import LeitoCard from './LeitoCard';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { AlertTriangle } from 'lucide-react';
-import { LeitoEnriquecido } from '@/pages/MapaLeitos';
+import { LeitoEnriquecido } from '@/types/hospital';
 
 interface QuartoCardProps {
   nomeQuarto: string;
