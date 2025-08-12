@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -19,6 +20,7 @@ import GestaoEstrategica from '@/pages/GestaoEstrategica';
 import Auditoria from '@/pages/Auditoria';
 import NotFound from '@/pages/NotFound';
 import ProtectedLayout from '@/components/ProtectedLayout';
+import { AuthProvider } from '@/hooks/useAuth';
 
 const queryClient = new QueryClient();
 
@@ -26,31 +28,34 @@ function App() {
   return (
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <div className="min-h-screen bg-background font-sans antialiased">
-            <Toaster />
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/" element={<ProtectedLayout />}>
-                <Route index element={<HomePage />} />
-                <Route path="mapa-leitos" element={<MapaLeitos />} />
-                <Route path="regulacao" element={<RegulacaoLeitos />} />
-                <Route path="central-higienizacao" element={<CentralHigienizacao />} />
-                <Route path="marcacao-cirurgica" element={<MarcacaoCirurgica />} />
-                <Route path="huddle" element={<Huddle />} />
-                <Route path="gestao-isolamentos" element={<GestaoIsolamentos />} />
-                <Route path="gestao-usuarios" element={<GestaoUsuarios />} />
-                <Route path="gestao-estrategica" element={<GestaoEstrategica />} />
-                <Route path="auditoria" element={<Auditoria />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <div className="min-h-screen bg-background font-sans antialiased">
+              <Toaster />
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/" element={<ProtectedLayout />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="mapa-leitos" element={<MapaLeitos />} />
+                  <Route path="regulacao" element={<RegulacaoLeitos />} />
+                  <Route path="central-higienizacao" element={<CentralHigienizacao />} />
+                  <Route path="marcacao-cirurgica" element={<MarcacaoCirurgica />} />
+                  <Route path="huddle" element={<Huddle />} />
+                  <Route path="gestao-isolamentos" element={<GestaoIsolamentos />} />
+                  <Route path="gestao-usuarios" element={<GestaoUsuarios />} />
+                  <Route path="gestao-estrategica" element={<GestaoEstrategica />} />
+                  <Route path="auditoria" element={<Auditoria />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );
 }
 
 export default App;
+
 
