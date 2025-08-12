@@ -9,11 +9,13 @@ import {
   Settings,
   Home,
   Menu,
-  BrainCircuit
+  BrainCircuit,
+  Sparkles
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { APP_ROUTES } from '@/config/routes';
 import {
   Sidebar,
   SidebarContent,
@@ -36,47 +38,52 @@ interface AppLayoutProps {
 const menuItems = [
   {
     title: 'Início',
-    url: '/inicio',
+    url: APP_ROUTES.private.home,
     icon: Home,
   },
   {
     title: 'Regulação de Leitos',
-    url: '/regulacao-leitos',
+    url: APP_ROUTES.private.regulacao,
     icon: BrainCircuit,
   },
   {
     title: 'Mapa de Leitos',
-    url: '/mapa-leitos',
+    url: APP_ROUTES.private.mapaLeitos,
     icon: BedDouble,
   },
   {
+    title: 'Central de Higienização',
+    url: APP_ROUTES.private.centralHigienizacao,
+    icon: Sparkles,
+  },
+  {
     title: 'Gestão de Isolamentos',
-    url: '/gestao-isolamentos',
+    url: APP_ROUTES.private.gestaoIsolamentos,
     icon: Shield,
   },
   {
     title: 'Marcação Cirúrgica',
-    url: '/marcacao-cirurgica',
+    url: APP_ROUTES.private.marcacaoCirurgica,
     icon: Scissors,
   },
   {
     title: 'Huddle',
-    url: '/huddle',
+    url: APP_ROUTES.private.huddle,
     icon: Users,
   },
   {
     title: 'Gestão Estratégica',
-    url: '/gestao-estrategica',
+    url: APP_ROUTES.private.gestaoEstrategica,
     icon: TrendingUp,
   },
   {
     title: 'Auditoria',
-    url: '/auditoria',
+    url: APP_ROUTES.private.auditoria,
     icon: FileText,
   },
   {
     title: 'Gestão de Usuários',
-    url: '/gestao-usuarios',
+    url: APP_ROUTES.private.gestaoUsuarios,
     icon: Settings,
   },
 ];
@@ -88,7 +95,7 @@ function AppSidebar() {
   
   const menuItemsVisiveis = menuItems.filter(item => {
     if (userData?.tipoAcesso === 'Administrador') return true;
-    if (item.url === '/inicio') return true;
+    if (item.url === APP_ROUTES.private.home) return true;
     const paginaId = item.url.replace('/', '');
     return userData?.permissoes?.includes(paginaId);
   });

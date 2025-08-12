@@ -1,11 +1,10 @@
 
-
-
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { APP_ROUTES } from '@/config/routes';
 
 import LoginPage from '@/pages/LoginPage';
 import HomePage from '@/pages/HomePage';
@@ -33,18 +32,18 @@ function App() {
             <div className="min-h-screen bg-background font-sans antialiased">
               <Toaster />
               <Routes>
-                <Route path="/login" element={<LoginPage />} />
+                <Route path={APP_ROUTES.public.login} element={<LoginPage />} />
                 <Route path="/" element={<ProtectedLayout />}>
                   <Route index element={<HomePage />} />
-                  <Route path="mapa-leitos" element={<MapaLeitos />} />
-                  <Route path="regulacao" element={<RegulacaoLeitos />} />
-                  <Route path="central-higienizacao" element={<CentralHigienizacao />} />
-                  <Route path="marcacao-cirurgica" element={<MarcacaoCirurgica />} />
-                  <Route path="huddle" element={<Huddle />} />
-                  <Route path="gestao-isolamentos" element={<GestaoIsolamentos />} />
-                  <Route path="gestao-usuarios" element={<GestaoUsuarios />} />
-                  <Route path="gestao-estrategica" element={<GestaoEstrategica />} />
-                  <Route path="auditoria" element={<Auditoria />} />
+                  <Route path={APP_ROUTES.private.mapaLeitos.substring(1)} element={<MapaLeitos />} />
+                  <Route path={APP_ROUTES.private.regulacao.substring(1)} element={<RegulacaoLeitos />} />
+                  <Route path={APP_ROUTES.private.centralHigienizacao.substring(1)} element={<CentralHigienizacao />} />
+                  <Route path={APP_ROUTES.private.marcacaoCirurgica.substring(1)} element={<MarcacaoCirurgica />} />
+                  <Route path={APP_ROUTES.private.huddle.substring(1)} element={<Huddle />} />
+                  <Route path={APP_ROUTES.private.gestaoIsolamentos.substring(1)} element={<GestaoIsolamentos />} />
+                  <Route path={APP_ROUTES.private.gestaoUsuarios.substring(1)} element={<GestaoUsuarios />} />
+                  <Route path={APP_ROUTES.private.gestaoEstrategica.substring(1)} element={<GestaoEstrategica />} />
+                  <Route path={APP_ROUTES.private.auditoria.substring(1)} element={<Auditoria />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
@@ -57,5 +56,3 @@ function App() {
 }
 
 export default App;
-
-

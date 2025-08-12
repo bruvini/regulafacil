@@ -15,69 +15,70 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { APP_ROUTES } from '@/config/routes';
 
 const features = [
   {
     title: 'Regulação de Leitos',
     description: 'Gerencie solicitações de leitos e pendências em tempo real',
     icon: BrainCircuit,
-    path: '/regulacao-leitos',
+    path: APP_ROUTES.private.regulacao,
     color: 'bg-medical-primary'
   },
   {
     title: 'Mapa de Leitos',
     description: 'Visualize a ocupação de todos os setores e leitos do hospital em tempo real',
     icon: BedDouble,
-    path: '/mapa-leitos',
+    path: APP_ROUTES.private.mapaLeitos,
     color: 'bg-cyan-600'
   },
   {
     title: 'Central de Higienização',
     description: 'Gerencie e monitore a limpeza e higienização dos leitos',
     icon: Sparkles,
-    path: '/central-higienizacao',
+    path: APP_ROUTES.private.centralHigienizacao,
     color: 'bg-emerald-600'
   },
   {
     title: 'Gestão de Isolamentos',
     description: 'Controle e monitore protocolos de isolamento de pacientes',
     icon: Shield,
-    path: '/gestao-isolamentos',
+    path: APP_ROUTES.private.gestaoIsolamentos,
     color: 'bg-medical-danger'
   },
   {
     title: 'Marcação Cirúrgica',
     description: 'Agende e gerencie cirurgias eletivas com controle de leitos',
     icon: Scissors,
-    path: '/marcacao-cirurgica',
+    path: APP_ROUTES.private.marcacaoCirurgica,
     color: 'bg-purple-600'
   },
   {
     title: 'Huddle',
     description: 'Reuniões diárias e comunicação entre equipes',
     icon: Users,
-    path: '/huddle',
+    path: APP_ROUTES.private.huddle,
     color: 'bg-green-600'
   },
   {
     title: 'Gestão Estratégica',
     description: 'Indicadores e métricas para tomada de decisão',
     icon: TrendingUp,
-    path: '/gestao-estrategica',
+    path: APP_ROUTES.private.gestaoEstrategica,
     color: 'bg-blue-600'
   },
   {
     title: 'Auditoria',
     description: 'Controle e rastreabilidade de todas as operações',
     icon: FileText,
-    path: '/auditoria',
+    path: APP_ROUTES.private.auditoria,
     color: 'bg-orange-600'
   },
   {
     title: 'Gestão de Usuários',
     description: 'Controle de acesso e permissões do sistema',
     icon: Settings,
-    path: '/gestao-usuarios',
+    path: APP_ROUTES.private.gestaoUsuarios,
     color: 'bg-gray-600'
   }
 ];
@@ -104,7 +105,6 @@ const HomePage = () => {
           </p>
         </div>
 
-        {/* BLOCO DE BOAS-VINDAS MOVIDO PARA CÁ */}
         <div className="mb-12">
           <Card className="bg-medical-primary/5 border-medical-primary/20">
             <CardContent className="pt-8 pb-8">
