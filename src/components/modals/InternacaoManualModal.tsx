@@ -52,18 +52,22 @@ interface InternacaoManualModalProps {
 }
 
 const especialidades = [
-  'Cardiologia',
-  'Cirurgia Geral',
-  'Clínica Médica',
-  'Endocrinologia',
-  'Gastroenterologia',
-  'Ginecologia',
-  'Neurologia',
-  'Obstetrícia',
-  'Ortopedia',
-  'Pediatria',
-  'Pneumologia',
-  'Urologia',
+  "CIRURGIA CABECA E PESCOCO", 
+  "CIRURGIA GERAL", 
+  "CIRURGIA TORACICA",
+  "CIRURGIA VASCULAR", 
+  "CLINICA GERAL", 
+  "HEMATOLOGIA", 
+  "INTENSIVISTA",
+  "NEFROLOGIA", 
+  "NEUROCIRURGIA", 
+  "NEUROLOGIA", 
+  "ODONTOLOGIA C.TRAUM.B.M.F.",
+  "ONCOLOGIA CIRURGICA", 
+  "ONCOLOGIA CLINICA/CANCEROLOGIA",
+  "ORTOPEDIA/TRAUMATOLOGIA", 
+  "PROCTOLOGIA", 
+  "UROLOGIA"
 ];
 
 export function InternacaoManualModal({ open, onOpenChange, onConfirm, leito }: InternacaoManualModalProps) {

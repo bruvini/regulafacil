@@ -7,6 +7,8 @@ import {
   onSnapshot,
   query,
   addDoc,
+  where,
+  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Paciente } from '@/types/hospital';
@@ -50,10 +52,38 @@ export const usePacientes = () => {
     return () => unsubscribe();
   }, []); // O array de dependências vazio garante que o listener seja configurado apenas uma vez.
 
-  const criarPacienteManual = async (dadosPaciente: Omit<Paciente, 'id'>): Promise<string> => {
+  const criarPacienteManual = async (dadosPaciente: Omit<Paciente, 'id'>): Promise<string | null> => {
+    // 1. Padroniza o nome para maiúsculas para a verificação e salvamento
+    const nomeEmMaiusculo = dadosPaciente.nomeCompleto.toUpperCase();
+
     try {
-      const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), dadosPaciente);
+      // 2. Cria a query para verificar duplicatas
+      const q = query(
+        collection(db, 'pacientesRegulaFacil'),
+        where('nomeCompleto', '==', nomeEmMaiusculo),
+        where('dataNascimento', '==', dadosPaciente.dataNascimento)
+      );
+
+      // 3. Executa a query
+      const querySnapshot = await getDocs(q);
+
+      // 4. Se o resultado não for vazio, um duplicado existe
+      if (!querySnapshot.empty) {
+        toast({
+          title: "Erro de Duplicidade",
+          description: "Este paciente já está cadastrado no sistema (mesmo nome e data de nascimento).",
+          variant: "destructive",
+        });
+        return null; // Retorna nulo para indicar que a criação falhou
+      }
+
+      // 5. Se não houver duplicatas, cria o novo paciente com o nome padronizado
+      const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), {
+        ...dadosPaciente,
+        nomeCompleto: nomeEmMaiusculo, // Garante que o nome salvo esteja em maiúsculas
+      });
       return docRef.id;
+
     } catch (error) {
       console.error("Erro ao criar paciente manualmente:", error);
       toast({
