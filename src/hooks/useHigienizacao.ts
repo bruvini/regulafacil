@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
 import { useLeitos } from '@/hooks/useLeitos';
+import { useSetores } from '@/hooks/useSetores';
 import { toast } from '@/hooks/use-toast';
 import { LeitoEnriquecido } from '@/types/hospital';
 
@@ -29,6 +30,7 @@ export const useHigienizacao = () => {
   const { userData } = useAuth();
   const { registrarLog } = useAuditoria();
   const { atualizarStatusLeito } = useLeitos();
+  const { setores } = useSetores();
 
   // Buscar leitos em higienização
   useEffect(() => {
@@ -62,6 +64,15 @@ export const useHigienizacao = () => {
     return () => unsubscribe();
   }, []);
 
+  // Criar mapa de setores para traduzir IDs para nomes
+  const mapaSetores = useMemo(() => {
+    const mapa = new Map();
+    setores.forEach(setor => {
+      mapa.set(setor.id, setor.nomeSetor);
+    });
+    return mapa;
+  }, [setores]);
+
   // Processar dados dos leitos
   const leitosProcessados = useMemo(() => {
     const agora = new Date();
@@ -77,14 +88,27 @@ export const useHigienizacao = () => {
         ...leito,
         tempoEsperaMinutos,
         tempoEsperaFormatado: horas > 0 ? `${horas}h ${minutos}m` : `${minutos}m`,
-        setor: leito.setorId || 'Setor não identificado'
+        setor: mapaSetores.get(leito.setorId) || 'Setor não identificado'
       } as LeitoHigienizacao;
     });
-  }, [leitosRaw]);
+  }, [leitosRaw, mapaSetores]);
 
-  // Agrupar e ordenar leitos por setor
+  // Separar leitos prioritários dos normais
+  const { leitosPrioritarios, leitosNormais } = useMemo(() => {
+    const prioritarios = leitosProcessados
+      .filter(leito => leito.higienizacaoPrioritaria)
+      .sort((a, b) => b.tempoEsperaMinutos - a.tempoEsperaMinutos);
+
+    const normais = leitosProcessados
+      .filter(leito => !leito.higienizacaoPrioritaria)
+      .sort((a, b) => b.tempoEsperaMinutos - a.tempoEsperaMinutos);
+
+    return { leitosPrioritarios: prioritarios, leitosNormais: normais };
+  }, [leitosProcessados]);
+
+  // Agrupar leitos normais por setor
   const leitosAgrupados = useMemo(() => {
-    const grupos = leitosProcessados.reduce((acc, leito) => {
+    const grupos = leitosNormais.reduce((acc, leito) => {
       if (!acc[leito.setor]) {
         acc[leito.setor] = [];
       }
@@ -103,7 +127,7 @@ export const useHigienizacao = () => {
     });
 
     return grupos;
-  }, [leitosProcessados]);
+  }, [leitosNormais]);
 
   // Calcular indicadores
   const indicadores: IndicadoresHigienizacao = useMemo(() => {
@@ -118,7 +142,7 @@ export const useHigienizacao = () => {
       tempoMedioEspera = horas > 0 ? `${horas}h ${minutos}m` : `${minutos}m`;
     }
 
-    // Top 3 setores
+    // Top 3 setores com nomes corretos
     const setoresCount = leitosProcessados.reduce((acc, leito) => {
       acc[leito.setor] = (acc[leito.setor] || 0) + 1;
       return acc;
@@ -199,7 +223,8 @@ export const useHigienizacao = () => {
   };
 
   return {
-    leitosEmHigienizacao: leitosAgrupados,
+    leitosPrioritarios,
+    leitosAgrupados,
     indicadores,
     handleConcluirHigienizacao,
     loading

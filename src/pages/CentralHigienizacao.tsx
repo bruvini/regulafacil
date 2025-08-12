@@ -4,11 +4,13 @@ import { useHigienizacao } from '@/hooks/useHigienizacao';
 import IndicadoresHigienizacao from '@/components/IndicadoresHigienizacao';
 import ListaHigienizacao from '@/components/ListaHigienizacao';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, Star, Clock } from 'lucide-react';
 
 const CentralHigienizacao = () => {
   const { userData } = useAuth();
-  const { leitosEmHigienizacao, indicadores, handleConcluirHigienizacao, loading } = useHigienizacao();
+  const { leitosPrioritarios, leitosAgrupados, indicadores, handleConcluirHigienizacao, loading } = useHigienizacao();
 
   if (loading) {
     return (
@@ -20,6 +22,8 @@ const CentralHigienizacao = () => {
       </div>
     );
   }
+
+  const temTarefas = leitosPrioritarios.length > 0 || Object.keys(leitosAgrupados).length > 0;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -48,11 +52,57 @@ const CentralHigienizacao = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {leitosEmHigienizacao.length > 0 ? (
-            <ListaHigienizacao 
-              leitosAgrupados={leitosEmHigienizacao} 
-              onConcluir={handleConcluirHigienizacao} 
-            />
+          {temTarefas ? (
+            <div className="space-y-6">
+              {/* Bloco de Leitos Prioritários */}
+              {leitosPrioritarios.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                    <h3 className="text-lg font-semibold text-yellow-700">PRIORIDADE MÁXIMA</h3>
+                    <Badge variant="destructive">{leitosPrioritarios.length}</Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {leitosPrioritarios.map(leito => (
+                      <div
+                        key={leito.id}
+                        className="flex items-center justify-between p-4 rounded-lg border-2 border-yellow-400 bg-yellow-50 shadow-md"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                          <div>
+                            <p className="font-medium text-foreground">
+                              Leito {leito.codigoLeito}
+                            </p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-4 w-4" />
+                              <span>Aguardando há {leito.tempoEsperaFormatado}</span>
+                              <span className="text-yellow-600">• {leito.setor}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Button
+                          onClick={() => handleConcluirHigienizacao(leito)}
+                          className="bg-medical-success hover:bg-medical-success/90"
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Concluir
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Blocos de Leitos Normais Agrupados por Setor */}
+              {Object.keys(leitosAgrupados).length > 0 && (
+                <ListaHigienizacao 
+                  leitosAgrupados={leitosAgrupados} 
+                  onConcluir={handleConcluirHigienizacao} 
+                />
+              )}
+            </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
