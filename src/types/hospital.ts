@@ -53,6 +53,7 @@ export interface Leito {
   tipoLeito: string;
   leitoIsolamento: boolean;
   leitoPCP: boolean;
+  higienizacaoPrioritaria?: boolean; // Nova propriedade adicionada
   historicoMovimentacao: HistoricoLeito[];
 }
 

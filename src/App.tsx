@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/toaster';
@@ -17,6 +18,7 @@ import GestaoEstrategica from '@/pages/GestaoEstrategica';
 import Auditoria from '@/pages/Auditoria';
 import NotFound from '@/pages/NotFound';
 import ProtectedLayout from '@/components/ProtectedLayout';
+import AppLayout from '@/components/AppLayout';
 
 const queryClient = new QueryClient();
 
