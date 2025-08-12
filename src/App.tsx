@@ -14,6 +14,7 @@ import Huddle from "./pages/Huddle";
 import GestaoEstrategica from "./pages/GestaoEstrategica";
 import Auditoria from "./pages/Auditoria";
 import GestaoUsuarios from "./pages/GestaoUsuarios";
+import CentralHigienizacao from "./pages/CentralHigienizacao";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import ProtectedLayout from "./components/ProtectedLayout";
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/inicio" element={<PermissionChecker><HomePage /></PermissionChecker>} />
                 <Route path="/regulacao-leitos" element={<PermissionChecker><RegulacaoLeitos /></PermissionChecker>} />
                 <Route path="/mapa-leitos" element={<PermissionChecker><MapaLeitos /></PermissionChecker>} />
+                <Route path="/central-higienizacao" element={<PermissionChecker><CentralHigienizacao /></PermissionChecker>} />
                 <Route path="/gestao-isolamentos" element={<PermissionChecker><GestaoIsolamentos /></PermissionChecker>} />
                 <Route path="/marcacao-cirurgica" element={<PermissionChecker><MarcacaoCirurgica /></PermissionChecker>} />
                 <Route path="/huddle" element={<PermissionChecker><Huddle /></PermissionChecker>} />

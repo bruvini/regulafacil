@@ -1,5 +1,5 @@
 
-import { Home, Users, Bed, Calendar, FileText, Settings, Activity, Shield, BarChart3, Stethoscope } from "lucide-react"
+import { Home, Users, Bed, Calendar, FileText, Settings, Activity, Shield, BarChart3, Stethoscope, Sparkles } from "lucide-react"
 import { NavLink } from "react-router-dom"
 
 import {
@@ -28,6 +28,11 @@ const navLinks = [
     title: "Regulação de Leitos",
     url: "/regulacao-leitos", 
     icon: Activity,
+  },
+  {
+    title: "Central de Higienização",
+    url: "/central-higienizacao",
+    icon: Sparkles,
   },
   {
     title: "Marcação Cirúrgica",
