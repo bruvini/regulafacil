@@ -18,6 +18,7 @@ import {
 const paginasSistema = [
   { id: 'regulacao-leitos', label: 'Regulação de Leitos' },
   { id: 'mapa-leitos', label: 'Mapa de Leitos' },
+  { id: 'central-higienizacao', label: 'Central de Higienização' },
   { id: 'gestao-isolamentos', label: 'Gestão de Isolamentos' },
   { id: 'marcacao-cirurgica', label: 'Marcação Cirúrgica' },
   { id: 'huddle', label: 'Huddle' },

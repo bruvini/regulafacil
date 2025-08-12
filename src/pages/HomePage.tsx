@@ -8,7 +8,8 @@ import {
   FileText, 
   Settings,
   ArrowRight,
-  BrainCircuit
+  BrainCircuit,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,13 @@ const features = [
     icon: BedDouble,
     path: '/mapa-leitos',
     color: 'bg-cyan-600'
+  },
+  {
+    title: 'Central de Higienização',
+    description: 'Gerencie e monitore a limpeza e higienização dos leitos',
+    icon: Sparkles,
+    path: '/central-higienizacao',
+    color: 'bg-emerald-600'
   },
   {
     title: 'Gestão de Isolamentos',
