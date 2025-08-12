@@ -8,9 +8,9 @@ interface IndicadoresProps {
     tempoMedioInternacao: string;
     contagemStatus: { Pendentes: number; Concluidas: number; Canceladas: number; Alteradas: number; };
     tempoMedioRegulacaoPendente: string;
-    topOrigem: string;
-    topDestino: string;
-    topTurno: string;
+    topOrigem: { nome: string; contagem: number };
+    topDestino: { nome: string; contagem: number };
+    topTurno: { nome: string; contagem: number };
   }
 }
 
@@ -64,12 +64,21 @@ export const IndicadoresRegulacao = ({ indicadores }: IndicadoresProps) => {
           </CardContent>
         </Card>
         
-        {/* Top Setores e Turno */}
+        {/* Top Setores e Turno com contagens */}
         <Card className="col-span-2 lg:col-span-4">
            <CardContent className="flex justify-around items-center pt-6 text-center">
-            <div className="flex items-center gap-2"><ArrowRight className="h-4 w-4" /><p className="text-sm">Origem mais frequente: <span className="font-bold">{topOrigem}</span></p></div>
-            <div className="flex items-center gap-2"><ArrowLeft className="h-4 w-4" /><p className="text-sm">Destino mais frequente: <span className="font-bold">{topDestino}</span></p></div>
-            <div className="flex items-center gap-2">{getTurnoIcon(topTurno)}<p className="text-sm">Turno com mais regulações: <span className="font-bold">{topTurno}</span></p></div>
+            <div className="flex items-center gap-2">
+              <ArrowRight className="h-4 w-4" />
+              <p className="text-sm">Origem mais frequente: <span className="font-bold">{topOrigem.nome} ({topOrigem.contagem})</span></p>
+            </div>
+            <div className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <p className="text-sm">Destino mais frequente: <span className="font-bold">{topDestino.nome} ({topDestino.contagem})</span></p>
+            </div>
+            <div className="flex items-center gap-2">
+              {getTurnoIcon(topTurno.nome)}
+              <p className="text-sm">Turno com mais regulações: <span className="font-bold">{topTurno.nome} ({topTurno.contagem})</span></p>
+            </div>
           </CardContent>
         </Card>
       </CardContent>

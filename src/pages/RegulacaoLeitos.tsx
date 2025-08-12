@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
@@ -6,7 +7,7 @@ import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
 import { useState } from "react";
 import { useRegulacoes } from "@/hooks/useRegulacoes";
 import { IndicadoresRegulacao } from "@/components/IndicadoresRegulacao";
-import { differenceInMinutes } from 'date-fns';
+import { differenceInMinutes, isValid } from 'date-fns';
 import { useMemo } from "react";
 
 // Componentes atualizados
@@ -43,19 +44,47 @@ const RegulacaoLeitos = () => {
     setPanoramaVisualizacaoOpen(true);
   };
 
-  // Cálculo dos indicadores
+  // Cálculo dos indicadores - CORRIGIDO
   const indicadores = useMemo(() => {
     const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length + listas.recuperacaoCirurgica.length + listas.pacientesAguardandoUTI.length;
     
-    // Tempo médio de internação
-    const pacientesAguardando = [...listas.decisaoCirurgica, ...listas.decisaoClinica, ...listas.recuperacaoCirurgica];
-    let tempoMedioInternacao = "N/A";
-    if (pacientesAguardando.length > 0) {
-      const totalMinutos = pacientesAguardando.reduce((acc, p) => acc + differenceInMinutes(new Date(), new Date(p.dataInternacao)), 0);
-      const mediaMinutos = totalMinutos / pacientesAguardando.length;
-      const dias = Math.floor(mediaMinutos / 1440);
-      const horas = Math.floor((mediaMinutos % 1440) / 60);
-      tempoMedioInternacao = `${dias}d ${horas}h`;
+    // Tempo médio de espera - LÓGICA CORRIGIDA
+    const agora = new Date();
+    const todosAguardando = [
+      ...listas.decisaoCirurgica,
+      ...listas.decisaoClinica,
+      ...listas.recuperacaoCirurgica,
+      ...listas.pacientesAguardandoUTI
+    ];
+
+    let tempoMedioEspera = "N/A";
+    if (todosAguardando.length > 0) {
+      const totalMinutos = todosAguardando.reduce((acc, p) => {
+        let dataInicioEspera;
+        // Se for um pedido de UTI, usa o timestamp do pedido
+        if (p.pedidoUTI && p.pedidoUTI.timestamp) {
+          dataInicioEspera = new Date(p.pedidoUTI.timestamp);
+        } 
+        // Senão, usa a data de internação
+        else if (p.dataInternacao) {
+          dataInicioEspera = new Date(p.dataInternacao);
+        }
+
+        // Se a data for válida, calcula a diferença e adiciona ao acumulador
+        if (dataInicioEspera && isValid(dataInicioEspera)) {
+          return acc + differenceInMinutes(agora, dataInicioEspera);
+        }
+        return acc;
+      }, 0);
+
+      const mediaMinutos = totalMinutos / todosAguardando.length;
+      if (!isNaN(mediaMinutos)) {
+        const dias = Math.floor(mediaMinutos / 1440);
+        const horas = Math.floor((mediaMinutos % 1440) / 60);
+        tempoMedioEspera = `${dias}d ${horas}h`;
+      } else {
+        tempoMedioEspera = "Erro";
+      }
     }
 
     // Contagem de status
@@ -77,22 +106,35 @@ const RegulacaoLeitos = () => {
       tempoMedioRegulacaoPendente = `${horas}h ${minutos}m`;
     }
 
-    // Funções para tops
-    const getTop = (arr: string[]) => arr.length ? Object.entries(arr.reduce((acc, val) => ({...acc, [val]: (acc[val] || 0) + 1}), {} as Record<string, number>)).sort((a,b) => b[1] - a[1])[0][0] : 'N/A';
+    // Funções para tops com contagem - CORRIGIDO
+    const getTopComContagem = (arr: string[]) => {
+      if (!arr.length) return { nome: 'N/A', contagem: 0 };
+      const contagens = arr.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {} as Record<string, number>);
+      const [nome, contagem] = Object.entries(contagens).sort((a, b) => b[1] - a[1])[0];
+      return { nome, contagem };
+    };
     
-    const topOrigem = getTop(regulacoes.map(r => r.setorOrigemNome));
-    const topDestino = getTop(regulacoes.map(r => r.setorDestinoNome));
+    const topOrigem = getTopComContagem(regulacoes.map(r => r.setorOrigemNome));
+    const topDestino = getTopComContagem(regulacoes.map(r => r.setorDestinoNome));
     
-    // Top Turno
+    // Top Turno com contagem
     const turnos = regulacoes.map(r => {
       const hora = new Date(r.criadaEm).getHours() + new Date(r.criadaEm).getMinutes() / 60;
       if (hora >= 6.5 && hora < 12.5) return 'Manhã';
       if (hora >= 12.5 && hora < 18.5) return 'Tarde';
       return 'Noite';
     });
-    const topTurno = getTop(turnos);
+    const topTurno = getTopComContagem(turnos);
 
-    return { aguardandoLeito, tempoMedioInternacao, contagemStatus, tempoMedioRegulacaoPendente, topOrigem, topDestino, topTurno };
+    return { 
+      aguardandoLeito, 
+      tempoMedioInternacao: tempoMedioEspera, 
+      contagemStatus, 
+      tempoMedioRegulacaoPendente, 
+      topOrigem, 
+      topDestino, 
+      topTurno 
+    };
   }, [listas, regulacoes]);
 
   if (loading) {
