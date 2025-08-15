@@ -12,7 +12,6 @@ import { LeitoEnriquecido } from '@/types/hospital';
 
 interface IndicadoresHigienizacao {
   quantidadeAguardando: number;
-  quantidadePrioritarios: number;
   tempoMedioEspera: string;
   top3Setores: { nome: string; quantidade: number }[];
   totalConcluidas: number;
@@ -133,7 +132,6 @@ export const useHigienizacao = () => {
   // Calcular indicadores
   const indicadores: IndicadoresHigienizacao = useMemo(() => {
     const quantidadeAguardando = leitosProcessados.length;
-    const quantidadePrioritarios = leitosProcessados.filter(l => l.higienizacaoPrioritaria).length;
     
     // Tempo médio de espera
     let tempoMedioEspera = "N/A";
@@ -157,7 +155,6 @@ export const useHigienizacao = () => {
 
     return {
       quantidadeAguardando,
-      quantidadePrioritarios,
       tempoMedioEspera,
       top3Setores,
       totalConcluidas

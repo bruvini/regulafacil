@@ -6,7 +6,6 @@ import { Clock, Sparkles, Building, CheckCircle } from 'lucide-react';
 interface IndicadoresHigienizacaoProps {
   indicadores: {
     quantidadeAguardando: number;
-    quantidadePrioritarios: number;
     tempoMedioEspera: string;
     top3Setores: { nome: string; quantidade: number }[];
     totalConcluidas: number;
@@ -27,9 +26,7 @@ const IndicadoresHigienizacao = ({ indicadores }: IndicadoresHigienizacaoProps) 
             {indicadores.quantidadeAguardando}
           </div>
           <p className="text-xs text-muted-foreground">
-            {indicadores.quantidadePrioritarios > 0 
-              ? `sendo ${indicadores.quantidadePrioritarios} prioritário(s)` 
-              : 'Nenhuma prioridade no momento'}
+            {indicadores.quantidadeAguardando === 1 ? 'leito' : 'leitos'}
           </p>
         </CardContent>
       </Card>
