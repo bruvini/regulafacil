@@ -1,469 +1,408 @@
-// src/components/LeitoCard.tsx
 
-import { useState, useMemo } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, MessageSquarePlus, UserPlus, BookMarked } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import StatusBadge from './StatusBadge';
-import DurationDisplay from './DurationDisplay';
-import MotivoBloqueioModal from './modals/MotivoBloqueioModal';
-import { RemanejamentoModal } from './modals/RemanejamentoModal';
-import { TransferenciaModal } from './modals/TransferenciaModal';
-import { cn } from '@/lib/utils';
-import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
+import { 
+  User, 
+  Clock, 
+  Sparkles, 
+  Lock, 
+  Star,
+  CheckCircle,
+  AlertTriangle,
+  MessageSquare,
+  Virus,
+  Shield,
+  Calendar,
+  UserCheck,
+  Building
+} from 'lucide-react';
 import { LeitoEnriquecido } from '@/types/hospital';
+import { cn } from '@/lib/utils';
+import DurationDisplay from './DurationDisplay';
+import StatusBadge from './StatusBadge';
+import { formatarDataHora, calcularIdade } from '@/lib/formatters';
 
 interface LeitoCardProps {
   leito: LeitoEnriquecido;
-  todosLeitosDoSetor: LeitoEnriquecido[];
-  actions: any;
+  actions: {
+    onMoverPaciente: (leito: LeitoEnriquecido) => void;
+    onAbrirObs: (leito: LeitoEnriquecido) => void;
+    onAltaNoLeito: (leito: LeitoEnriquecido) => void;
+    onInternarManualmente: (leito: LeitoEnriquecido) => void;
+    onReservarExterno: (leito: LeitoEnriquecido) => void;
+    onLiberarLeito: (leitoId: string, pacienteId: string) => void;
+    onAtualizarStatus: (leitoId: string, status: string, detalhes?: any) => void;
+    onSolicitarUTI: (pacienteId: string) => void;
+    onSolicitarRemanejamento: (pacienteId: string, motivo: string) => void;
+    onTransferirPaciente: (pacienteId: string, destino: string, motivo: string) => void;
+    onCancelarReserva: (leitoId: string) => void;
+    onConcluirTransferencia: (leito: LeitoEnriquecido) => void;
+    onToggleProvavelAlta: (pacienteId: string, valorAtual: boolean) => void;
+    onFinalizarHigienizacao: (leitoId: string) => void;
+    onBloquearLeito: (leitoId: string, motivo: string) => void;
+    onEnviarParaHigienizacao: (leitoId: string) => void;
+    onPriorizarHigienizacao: (leito: LeitoEnriquecido) => void;
+  };
 }
 
-const calcularIdade = (dataNascimento: string): string => {
-    if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
-    const [dia, mes, ano] = dataNascimento.split('/').map(Number);
-    const hoje = new Date();
-    const nascimento = new Date(ano, mes - 1, dia);
-    let idade = hoje.getFullYear() - nascimento.getFullYear();
-    const m = hoje.getMonth() - nascimento.getMonth();
-    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
-    return idade.toString();
-};
+const LeitoCard = ({ leito, actions }: LeitoCardProps) => {
+  const paciente = leito.dadosPaciente;
+  const ultimoStatus = leito.historicoMovimentacao?.slice(-1)[0];
 
-const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
-    const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
-    const [remanejamentoModalOpen, setRemanejamentoModalOpen] = useState(false);
-    const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
+  // Função para renderizar ícones de isolamento
+  const renderIsolamentoIcons = (isolamentos: string[]) => {
+    if (!isolamentos || isolamentos.length === 0) return null;
+    
+    return (
+      <div className="flex gap-1">
+        {isolamentos.map((isolamento, index) => (
+          <TooltipProvider key={index}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="destructive" className="text-xs px-1 py-0">
+                  <Virus className="h-3 w-3 mr-1" />
+                  {isolamento}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Isolamento: {isolamento}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ))}
+      </div>
+    );
+  };
 
-    const paciente = leito.dadosPaciente;
-
-  const infoBloqueioIsolamento = useMemo(() => {
-    if (leito.statusLeito !== 'Vago') return null;
-    const getQuartoId = (codigoLeito: string): string => {
-        const match = codigoLeito.match(/^(\d+[\s-]?\w*|\w+[\s-]?\d+)\s/);
-        return match ? match[1].trim() : codigoLeito;
-    };
-    const quartoId = getQuartoId(leito.codigoLeito);
-    if (!quartoId) return null;
-    const companheiros = todosLeitosDoSetor.filter(l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado');
-    if (companheiros.length > 0) {
-        const isolamentosCompanheiros = companheiros[0].dadosPaciente?.isolamentosVigentes;
-        if (isolamentosCompanheiros && isolamentosCompanheiros.length > 0) {
-            return { isolamentos: isolamentosCompanheiros.map(i => i.sigla), sexo: companheiros[0].dadosPaciente?.sexoPaciente };
-        }
-    }
-    return null;
-  }, [leito, todosLeitosDoSetor]);
-
-  return (
-    <>
-      {/* A ESTRUTURA PRINCIPAL DO CARD */}
-      <Card className={cn(
-        "flex flex-col min-w-[260px] h-[220px] p-3 shadow-card hover:shadow-medical transition-all duration-200 border",
-        paciente?.sexoPaciente === 'Feminino' && 'border-2 border-pink-500',
-        paciente?.sexoPaciente === 'Masculino' && 'border-2 border-blue-500'
-      )}>
-        {/* Header do Card */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-2">
-            <h4 className="font-semibold text-sm text-foreground">{leito.codigoLeito}</h4>
-            {leito.leitoPCP && (<div className="p-1 bg-medical-warning/10 rounded-full"><Star className="h-3 w-3 text-medical-warning" fill="currentColor" /></div>)}
-            {paciente?.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (<div className="p-1 bg-medical-danger/10 rounded-full"><ShieldAlert className="h-3 w-3 text-medical-danger" /></div>)}
+  // Renderização baseada no status do leito
+  if (leito.statusLeito === 'Vago') {
+    return (
+      <Card className="border border-green-200 bg-green-50 hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-green-800">Leito {leito.codigoLeito}</h3>
+            <StatusBadge status="Vago" />
           </div>
-          <StatusBadge status={leito.statusLeito} />
-        </div>
-
-        {/* Conteúdo Principal */}
-        <div className="flex-grow flex flex-col justify-center py-2">
-            {leito.statusLeito === 'Vago' && infoBloqueioIsolamento ? (
-              <LeitoStatusIsolamento isolamentos={infoBloqueioIsolamento.isolamentos} sexo={infoBloqueioIsolamento.sexo} />
-            ) : leito.statusLeito === 'Ocupado' && paciente ? (
-              <div className="text-left space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="font-medium text-sm leading-tight truncate">{paciente.nomeCompleto}</p>
-                  </div>
-                  {/* ÍCONES DE STATUS DO PACIENTE */}
-                  <div className="flex items-center space-x-1">
-                    {paciente.provavelAlta && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Bell className="h-4 w-4 text-green-500" />
-                          </TooltipTrigger>
-                          <TooltipContent><p>Provável Alta</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    {paciente.aguardaUTI && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
-                          </TooltipTrigger>
-                          <TooltipContent><p>Aguardando UTI</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    {paciente.remanejarPaciente && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <ArrowRightLeft className="h-4 w-4 text-yellow-500" />
-                          </TooltipTrigger>
-                          <TooltipContent><p>Remanejamento Solicitado</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                    {paciente.transferirPaciente && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Ambulance className="h-4 w-4 text-blue-500" />
-                          </TooltipTrigger>
-                          <TooltipContent><p>Transferência Externa</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground pl-6">{calcularIdade(paciente.dataNascimento)} anos • {paciente.sexoPaciente?.charAt(0) || '?'}</p>
-                <div className="flex items-center gap-2"><Stethoscope className="h-4 w-4 text-muted-foreground flex-shrink-0" /><p className="text-xs text-muted-foreground truncate">{paciente.especialidadePaciente}</p></div>
-                {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {paciente.isolamentosVigentes.map((iso, idx) => (
-                      <Badge key={idx} variant="outline" className="text-xs px-1 py-0 bg-orange-50 border-orange-200 text-orange-800">
-                        {iso.sigla}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : leito.statusLeito === 'Bloqueado' && leito.motivoBloqueio ? (
-              <div className="text-center p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-                <Lock className="mx-auto h-4 w-4 text-yellow-600 mb-1" />
-                <p className="text-xs font-bold text-yellow-700">BLOQUEADO</p>
-                <p className="text-xs text-yellow-600">{leito.motivoBloqueio}</p>
-              </div>
-            ) : leito.statusLeito === 'Higienizacao' ? (
-              <div className="text-center p-2 bg-blue-50 border border-blue-200 rounded-md">
-                <Paintbrush className="mx-auto h-4 w-4 text-blue-600 mb-1" />
-                <p className="text-xs font-bold text-blue-700">HIGIENIZAÇÃO</p>
-                <p className="text-xs text-blue-600">Em limpeza</p>
-              </div>
-            ) : leito.statusLeito === 'Regulado' && leito.regulacao ? (
-              <div className="text-center p-2 bg-purple-50 border border-purple-200 rounded-md">
-                <Info className="mx-auto h-4 w-4 text-purple-600 mb-1" />
-                <p className="text-xs font-bold text-purple-700">REGULADO PARA:</p>
-                <p className="text-sm font-medium text-purple-800">{leito.dadosPaciente?.nomeCompleto}</p>
-                <p className="text-sm text-purple-600">{leito.regulacao.paraSetor} - {leito.regulacao.paraLeito}</p>
-              </div>
-            ) : leito.statusLeito === 'Reservado' && leito.dadosPaciente ? (
-              <div className="text-center p-2 bg-teal-50 border border-teal-200 rounded-md">
-                <Info className="mx-auto h-4 w-4 text-teal-600 mb-1" />
-                <p className="text-xs font-bold text-teal-700">RESERVADO PARA:</p>
-                <p className="text-sm font-medium text-teal-800">{leito.dadosPaciente.nomeCompleto}</p>
-                {leito.regulacao?.tipoReserva === 'externo' ? (
-                  <p className="text-xs text-teal-600">Origem Externa: {leito.regulacao.origemExterna}</p>
-                ) : (
-                  leito.dadosPaciente.origem && <p className="text-xs text-teal-600">Vindo de: {leito.dadosPaciente.origem.deSetor} - {leito.dadosPaciente.origem.deLeito}</p>
-                )}
-              </div>
-            ) : (
-              <div className="h-full w-full"></div>
-            )}
-        </div>
-
-        {/* Footer do Card */}
-        <div className="mt-auto pt-2 border-t border-border/30 space-y-2">
-          <div className="text-center"><DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} /></div>
-          <div className="h-10 flex items-center justify-center">
-            {leito.statusLeito === 'Vago' && (
-              <div className="flex justify-center flex-wrap gap-1">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onInternarManualmente(leito)}>
-                        <UserPlus className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Internar Paciente Manualmente</p></TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onReservarExterno(leito)}>
-                        <BookMarked className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Reservar Leito (Paciente Externo)</p></TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMotivoBloqueioModalOpen(true)}>
-                        <Lock className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Bloquear Leito</p></TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onEnviarParaHigienizacao(leito.id)}>
-                        <Paintbrush className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Enviar para Higienização</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
-            
-            {leito.statusLeito === 'Bloqueado' && (
-              <div className="flex justify-center">
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Unlock className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Desbloquear Leito</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Desbloquear Leito</AlertDialogTitle>
-                      <AlertDialogDescription>Deseja realmente desbloquear o leito {leito.codigoLeito}?</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onAtualizarStatus(leito.id, 'Vago')}>Desbloquear</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-            
-            {leito.statusLeito === 'Higienizacao' && (
-              <div className="flex justify-center">
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Finalizar Higienização</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Finalizar Higienização</AlertDialogTitle>
-                      <AlertDialogDescription>Confirmar a finalização da higienização do leito {leito.codigoLeito}?</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onFinalizarHigienizacao(leito.id)}>Finalizar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div> 
-            )}
-            
-            {leito.statusLeito === 'Reservado' && (
-              <div className="flex justify-center flex-wrap gap-1">
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Confirmar Transferência</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar Transferência</AlertDialogTitle>
-                      <AlertDialogDescription>Confirmar a chegada do paciente {leito.dadosPaciente?.nomeCompleto} ao leito {leito.codigoLeito}?</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onConcluirTransferencia(leito)}>Confirmar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Cancelar Reserva</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
-                      <AlertDialogDescription>Deseja cancelar a reserva do leito {leito.codigoLeito} para {leito.dadosPaciente?.nomeCompleto}?</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Não</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onCancelarReserva(leito.id)}>Cancelar Reserva</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-            
-            {leito.statusLeito === 'Ocupado' && (
-              <div className="flex justify-center flex-wrap gap-1">
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <BedDouble className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Liberar Leito</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Liberar Leito</AlertDialogTitle>
-                      <AlertDialogDescription>Confirmar a liberação do leito {leito.codigoLeito}? O leito será enviado para higienização.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onLiberarLeito(leito.id, paciente!.id)}>Liberar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onMoverPaciente(leito)}>
-                        <Move className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Mover Paciente</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onAbrirObs(leito)}>
-                        <MessageSquarePlus className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Observações</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <AlertTriangle className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Solicitar UTI</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Solicitar UTI</AlertDialogTitle>
-                      <AlertDialogDescription>Confirmar a solicitação de vaga de UTI para o paciente {paciente?.nomeCompleto}?</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onSolicitarUTI(paciente!.id)}>Solicitar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRemanejamentoModalOpen(true)}>
-                        <ArrowRightLeft className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Solicitar Remanejamento</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTransferenciaModalOpen(true)}>
-                        <Ambulance className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Transferência Externa</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onToggleProvavelAlta(paciente!.id, paciente?.provavelAlta || false)}>
-                        <LogOut className={`h-4 w-4 ${paciente?.provavelAlta ? 'text-green-500' : ''}`} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Sinalizar Provável Alta</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            )}
+        </CardHeader>
+        <CardContent className="text-center py-4">
+          <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+          <p className="text-sm text-green-700 font-medium">Disponível</p>
+          <p className="text-xs text-green-600">Pronto para ocupação</p>
+        </CardContent>
+        <CardFooter className="pt-2 justify-center">
+          <div className="flex gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => actions.onInternarManualmente(leito)}
+                  >
+                    <User className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Internar Manualmente</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => actions.onReservarExterno(leito)}
+                  >
+                    <Shield className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Reservar para Externo</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        </div>
+        </CardFooter>
       </Card>
+    );
+  }
 
-      <MotivoBloqueioModal
-        open={motivoBloqueioModalOpen}
-        onOpenChange={setMotivoBloqueioModalOpen}
-        onConfirm={(motivo) => actions.onBloquearLeito(leito.id, motivo)}
-        leitoCodigoLeito={leito.codigoLeito}
-      />
+  if (leito.statusLeito === 'Ocupado' && paciente) {
+    const isolamentos = paciente.isolamentosVigentes?.map(iso => iso.sigla) || [];
+    const temObservacoes = paciente.obsPaciente && paciente.obsPaciente.length > 0;
+    
+    return (
+      <Card className="border border-blue-200 bg-blue-50 hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-blue-800">Leito {leito.codigoLeito}</h3>
+            <StatusBadge status="Ocupado" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-blue-600" />
+            <span className="font-medium text-blue-800">{paciente.nomeCompleto}</span>
+            {paciente.sexoPaciente === 'Masculino' ? (
+              <Badge variant="outline" className="text-xs">M</Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs">F</Badge>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm text-blue-700">
+            <Calendar className="h-3 w-3" />
+            <span>{calcularIdade(paciente.dataNascimento)} anos</span>
+            <Clock className="h-3 w-3 ml-2" />
+            <DurationDisplay dataAtualizacaoStatus={paciente.dataInternacao} />
+          </div>
 
-      <RemanejamentoModal
-        open={remanejamentoModalOpen}
-        onOpenChange={setRemanejamentoModalOpen}
-        onConfirm={(motivo) => actions.onSolicitarRemanejamento(paciente!.id, motivo)}
-      />
+          <div className="text-xs text-blue-600">
+            <p><strong>Especialidade:</strong> {paciente.especialidadePaciente}</p>
+          </div>
 
-      <TransferenciaModal
-        open={transferenciaModalOpen}
-        onOpenChange={setTransferenciaModalOpen}
-        onConfirm={(destino, motivo) => actions.onTransferirPaciente(paciente!.id, destino, motivo)}
-      />
-    </>
+          {isolamentos.length > 0 && renderIsolamentoIcons(isolamentos)}
+
+          {paciente.aguardaUTI && (
+            <Badge variant="destructive" className="text-xs">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Aguarda UTI
+            </Badge>
+          )}
+
+          {paciente.provavelAlta && (
+            <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
+              <UserCheck className="h-3 w-3 mr-1" />
+              Provável Alta
+            </Badge>
+          )}
+
+          {paciente.altaNoLeito?.status && (
+            <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+              <Building className="h-3 w-3 mr-1" />
+              Alta no Leito
+            </Badge>
+          )}
+        </CardContent>
+        <CardFooter className="pt-2 justify-center">
+          <div className="flex gap-1 flex-wrap">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => actions.onMoverPaciente(leito)}
+                  >
+                    <User className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Mover Paciente</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            {temObservacoes && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-blue-600"
+                      onClick={() => actions.onAbrirObs(leito)}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent><p>Ver Observações</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  if (leito.statusLeito === 'Higienizacao') {
+    return (
+      <Card className={cn(
+        "border hover:shadow-md transition-shadow",
+        leito.higienizacaoPrioritaria 
+          ? "border-yellow-400 bg-yellow-50 shadow-md border-2" 
+          : "border-orange-200 bg-orange-50"
+      )}>
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-orange-800">Leito {leito.codigoLeito}</h3>
+              {leito.higienizacaoPrioritaria && (
+                <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+              )}
+            </div>
+            <StatusBadge status="Higienizacao" />
+          </div>
+        </CardHeader>
+        <CardContent className="text-center py-4">
+          <Sparkles className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+          <p className="text-sm text-orange-700 font-medium">
+            {leito.higienizacaoPrioritaria ? 'Higienização PRIORITÁRIA' : 'Aguardando Higienização'}
+          </p>
+          {ultimoStatus?.dataAtualizacaoStatus && (
+            <DurationDisplay dataAtualizacaoStatus={ultimoStatus.dataAtualizacaoStatus} />
+          )}
+        </CardContent>
+        <CardFooter className="pt-2 justify-center">
+          <div className="flex gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => actions.onFinalizarHigienizacao(leito.id)}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Finalizar Higienização</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("h-8 w-8", leito.higienizacaoPrioritaria && 'text-yellow-500')}
+                    onClick={() => actions.onPriorizarHigienizacao(leito)}
+                  >
+                    <Star className={cn("h-4 w-4", leito.higienizacaoPrioritaria && 'fill-yellow-500')} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Priorizar Higienização</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  if (leito.statusLeito === 'Bloqueado') {
+    return (
+      <Card className="border border-red-200 bg-red-50 hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-red-800">Leito {leito.codigoLeito}</h3>
+            <StatusBadge status="Bloqueado" />
+          </div>
+        </CardHeader>
+        <CardContent className="text-center py-4">
+          <Lock className="h-8 w-8 text-red-600 mx-auto mb-2" />
+          <p className="text-sm text-red-700 font-medium">Bloqueado</p>
+          {ultimoStatus?.motivoBloqueio && (
+            <p className="text-xs text-red-600 mt-1">{ultimoStatus.motivoBloqueio}</p>
+          )}
+          {ultimoStatus?.dataAtualizacaoStatus && (
+            <DurationDisplay dataAtualizacaoStatus={ultimoStatus.dataAtualizacaoStatus} />
+          )}
+        </CardContent>
+        <CardFooter className="pt-2 justify-center">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => actions.onAtualizarStatus(leito.id, 'Vago')}
+                >
+                  <CheckCircle className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p>Desbloquear Leito</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  if (leito.statusLeito === 'Reservado') {
+    return (
+      <Card className="border border-purple-200 bg-purple-50 hover:shadow-md transition-shadow">
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-purple-800">Leito {leito.codigoLeito}</h3>
+            <StatusBadge status="Reservado" />
+          </div>
+        </CardHeader>
+        <CardContent className="text-center py-4">
+          <Shield className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+          <p className="text-sm text-purple-700 font-medium">Reservado</p>
+          {leito.regulacao?.origemExterna && (
+            <p className="text-xs text-purple-600 mt-1">Origem: {leito.regulacao.origemExterna}</p>
+          )}
+          {ultimoStatus?.dataAtualizacaoStatus && (
+            <DurationDisplay dataAtualizacaoStatus={ultimoStatus.dataAtualizacaoStatus} />
+          )}
+        </CardContent>
+        <CardFooter className="pt-2 justify-center">
+          <div className="flex gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => actions.onConcluirTransferencia(leito)}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Concluir Transferência</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-600"
+                    onClick={() => actions.onCancelarReserva(leito.id)}
+                  >
+                    <AlertTriangle className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent><p>Cancelar Reserva</p></TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  // Fallback para status não reconhecidos
+  return (
+    <Card className="border border-gray-200 bg-gray-50">
+      <CardHeader>
+        <h3 className="font-semibold">Leito {leito.codigoLeito}</h3>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-gray-600">Status: {leito.statusLeito}</p>
+      </CardContent>
+    </Card>
   );
 };
 
