@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { 
   BedDouble, 
   User, 
@@ -69,24 +69,6 @@ const LeitoCard = ({ leito, actions }: LeitoCardProps) => {
       default: return baseClass;
     }
   };
-
-  // Função segura para calcular tempo desde última atualização
-  const tempoDesdeUltimaAtualizacao = (() => {
-    if (!leito.dataAtualizacaoStatus) return '';
-    
-    try {
-      const dataAtualização = new Date(leito.dataAtualizacaoStatus);
-      if (!isValid(dataAtualização)) return '';
-      
-      return formatDistanceToNow(dataAtualização, { 
-        addSuffix: true, 
-        locale: ptBR 
-      });
-    } catch (error) {
-      console.error('Erro ao calcular tempo desde última atualização:', error, 'Data:', leito.dataAtualizacaoStatus);
-      return '';
-    }
-  })();
 
   // Função segura para calcular tempo de internação do paciente
   const tempoInternacao = (() => {
