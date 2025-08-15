@@ -1,12 +1,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Sparkles, Building, CheckCircle, Star } from 'lucide-react';
+import { Clock, Sparkles, Building, CheckCircle } from 'lucide-react';
 
 interface IndicadoresHigienizacaoProps {
   indicadores: {
     quantidadeAguardando: number;
-    quantidadePrioritaria: number;
     tempoMedioEspera: string;
     top3Setores: { nome: string; quantidade: number }[];
     totalConcluidas: number;
@@ -26,19 +25,9 @@ const IndicadoresHigienizacao = ({ indicadores }: IndicadoresHigienizacaoProps) 
           <div className="text-2xl font-bold text-medical-primary">
             {indicadores.quantidadeAguardando}
           </div>
-          <div className="flex items-center gap-2">
-            <p className="text-xs text-muted-foreground">
-              {indicadores.quantidadeAguardando === 1 ? 'leito' : 'leitos'}
-            </p>
-            {indicadores.quantidadePrioritaria > 0 && (
-              <div className="flex items-center gap-1">
-                <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
-                  {indicadores.quantidadePrioritaria} prioritário{indicadores.quantidadePrioritaria !== 1 ? 's' : ''}
-                </Badge>
-              </div>
-            )}
-          </div>
+          <p className="text-xs text-muted-foreground">
+            {indicadores.quantidadeAguardando === 1 ? 'leito' : 'leitos'}
+          </p>
         </CardContent>
       </Card>
 

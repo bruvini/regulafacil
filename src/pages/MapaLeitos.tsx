@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,33 +102,6 @@ const MapaLeitos = () => {
 
   // Verificar se o usuário é administrador
   const isAdmin = userData?.tipoAcesso === 'Administrador';
-
-  // Nova função para priorizar higienização
-  const handlePriorizarHigienizacao = async (leito: LeitoEnriquecido) => {
-    const novaPrioridade = !leito.higienizacaoPrioritaria;
-    
-    try {
-      const leitoRef = doc(db, 'leitosRegulaFacil', leito.id);
-      await updateDoc(leitoRef, {
-        higienizacaoPrioritaria: novaPrioridade
-      });
-
-      const logMessage = `Prioridade de higienização ${novaPrioridade ? 'ATIVADA' : 'REMOVIDA'} para o leito ${leito.codigoLeito}.`;
-      registrarLog(logMessage, 'Mapa de Leitos');
-
-      toast({
-        title: `Prioridade ${novaPrioridade ? 'ativada' : 'removida'}!`,
-        description: `O leito ${leito.codigoLeito} foi atualizado.`,
-      });
-    } catch (error) {
-      console.error('Erro ao priorizar higienização:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar a prioridade.",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Funções de confirmação para internação e reserva
   const handleConfirmarInternacao = async (dadosForm: any) => {
@@ -310,9 +284,7 @@ const MapaLeitos = () => {
         console.error('Erro ao enviar para higienização:', error);
         toast({ title: "Erro", description: "Erro ao enviar para higienização.", variant: "destructive" });
       }
-    },
-
-    onPriorizarHigienizacao: handlePriorizarHigienizacao
+    }
   };
 
   const handleConfirmarMovimentacao = async (leitoDestino: Leito) => {

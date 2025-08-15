@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 import LeitoCard from './LeitoCard';
 import QuartoCard from './QuartoCard';
@@ -30,6 +29,7 @@ const SetorCard = ({ setor, actions }: SetorCardProps) => {
                   key={nomeQuarto}
                   nomeQuarto={nomeQuarto}
                   leitos={leitosDoQuarto as LeitoEnriquecido[]}
+                  todosLeitosDoSetor={setor.leitos}
                   actions={actions}
                 />
             ))}
@@ -43,6 +43,7 @@ const SetorCard = ({ setor, actions }: SetorCardProps) => {
                     <LeitoCard
                       key={leito.id}
                       leito={leito}
+                      todosLeitosDoSetor={setor.leitos}
                       actions={actions}
                     />
                   ))}

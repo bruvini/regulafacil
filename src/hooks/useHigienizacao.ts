@@ -12,7 +12,6 @@ import { LeitoEnriquecido } from '@/types/hospital';
 
 interface IndicadoresHigienizacao {
   quantidadeAguardando: number;
-  quantidadePrioritaria: number;
   tempoMedioEspera: string;
   top3Setores: { nome: string; quantidade: number }[];
   totalConcluidas: number;
@@ -117,9 +116,14 @@ export const useHigienizacao = () => {
       return acc;
     }, {} as Record<string, LeitoHigienizacao[]>);
 
-    // Ordenar cada grupo por tempo de espera (maior primeiro)
+    // Ordenar cada grupo por tempo de espera (maior primeiro) e prioridade
     Object.keys(grupos).forEach(setor => {
-      grupos[setor].sort((a, b) => b.tempoEsperaMinutos - a.tempoEsperaMinutos);
+      grupos[setor].sort((a, b) => {
+        // Primeiro prioridade, depois tempo
+        if (a.higienizacaoPrioritaria && !b.higienizacaoPrioritaria) return -1;
+        if (!a.higienizacaoPrioritaria && b.higienizacaoPrioritaria) return 1;
+        return b.tempoEsperaMinutos - a.tempoEsperaMinutos;
+      });
     });
 
     return grupos;
@@ -128,7 +132,6 @@ export const useHigienizacao = () => {
   // Calcular indicadores
   const indicadores: IndicadoresHigienizacao = useMemo(() => {
     const quantidadeAguardando = leitosProcessados.length;
-    const quantidadePrioritaria = leitosProcessados.filter(l => l.higienizacaoPrioritaria).length;
     
     // Tempo médio de espera
     let tempoMedioEspera = "N/A";
@@ -152,7 +155,6 @@ export const useHigienizacao = () => {
 
     return {
       quantidadeAguardando,
-      quantidadePrioritaria,
       tempoMedioEspera,
       top3Setores,
       totalConcluidas
