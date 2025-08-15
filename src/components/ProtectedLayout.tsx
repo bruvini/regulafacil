@@ -1,12 +1,21 @@
 
+import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useNavigate } from 'react-router-dom';
 import AppLayout from './AppLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlterarSenhaModal } from './modals/AlterarSenhaModal';
 
 const ProtectedLayout = () => {
   const { currentUser, loading, isFirstLogin } = useAuth();
+  const navigate = useNavigate();
+
+  // Redireciona para login se não houver usuário autenticado
+  useEffect(() => {
+    if (!loading && !currentUser) {
+      navigate('/login');
+    }
+  }, [currentUser, loading, navigate]);
 
   if (loading) {
     return (
@@ -21,7 +30,7 @@ const ProtectedLayout = () => {
   }
 
   if (!currentUser) {
-    return <Navigate to="/" />;
+    return <Navigate to="/login" />;
   }
 
   return (

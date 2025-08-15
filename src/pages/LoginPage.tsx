@@ -48,8 +48,8 @@ const LoginPage = () => {
 
         // A lógica de forçar a troca de senha será tratada pelo AuthProvider/Layout
         // que detectará o estado de primeiro login.
-        // Apenas navegamos para a página inicial.
-        navigate('/inicio');
+        // Redireciona para a página inicial (rota raiz)
+        navigate('/');
         toast({ title: "Login realizado com sucesso!", description: "Bem-vindo ao RegulaFacil" });
       } else {
         throw new Error("Documento do usuário não encontrado no Firestore.");
