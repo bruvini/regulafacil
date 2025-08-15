@@ -10,6 +10,15 @@ const DurationDisplay = ({ dataAtualizacaoStatus }: DurationDisplayProps) => {
   const [duration, setDuration] = useState(() => formatarDuracao(dataAtualizacaoStatus));
 
   useEffect(() => {
+    // Só atualiza se a data é válida
+    if (!dataAtualizacaoStatus) {
+      setDuration('N/A');
+      return;
+    }
+
+    // Atualiza imediatamente
+    setDuration(formatarDuracao(dataAtualizacaoStatus));
+
     // Atualiza a cada minuto
     const interval = setInterval(() => {
       setDuration(formatarDuracao(dataAtualizacaoStatus));

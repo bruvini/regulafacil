@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -21,8 +22,9 @@ import { cn } from '@/lib/utils';
 import { LeitoEnriquecido } from '@/types/hospital';
 import StatusBadge from './StatusBadge';
 import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import DurationDisplay from './DurationDisplay';
 
 interface LeitoCardProps {
   leito: LeitoEnriquecido;
@@ -68,12 +70,41 @@ const LeitoCard = ({ leito, actions }: LeitoCardProps) => {
     }
   };
 
-  const tempoDesdeUltimaAtualizacao = leito.dataAtualizacaoStatus 
-    ? formatDistanceToNow(new Date(leito.dataAtualizacaoStatus), { 
+  // Função segura para calcular tempo desde última atualização
+  const tempoDesdeUltimaAtualizacao = (() => {
+    if (!leito.dataAtualizacaoStatus) return '';
+    
+    try {
+      const dataAtualização = new Date(leito.dataAtualizacaoStatus);
+      if (!isValid(dataAtualização)) return '';
+      
+      return formatDistanceToNow(dataAtualização, { 
         addSuffix: true, 
         locale: ptBR 
-      })
-    : '';
+      });
+    } catch (error) {
+      console.error('Erro ao calcular tempo desde última atualização:', error, 'Data:', leito.dataAtualizacaoStatus);
+      return '';
+    }
+  })();
+
+  // Função segura para calcular tempo de internação do paciente
+  const tempoInternacao = (() => {
+    if (!paciente?.dataInternacao) return '';
+    
+    try {
+      const dataInternacao = new Date(paciente.dataInternacao);
+      if (!isValid(dataInternacao)) return '';
+      
+      return formatDistanceToNow(dataInternacao, { 
+        addSuffix: true, 
+        locale: ptBR 
+      });
+    } catch (error) {
+      console.error('Erro ao calcular tempo de internação:', error, 'Data:', paciente.dataInternacao);
+      return '';
+    }
+  })();
 
   return (
     <Card className={getCardClassName()}>
@@ -106,10 +137,12 @@ const LeitoCard = ({ leito, actions }: LeitoCardProps) => {
                 </Badge>
               )}
             </div>
-            <div className="text-xs text-muted-foreground flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              Internado(a) {formatDistanceToNow(new Date(paciente.dataInternacao), { addSuffix: true, locale: ptBR })}
-            </div>
+            {tempoInternacao && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                Internado(a) {tempoInternacao}
+              </div>
+            )}
             {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
               <div className="flex items-center gap-1">
                 <Shield className="h-4 w-4 text-destructive" />
@@ -143,11 +176,11 @@ const LeitoCard = ({ leito, actions }: LeitoCardProps) => {
           </>
         )}
         
-        {/* Tempo desde última atualização */}
-        {tempoDesdeUltimaAtualizacao && (
+        {/* Tempo desde última atualização usando componente seguro */}
+        {leito.dataAtualizacaoStatus && (
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            {tempoDesdeUltimaAtualizacao}
+            <DurationDisplay dataAtualizacaoStatus={leito.dataAtualizacaoStatus} />
           </div>
         )}
       </CardContent>
