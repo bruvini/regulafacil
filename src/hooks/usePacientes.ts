@@ -1,6 +1,4 @@
 
-// src/hooks/usePacientes.ts
-
 import { useState, useEffect } from 'react';
 import {
   collection,
@@ -13,6 +11,7 @@ import {
 import { db } from '@/lib/firebase';
 import { Paciente } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
+import { reconciliarPacientesComPlanilha, PacientePlanilha, ImportacaoResumo } from '@/services/importacaoPacientes';
 
 export const usePacientes = () => {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
@@ -95,9 +94,21 @@ export const usePacientes = () => {
     }
   };
 
+  // NOVO: importação com reconciliação atômica (batch write)
+  const importarPacientesDaPlanilha = async (pacientesDaPlanilha: PacientePlanilha[]): Promise<ImportacaoResumo> => {
+    setLoading(true);
+    try {
+      const resumo = await reconciliarPacientesComPlanilha(pacientesDaPlanilha);
+      return resumo;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     pacientes,
     loading,
     criarPacienteManual,
+    importarPacientesDaPlanilha, // exposto para uso na UI
   };
 };
