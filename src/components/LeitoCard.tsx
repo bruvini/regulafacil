@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LeitoEnriquecido } from '@/types/hospital';
-import { StatusBadge } from './StatusBadge';
+import StatusBadge from './StatusBadge';
 import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -43,7 +43,7 @@ interface LeitoCardProps {
     onFinalizarHigienizacao: (leitoId: string) => void;
     onBloquearLeito: (leitoId: string, motivo: string) => void;
     onEnviarParaHigienizacao: (leitoId: string) => void;
-    onPriorizarHigienizacao: (leito: LeitoEnriquecido) => void; // Nova ação
+    onPriorizarHigienizacao: (leito: LeitoEnriquecido) => void;
   };
 }
 
@@ -113,7 +113,7 @@ const LeitoCard = ({ leito, actions }: LeitoCardProps) => {
             {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
               <div className="flex items-center gap-1">
                 <Shield className="h-4 w-4 text-destructive" />
-                <LeitoStatusIsolamento isolamentos={paciente.isolamentosVigentes} />
+                <LeitoStatusIsolamento isolamentos={paciente.isolamentosVigentes.map(iso => iso.sigla)} />
               </div>
             )}
             {paciente.aguardaUTI && (

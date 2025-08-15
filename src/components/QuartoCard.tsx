@@ -1,3 +1,4 @@
+
 // src/components/QuartoCard.tsx
 
 import { useMemo } from 'react';
@@ -10,11 +11,10 @@ import { LeitoEnriquecido } from '@/types/hospital';
 interface QuartoCardProps {
   nomeQuarto: string;
   leitos: LeitoEnriquecido[];
-  todosLeitosDoSetor: LeitoEnriquecido[];
   actions: any;
 }
 
-const QuartoCard = ({ nomeQuarto, leitos, todosLeitosDoSetor, actions }: QuartoCardProps) => {
+const QuartoCard = ({ nomeQuarto, leitos, actions }: QuartoCardProps) => {
   const hasMixedGenders = useMemo(() => {
     const genders = new Set(leitos.filter(l => l.dadosPaciente).map(l => l.dadosPaciente?.sexoPaciente));
     return genders.size > 1;
@@ -47,7 +47,6 @@ const QuartoCard = ({ nomeQuarto, leitos, todosLeitosDoSetor, actions }: QuartoC
               <LeitoCard 
                 key={leito.id} 
                 leito={leito} 
-                todosLeitosDoSetor={todosLeitosDoSetor} 
                 actions={actions}
               />
           ))}
