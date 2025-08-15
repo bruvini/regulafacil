@@ -13,7 +13,6 @@ import {
   CheckCircle,
   AlertTriangle,
   MessageSquare,
-  Virus,
   Shield,
   Calendar,
   UserCheck,
@@ -63,7 +62,7 @@ const LeitoCard = ({ leito, actions }: LeitoCardProps) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge variant="destructive" className="text-xs px-1 py-0">
-                  <Virus className="h-3 w-3 mr-1" />
+                  <Shield className="h-3 w-3 mr-1" />
                   {isolamento}
                 </Badge>
               </TooltipTrigger>

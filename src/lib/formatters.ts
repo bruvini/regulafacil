@@ -1,4 +1,7 @@
+
 import { RegraIsolamento } from '@/types/isolamento';
+import { format, differenceInYears, parse, isValid } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export const formatarDescricaoRegra = (regra: RegraIsolamento): string => {
   if (!regra || !regra.tipo) return 'Regra inválida';
@@ -26,5 +29,53 @@ export const formatarDescricaoRegra = (regra: RegraIsolamento): string => {
       return atb ? `Até fim do tratamento com ${atb}` : 'Até fim do tratamento';
     default:
       return regra.descricao; // Fallback para a descrição genérica
+  }
+};
+
+export const formatarDataHora = (data: string | Date): string => {
+  try {
+    let dataObj: Date;
+    
+    if (typeof data === 'string') {
+      // Try parsing as ISO first, then as dd/MM/yyyy HH:mm
+      dataObj = new Date(data);
+      if (!isValid(dataObj)) {
+        dataObj = parse(data, 'dd/MM/yyyy HH:mm', new Date());
+      }
+    } else {
+      dataObj = data;
+    }
+
+    if (!isValid(dataObj)) {
+      return 'Data inválida';
+    }
+
+    return format(dataObj, 'dd/MM/yyyy HH:mm', { locale: ptBR });
+  } catch {
+    return 'Data inválida';
+  }
+};
+
+export const calcularIdade = (dataNascimento: string | Date): number => {
+  try {
+    let dataObj: Date;
+    
+    if (typeof dataNascimento === 'string') {
+      // Try parsing as ISO first, then as dd/MM/yyyy
+      dataObj = new Date(dataNascimento);
+      if (!isValid(dataObj)) {
+        dataObj = parse(dataNascimento, 'dd/MM/yyyy', new Date());
+      }
+    } else {
+      dataObj = dataNascimento;
+    }
+
+    if (!isValid(dataObj)) {
+      return 0;
+    }
+
+    return differenceInYears(new Date(), dataObj);
+  } catch {
+    return 0;
   }
 };
