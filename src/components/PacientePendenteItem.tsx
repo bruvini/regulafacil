@@ -1,4 +1,3 @@
-
 // src/components/PacientePendenteItem.tsx
 
 import { Badge } from '@/components/ui/badge';
@@ -27,13 +26,15 @@ import {
   Clock,
   CheckCheck,
   Pencil,
-  XCircle
+  XCircle,
+  Biohazard // Ícone de isolamento importado
 } from 'lucide-react';
 
-import { formatarDuracao } from '@/lib/utils';
+// CORREÇÃO: A função 'formatarDuracao' está em 'formatters' e não em 'utils'
+import { formatarDuracao } from '@/lib/formatters'; 
 import { Paciente } from '@/types/hospital';
 
-// Função auxiliar
+// Função auxiliar para calcular idade
 const calcularIdade = (dataNascimento: string): string => {
   if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
   const [dia, mes, ano] = dataNascimento.split('/').map(Number);
@@ -53,13 +54,15 @@ interface PacientePendenteItemProps {
     leitoId: string;
     statusLeito: string;
     regulacao?: any;
+    // Garantir que a propriedade isolamentos esteja no tipo
+    isolamentos?: string[];
   };
   onRegularClick?: () => void;
   onAlta?: () => void;
   onConcluir?: (paciente: Paciente) => void;
   onAlterar?: (paciente: Paciente) => void;
   onCancelar?: (paciente: Paciente) => void;
-  onAltaDireta?: (paciente: any) => void; // Nova prop adicionada
+  onAltaDireta?: (paciente: any) => void;
 }
 
 export const PacientePendenteItem = ({
@@ -73,8 +76,8 @@ export const PacientePendenteItem = ({
 }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
   
-  console.log('PacientePendenteItem - paciente:', paciente);
-  console.log('PacientePendenteItem - nomeCompleto:', paciente.nomeCompleto);
+  // Verifica se o paciente tem isolamentos
+  const temIsolamentos = paciente.isolamentos && paciente.isolamentos.length > 0;
 
   return (
     <div className="flex items-start gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
@@ -83,6 +86,28 @@ export const PacientePendenteItem = ({
           <p className="font-bold text-sm text-foreground">
             {paciente.nomeCompleto || 'Nome não disponível'}
           </p>
+          
+          {/* Adiciona o ícone e o Tooltip de isolamento condicionalmente */}
+          {temIsolamentos && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Biohazard className="h-4 w-4 text-orange-500" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="p-1">
+                    <p className="font-bold mb-1">Isolamentos:</p>
+                    <ul className="list-disc list-inside">
+                      {paciente.isolamentos?.map((iso, index) => (
+                        <li key={index}>{iso}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
           <Badge variant="outline" className="text-xs">
             {paciente.sexoPaciente?.charAt(0) || '?'} - {idade}a
           </Badge>
@@ -176,7 +201,6 @@ export const PacientePendenteItem = ({
               <TooltipContent><p>Regular Leito</p></TooltipContent>
             </Tooltip>
 
-            {/* Nova ação de Alta Direta */}
             {onAltaDireta && (
               <AlertDialog>
                 <Tooltip>
