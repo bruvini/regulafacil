@@ -533,6 +533,7 @@ const registrarHistoricoRegulacao = async (
   };
 
   const handleConcluir = async (paciente: any) => {
+    // Validações iniciais (usuário e dados da regulação)
     if (!userData) {
         toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
         return;
@@ -545,71 +546,70 @@ const registrarHistoricoRegulacao = async (
     setActingOnPatientId(paciente.id);
 
     try {
-      // CORREÇÃO 1: Busca o paciente mais atualizado da nossa lista principal.
-      // Isso garante que temos a informação correta sobre 'aguardaUTI'.
+      // --- BUSCA DE DADOS ESSENCIAIS ---
       const pacienteCompleto = pacientesComDadosCompletos.find(p => p.id === paciente.id);
-      if (!pacienteCompleto) {
-          toast({ title: "Erro", description: "Paciente não encontrado no sistema.", variant: "destructive"});
-          setActingOnPatientId(null);
-          return;
-      }
-
       const leitoDestino = leitos.find(l => l.codigoLeito === paciente.regulacao.paraLeito);
+      const leitoOrigem = leitos.find(l => l.id === pacienteCompleto?.leitoId);
       const setorDestino = leitoDestino ? setores.find(s => s.id === leitoDestino.setorId) : undefined;
 
-      if (leitoDestino && setorDestino) {
-          const logMessage = `Regulação de ${pacienteCompleto.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
-          
-          await registrarHistoricoRegulacao(paciente.regulacao.regulacaoId, 'concluida', {
-              detalhesLog: logMessage,
-          });
-
-          // CORREÇÃO 2: Altera o status do leito de origem para "Higienização".
-          await atualizarStatusLeito(pacienteCompleto.leitoId, "Higienizacao");
-
-          await atualizarStatusLeito(leitoDestino.id, "Ocupado", {
-              pacienteId: pacienteCompleto.id,
-          });
-
-          const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteCompleto.id);
-          
-          const dadosUpdate: any = {
-              leitoId: leitoDestino.id,
-              setorId: leitoDestino.setorId,
-          };
-
-          // Agora a verificação usará os dados mais recentes de 'pacienteCompleto'.
-          if (pacienteCompleto.aguardaUTI && setorDestino.tipoUnidade === 'UTI') {
-              const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
-              const dataConclusao = new Date();
-              const duracao = intervalToDuration({ start: dataPedido, end: dataConclusao });
-              const tempoDeEspera = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
-              
-              const logUTI = `Pedido de UTI para ${pacienteCompleto.nomeCompleto} finalizado após ${tempoDeEspera}. Paciente alocado no leito ${leitoDestino.codigoLeito}. Conclusão em: ${dataConclusao.toLocaleString('pt-BR')}.`;
-              registrarLog(logUTI, "Fila de UTI");
-
-              dadosUpdate.aguardaUTI = false;
-              dadosUpdate.dataPedidoUTI = null;
-          }
-
-          await updateDoc(pacienteRef, dadosUpdate);
-
-          registrarLog(logMessage, "Regulação de Leitos");
-          toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado para higienização." });
-      } else {
-        toast({
-            title: "Erro de Dados",
-            description: "Não foi possível encontrar o leito ou setor de destino. A operação foi cancelada.",
-            variant: "destructive"
-        });
+      // Validação de segurança: garante que todos os dados necessários existem
+      if (!pacienteCompleto || !leitoDestino || !leitoOrigem || !setorDestino) {
+        toast({ title: "Erro de Dados", description: "Não foi possível encontrar todos os dados necessários (paciente, leitos, setor). A operação foi cancelada.", variant: "destructive" });
+        setActingOnPatientId(null);
+        return;
       }
+
+      // --- INÍCIO DA OPERAÇÃO ATÔMICA (BATCH) ---
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      // 1. Atualiza o Leito de Origem para "Higienização"
+      const leitoOrigemRef = doc(db, "leitosRegulaFacil", leitoOrigem.id);
+      const historicoOrigem = { statusLeito: "Higienizacao", dataAtualizacaoStatus: agora };
+      batch.update(leitoOrigemRef, { historicoMovimentacao: arrayUnion(historicoOrigem) });
+
+      // 2. Atualiza o Leito de Destino para "Ocupado"
+      const leitoDestinoRef = doc(db, "leitosRegulaFacil", leitoDestino.id);
+      const historicoDestino = { statusLeito: "Ocupado", dataAtualizacaoStatus: agora, pacienteId: pacienteCompleto.id };
+      batch.update(leitoDestinoRef, { historicoMovimentacao: arrayUnion(historicoDestino) });
+
+      // 3. Prepara a atualização do Paciente
+      const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteCompleto.id);
+      const dadosUpdate: any = {
+          leitoId: leitoDestino.id,
+          setorId: leitoDestino.setorId,
+      };
+
+      // 4. VERIFICA E FINALIZA O PEDIDO DE UTI (se aplicável)
+      if (pacienteCompleto.aguardaUTI && setorDestino.tipoUnidade?.toUpperCase() === 'UTI') {
+          const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
+          const dataConclusao = new Date();
+          const duracao = intervalToDuration({ start: dataPedido, end: dataConclusao });
+          const tempoDeEspera = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
+          
+          const logUTI = `Pedido de UTI para ${pacienteCompleto.nomeCompleto} finalizado após ${tempoDeEspera}. Paciente alocado no leito ${leitoDestino.codigoLeito}. Conclusão em: ${dataConclusao.toLocaleString('pt-BR')}.`;
+          registrarLog(logUTI, "Fila de UTI");
+
+          dadosUpdate.aguardaUTI = false;
+          dadosUpdate.dataPedidoUTI = null;
+      }
+
+      batch.update(pacienteRef, dadosUpdate);
+
+      // --- EXECUÇÃO DO BATCH ---
+      // Envia todas as atualizações para o banco de dados de uma só vez
+      await batch.commit();
+
+      // --- LOGS E NOTIFICAÇÕES (APENAS APÓS SUCESSO DO BATCH) ---
+      const logMessage = `Regulação de ${pacienteCompleto.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
+      await registrarHistoricoRegulacao(paciente.regulacao.regulacaoId, 'concluida', { detalhesLog: logMessage });
+      registrarLog(logMessage, "Regulação de Leitos");
+      
+      toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado para higienização." });
+
     } catch (error) {
         console.error("Erro ao concluir regulação:", error);
-        toast({
-            title: "Erro Inesperado",
-            description: "Ocorreu um erro ao tentar concluir a regulação.",
-            variant: "destructive"
-        });
+        toast({ title: "Erro Inesperado", description: "Ocorreu um erro ao tentar concluir a regulação. Nenhuma alteração foi salva.", variant: "destructive" });
     } finally {
       setActingOnPatientId(null);
     }
