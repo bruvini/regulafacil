@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
@@ -7,7 +6,8 @@ import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
 import { useState } from "react";
 import { useRegulacoes } from "@/hooks/useRegulacoes";
 import { IndicadoresRegulacao } from "@/components/IndicadoresRegulacao";
-import { differenceInMinutes, isValid } from 'date-fns';
+// Importações necessárias para o cálculo
+import { differenceInMinutes, isValid, parse } from 'date-fns'; 
 import { useMemo } from "react";
 
 // Componentes atualizados
@@ -44,50 +44,49 @@ const RegulacaoLeitos = () => {
     setPanoramaVisualizacaoOpen(true);
   };
 
-  // Cálculo dos indicadores - CORRIGIDO
+  // Substitua todo este bloco 'useMemo' pelo novo código
   const indicadores = useMemo(() => {
-    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length + listas.recuperacaoCirurgica.length + listas.pacientesAguardandoUTI.length;
-    
-    // Tempo médio de espera - LÓGICA CORRIGIDA
     const agora = new Date();
-    const todosAguardando = [
+
+    // --- INÍCIO DA LÓGICA ATUALIZADA ---
+
+    // 1. Foco nos pacientes corretos
+    const pacientesNoPs = [
       ...listas.decisaoCirurgica,
       ...listas.decisaoClinica,
-      ...listas.recuperacaoCirurgica,
-      ...listas.pacientesAguardandoUTI
     ];
 
-    let tempoMedioEspera = "N/A";
-    if (todosAguardando.length > 0) {
-      const totalMinutos = todosAguardando.reduce((acc, p) => {
-        let dataInicioEspera;
-        // Se for um pedido de UTI, usa o timestamp do pedido
-        if (p.pedidoUTI && p.pedidoUTI.timestamp) {
-          dataInicioEspera = new Date(p.pedidoUTI.timestamp);
-        } 
-        // Senão, usa a data de internação
-        else if (p.dataInternacao) {
-          dataInicioEspera = new Date(p.dataInternacao);
-        }
+    let tempoMedioInternacao = "0d 0h 0m";
 
-        // Se a data for válida, calcula a diferença e adiciona ao acumulador
-        if (dataInicioEspera && isValid(dataInicioEspera)) {
-          return acc + differenceInMinutes(agora, dataInicioEspera);
+    if (pacientesNoPs.length > 0) {
+      // 2. Cálculo do total de minutos de espera
+      const totalMinutos = pacientesNoPs.reduce((acc, p) => {
+        // Garante que a data de internação seja lida corretamente
+        const dataInicioEspera = parse(p.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+        if (isValid(dataInicioEspera)) {
+          const diff = differenceInMinutes(agora, dataInicioEspera);
+          // Adiciona ao total apenas se a diferença for positiva
+          return acc + (diff > 0 ? diff : 0);
         }
         return acc;
       }, 0);
 
-      const mediaMinutos = totalMinutos / todosAguardando.length;
-      if (!isNaN(mediaMinutos)) {
+      // 3. Cálculo da média
+      const mediaMinutos = totalMinutos / pacientesNoPs.length;
+
+      // 4. Formatação do resultado
+      if (!isNaN(mediaMinutos) && mediaMinutos > 0) {
         const dias = Math.floor(mediaMinutos / 1440);
         const horas = Math.floor((mediaMinutos % 1440) / 60);
-        tempoMedioEspera = `${dias}d ${horas}h`;
-      } else {
-        tempoMedioEspera = "Erro";
+        const minutos = Math.floor(mediaMinutos % 60);
+        tempoMedioInternacao = `${dias}d ${horas}h ${minutos}m`;
       }
     }
+    
+    // --- FIM DA LÓGICA ATUALIZADA ---
 
-    // Contagem de status
+    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length + listas.recuperacaoCirurgica.length + listas.pacientesAguardandoUTI.length;
+
     const contagemStatus = {
       Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
       Concluidas: regulacoes.filter(r => r.status === 'Concluída').length,
@@ -95,7 +94,6 @@ const RegulacaoLeitos = () => {
       Alteradas: regulacoes.filter(r => r.historicoEventos.some(e => e.evento === 'alterada')).length,
     };
     
-    // Tempo médio pendente
     let tempoMedioRegulacaoPendente = "N/A";
     const regulacoesPendentes = regulacoes.filter(r => r.status === 'Pendente');
     if (regulacoesPendentes.length > 0) {
@@ -106,7 +104,6 @@ const RegulacaoLeitos = () => {
       tempoMedioRegulacaoPendente = `${horas}h ${minutos}m`;
     }
 
-    // Funções para tops com contagem - CORRIGIDO
     const getTopComContagem = (arr: string[]) => {
       if (!arr.length) return { nome: 'N/A', contagem: 0 };
       const contagens = arr.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {} as Record<string, number>);
@@ -117,7 +114,6 @@ const RegulacaoLeitos = () => {
     const topOrigem = getTopComContagem(regulacoes.map(r => r.setorOrigemNome));
     const topDestino = getTopComContagem(regulacoes.map(r => r.setorDestinoNome));
     
-    // Top Turno com contagem
     const turnos = regulacoes.map(r => {
       const hora = new Date(r.criadaEm).getHours() + new Date(r.criadaEm).getMinutes() / 60;
       if (hora >= 6.5 && hora < 12.5) return 'Manhã';
@@ -128,7 +124,7 @@ const RegulacaoLeitos = () => {
 
     return { 
       aguardandoLeito, 
-      tempoMedioInternacao: tempoMedioEspera, 
+      tempoMedioInternacao, 
       contagemStatus, 
       tempoMedioRegulacaoPendente, 
       topOrigem, 
