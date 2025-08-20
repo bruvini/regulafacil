@@ -47,17 +47,17 @@ const RegulacaoLeitos = () => {
   // Substitua todo este bloco 'useMemo' pelo novo código
   // dentro do arquivo src/pages/RegulacaoLeitos.tsx
 
-const indicadores = useMemo(() => {
+// dentro do arquivo src/pages/RegulacaoLeitos.tsx
+
+  const indicadores = useMemo(() => {
     const agora = new Date();
 
-    // --- LÓGICA DO TEMPO MÉDIO DE ESPERA (JÁ AJUSTADA) ---
+    // --- LÓGICA CORRIGIDA: Tempo médio de espera (PS) ---
     const pacientesNoPs = [
       ...listas.decisaoCirurgica,
       ...listas.decisaoClinica,
     ];
-
     let tempoMedioInternacao = "0d 0h 0m";
-
     if (pacientesNoPs.length > 0) {
       const totalMinutos = pacientesNoPs.reduce((acc, p) => {
         const dataInicioEspera = parse(p.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
@@ -67,9 +67,7 @@ const indicadores = useMemo(() => {
         }
         return acc;
       }, 0);
-
       const mediaMinutos = totalMinutos / pacientesNoPs.length;
-
       if (!isNaN(mediaMinutos) && mediaMinutos > 0) {
         const dias = Math.floor(mediaMinutos / 1440);
         const horas = Math.floor((mediaMinutos % 1440) / 60);
@@ -80,24 +78,32 @@ const indicadores = useMemo(() => {
     
     // --- INÍCIO DA LÓGICA ATUALIZADA PARA REGULAÇÕES PENDENTES ---
 
-    let tempoMedioRegulacaoPendente = "0d 0h 0m"; // Valor padrão zerado
-    const regulacoesPendentes = regulacoes.filter(r => r.status === 'Pendente');
+    let tempoMedioRegulacaoPendente = "0d 0h 0m";
 
-    if (regulacoesPendentes.length > 0) {
-      // Calcula o total de minutos de espera das regulações pendentes
-      const totalMinutosPendentes = regulacoesPendentes.reduce((acc, r) => {
+    // 1. Criamos um conjunto com os IDs dos pacientes que estão visíveis na lista de "Já Regulados".
+    //    Esta é a nossa fonte da verdade sobre quem está com uma regulação ativa.
+    const idsPacientesAtualmenteRegulados = new Set(listas.pacientesJaRegulados.map(p => p.id));
+
+    // 2. Filtramos a lista geral de regulações para pegar apenas aquelas que:
+    //    a) Pertencem a um paciente que está na lista de ativos (`idsPacientesAtualmenteRegulados`).
+    //    b) Possuem o status 'Pendente'.
+    const regulacoesPendentesAtuais = regulacoes.filter(r => 
+      idsPacientesAtualmenteRegulados.has(r.pacienteId) && r.status === 'Pendente'
+    );
+
+    // 3. O cálculo da média agora é feito apenas sobre esta lista filtrada e correta.
+    if (regulacoesPendentesAtuais.length > 0) {
+      const totalMinutosPendentes = regulacoesPendentesAtuais.reduce((acc, r) => {
           const dataInicioRegulacao = new Date(r.criadaEm);
           if(isValid(dataInicioRegulacao)) {
             const diff = differenceInMinutes(agora, dataInicioRegulacao);
-            return acc + (diff > 0 ? diff : 0); // Garante que a diferença seja positiva
+            return acc + (diff > 0 ? diff : 0);
           }
           return acc;
       }, 0);
 
-      // Calcula a média
-      const mediaMinutosPendentes = totalMinutosPendentes / regulacoesPendentes.length;
+      const mediaMinutosPendentes = totalMinutosPendentes / regulacoesPendentesAtuais.length;
       
-      // Formata o resultado em dias, horas e minutos
       if (!isNaN(mediaMinutosPendentes) && mediaMinutosPendentes > 0) {
         const dias = Math.floor(mediaMinutosPendentes / 1440);
         const horas = Math.floor((mediaMinutosPendentes % 1440) / 60);
@@ -108,7 +114,7 @@ const indicadores = useMemo(() => {
     
     // --- FIM DA LÓGICA ATUALIZADA ---
 
-    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length + listas.recuperacaoCirurgica.length + listas.pacientesAguardandoUTI.length;
+    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length;
 
     const contagemStatus = {
       Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
