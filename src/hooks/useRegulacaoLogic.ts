@@ -28,7 +28,7 @@ import {
   getDocs
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { intervalToDuration } from "date-fns";
+import { intervalToDuration, parse, isValid } from "date-fns";
 import * as XLSX from "xlsx";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -225,8 +225,6 @@ const registrarHistoricoRegulacao = async (
 }, [leitos, pacientes, leitosLoading, pacientesLoading]);
   
 
-  // Lógica Inteligente de Sugestões de Regulação Refinada
-  // Lógica Inteligente de Sugestões de Regulação Refinada
   const sugestoesDeRegulacao = useMemo(() => {
     if (!leitosEnriquecidos || leitosEnriquecidos.length === 0) return [];
 
@@ -315,33 +313,37 @@ const registrarHistoricoRegulacao = async (
             return false;
           }
 
-          // --- INÍCIO DA LÓGICA ATUALIZADA ---
           if (leito.leitoPCP) {
-            // REGRA 1: Se o leito é PCP, não pode receber paciente do CC - RECUPERAÇÃO.
             if (p.setorOrigem === 'CC - RECUPERAÇÃO') {
               return false;
             }
-            
-            // REGRA 2: Mantém a regra de idade para leitos PCP.
             const idade = calcularIdade(p.dataNascimento);
             if (idade < 18 || idade > 60) {
               return false;
             }
           }
-          // --- FIM DA LÓGICA ATUALIZADA ---
-
           return true;
         })
         .sort((a, b) => {
+          // 1º Critério: Isolamento
           const aIso = a.isolamentosVigentes && a.isolamentosVigentes.length > 0;
           const bIso = b.isolamentosVigentes && b.isolamentosVigentes.length > 0;
           if (aIso && !bIso) return -1;
           if (!aIso && bIso) return 1;
 
-          const tempoA = new Date(a.dataInternacao).getTime();
-          const tempoB = new Date(b.dataInternacao).getTime();
-          if (tempoA !== tempoB) return tempoB - tempoA;
+          // 2º Critério: Maior tempo de internação (data mais antiga primeiro)
+          // Usamos 'parse' para garantir a leitura correta da data
+          const dataA = parse(a.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+          const dataB = parse(b.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
+          const tempoA = isValid(dataA) ? dataA.getTime() : 0;
+          const tempoB = isValid(dataB) ? dataB.getTime() : 0;
+          
+          if (tempoA !== tempoB) {
+            // Ordenação ASCENDENTE pelo timestamp (datas mais antigas vêm primeiro)
+            return tempoA - tempoB; 
+          }
 
+          // 3º Critério (desempate): Maior idade (mais velho primeiro)
           const idadeA = calcularIdade(a.dataNascimento);
           const idadeB = calcularIdade(b.dataNascimento);
           return idadeB - idadeA;
