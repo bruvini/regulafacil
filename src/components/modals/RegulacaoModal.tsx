@@ -7,12 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AlertTriangle, Copy, CheckCircle, BedDouble } from 'lucide-react';
 import { Paciente } from '@/types/hospital'; // CORREÇÃO: Importa o tipo correto
 import { useLeitoFinder } from '@/hooks/useLeitoFinder';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, Copy, CheckCircle, BedDouble } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RegulacaoModalProps {
   open: boolean;
@@ -215,6 +216,24 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                               <div className="flex items-center gap-2">
                                 <BedDouble className="h-4 w-4" />
                                 <span className="font-medium">{leito.codigoLeito}</span>
+
+                                {leito.temHomonimo && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="flex items-center ml-1">
+                                          <AlertTriangle className="h-5 w-5 text-red-500" />
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="text-red-500 font-semibold">
+                                          Alerta: Paciente com o mesmo nome neste quarto.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+        
                                 {leito.leitoPCP && <Badge variant="outline">PCP</Badge>}
                                 {leito.leitoIsolamento && <Badge variant="destructive">Isolamento</Badge>}
                               </div>
