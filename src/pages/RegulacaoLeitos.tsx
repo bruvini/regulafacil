@@ -45,12 +45,12 @@ const RegulacaoLeitos = () => {
   };
 
   // Substitua todo este bloco 'useMemo' pelo novo código
-  const indicadores = useMemo(() => {
+  // dentro do arquivo src/pages/RegulacaoLeitos.tsx
+
+const indicadores = useMemo(() => {
     const agora = new Date();
 
-    // --- INÍCIO DA LÓGICA ATUALIZADA ---
-
-    // 1. Foco nos pacientes corretos
+    // --- LÓGICA DO TEMPO MÉDIO DE ESPERA (JÁ AJUSTADA) ---
     const pacientesNoPs = [
       ...listas.decisaoCirurgica,
       ...listas.decisaoClinica,
@@ -59,22 +59,17 @@ const RegulacaoLeitos = () => {
     let tempoMedioInternacao = "0d 0h 0m";
 
     if (pacientesNoPs.length > 0) {
-      // 2. Cálculo do total de minutos de espera
       const totalMinutos = pacientesNoPs.reduce((acc, p) => {
-        // Garante que a data de internação seja lida corretamente
         const dataInicioEspera = parse(p.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
         if (isValid(dataInicioEspera)) {
           const diff = differenceInMinutes(agora, dataInicioEspera);
-          // Adiciona ao total apenas se a diferença for positiva
           return acc + (diff > 0 ? diff : 0);
         }
         return acc;
       }, 0);
 
-      // 3. Cálculo da média
       const mediaMinutos = totalMinutos / pacientesNoPs.length;
 
-      // 4. Formatação do resultado
       if (!isNaN(mediaMinutos) && mediaMinutos > 0) {
         const dias = Math.floor(mediaMinutos / 1440);
         const horas = Math.floor((mediaMinutos % 1440) / 60);
@@ -83,9 +78,37 @@ const RegulacaoLeitos = () => {
       }
     }
     
+    // --- INÍCIO DA LÓGICA ATUALIZADA PARA REGULAÇÕES PENDENTES ---
+
+    let tempoMedioRegulacaoPendente = "0d 0h 0m"; // Valor padrão zerado
+    const regulacoesPendentes = regulacoes.filter(r => r.status === 'Pendente');
+
+    if (regulacoesPendentes.length > 0) {
+      // Calcula o total de minutos de espera das regulações pendentes
+      const totalMinutosPendentes = regulacoesPendentes.reduce((acc, r) => {
+          const dataInicioRegulacao = new Date(r.criadaEm);
+          if(isValid(dataInicioRegulacao)) {
+            const diff = differenceInMinutes(agora, dataInicioRegulacao);
+            return acc + (diff > 0 ? diff : 0); // Garante que a diferença seja positiva
+          }
+          return acc;
+      }, 0);
+
+      // Calcula a média
+      const mediaMinutosPendentes = totalMinutosPendentes / regulacoesPendentes.length;
+      
+      // Formata o resultado em dias, horas e minutos
+      if (!isNaN(mediaMinutosPendentes) && mediaMinutosPendentes > 0) {
+        const dias = Math.floor(mediaMinutosPendentes / 1440);
+        const horas = Math.floor((mediaMinutosPendentes % 1440) / 60);
+        const minutos = Math.floor(mediaMinutosPendentes % 60);
+        tempoMedioRegulacaoPendente = `${dias}d ${horas}h ${minutos}m`;
+      }
+    }
+    
     // --- FIM DA LÓGICA ATUALIZADA ---
 
-    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length;
+    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length + listas.recuperacaoCirurgica.length + listas.pacientesAguardandoUTI.length;
 
     const contagemStatus = {
       Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
@@ -94,16 +117,6 @@ const RegulacaoLeitos = () => {
       Alteradas: regulacoes.filter(r => r.historicoEventos.some(e => e.evento === 'alterada')).length,
     };
     
-    let tempoMedioRegulacaoPendente = "N/A";
-    const regulacoesPendentes = regulacoes.filter(r => r.status === 'Pendente');
-    if (regulacoesPendentes.length > 0) {
-      const totalMinutosPendentes = regulacoesPendentes.reduce((acc, r) => acc + differenceInMinutes(new Date(), new Date(r.criadaEm)), 0);
-      const mediaMinutosPendentes = totalMinutosPendentes / regulacoesPendentes.length;
-      const horas = Math.floor(mediaMinutosPendentes / 60);
-      const minutos = Math.floor(mediaMinutosPendentes % 60);
-      tempoMedioRegulacaoPendente = `${horas}h ${minutos}m`;
-    }
-
     const getTopComContagem = (arr: string[]) => {
       if (!arr.length) return { nome: 'N/A', contagem: 0 };
       const contagens = arr.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {} as Record<string, number>);
