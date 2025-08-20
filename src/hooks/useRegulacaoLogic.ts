@@ -559,6 +559,14 @@ const registrarHistoricoRegulacao = async (
   };
 
   const handleAlterar = (paciente: any) => {
+    // Verifica se o paciente tem a flag 'aguardaUTI'.
+    // Esta flag indica a necessidade original do paciente.
+    const modo = paciente.aguardaUTI ? "uti" : "normal";
+
+    // Define o modo de regulação ('uti' ou 'normal') com base na verificação.
+    setModoRegulacao(modo);
+    
+    // Mantém a lógica original para abrir o modal em modo de alteração.
     setPacienteParaRegular(paciente);
     setIsAlteracaoMode(true);
     setRegulacaoModalOpen(true);
