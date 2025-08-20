@@ -1,13 +1,14 @@
+
 // src/components/PacientePendenteItem.tsx
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  TooltipTrigger
+} from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,8 +18,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
 
 import {
   LogIn,
@@ -26,18 +27,16 @@ import {
   Clock,
   CheckCheck,
   Pencil,
-  XCircle,
-  Biohazard, // Ícone para isolamento
-} from "lucide-react";
+  XCircle
+} from 'lucide-react';
 
-import { formatarDuracao } from "@/lib/utils";
-import { Paciente } from "@/types/hospital";
+import { formatarDuracao } from '@/lib/utils';
+import { Paciente } from '@/types/hospital';
 
 // Função auxiliar
 const calcularIdade = (dataNascimento: string): string => {
-  if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento))
-    return "?";
-  const [dia, mes, ano] = dataNascimento.split("/").map(Number);
+  if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
+  const [dia, mes, ano] = dataNascimento.split('/').map(Number);
   const hoje = new Date();
   const nascimento = new Date(ano, mes - 1, dia);
   let idade = hoje.getFullYear() - nascimento.getFullYear();
@@ -54,7 +53,6 @@ interface PacientePendenteItemProps {
     leitoId: string;
     statusLeito: string;
     regulacao?: any;
-    isolamentos?: string[];
   };
   onRegularClick?: () => void;
   onAlta?: () => void;
@@ -71,55 +69,32 @@ export const PacientePendenteItem = ({
   onConcluir,
   onAlterar,
   onCancelar,
-  onAltaDireta,
+  onAltaDireta
 }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
-  const temIsolamentos =
-    paciente.isolamentos && paciente.isolamentos.length > 0;
-
-  console.log("PacientePendenteItem - paciente:", paciente);
-  console.log("PacientePendenteItem - nomeCompleto:", paciente.nomeCompleto);
+  
+  console.log('PacientePendenteItem - paciente:', paciente);
+  console.log('PacientePendenteItem - nomeCompleto:', paciente.nomeCompleto);
 
   return (
     <div className="flex items-start gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
       <div className="flex-grow">
         <div className="flex items-center gap-2">
           <p className="font-bold text-sm text-foreground">
-            {paciente.nomeCompleto || "Nome não disponível"}
+            {paciente.nomeCompleto || 'Nome não disponível'}
           </p>
-
-          {temIsolamentos && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Biohazard className="h-4 w-4 text-orange-500" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="p-1">
-                    <p className="font-bold mb-1">Isolamentos:</p>
-                    <ul className="list-disc list-inside">
-                      {paciente.isolamentos?.map((iso, index) => (
-                        <li key={index}>{iso}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
           <Badge variant="outline" className="text-xs">
-            {paciente.sexoPaciente?.charAt(0) || "?"} - {idade}a
+            {paciente.sexoPaciente?.charAt(0) || '?'} - {idade}a
           </Badge>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-          {paciente.statusLeito === "Regulado" ? (
+          {paciente.statusLeito === 'Regulado' ? (
             <>
               <span className="font-semibold text-purple-600">Destino:</span>
               <span>
-                {paciente.regulacao?.paraSetorSigla || "Setor desconhecido"} -{" "}
-                {paciente.regulacao?.paraLeito || "Leito não informado"}
+                {paciente.regulacao?.paraSetorSigla || 'Setor desconhecido'} -{' '}
+                {paciente.regulacao?.paraLeito || 'Leito não informado'}
               </span>
               <span className="text-gray-400">•</span>
               <div className="flex items-center gap-1">
@@ -137,7 +112,7 @@ export const PacientePendenteItem = ({
       </div>
 
       <div className="flex items-center gap-1">
-        {paciente.statusLeito === "Regulado" ? (
+        {paciente.statusLeito === 'Regulado' ? (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -151,9 +126,7 @@ export const PacientePendenteItem = ({
                   <CheckCheck className="h-4 w-4 text-green-600" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Concluir Regulação</p>
-              </TooltipContent>
+              <TooltipContent><p>Concluir Regulação</p></TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -168,9 +141,7 @@ export const PacientePendenteItem = ({
                   <Pencil className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Alterar Regulação</p>
-              </TooltipContent>
+              <TooltipContent><p>Alterar Regulação</p></TooltipContent>
             </Tooltip>
 
             <Tooltip>
@@ -185,9 +156,7 @@ export const PacientePendenteItem = ({
                   <XCircle className="h-4 w-4 text-destructive" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Cancelar Regulação</p>
-              </TooltipContent>
+              <TooltipContent><p>Cancelar Regulação</p></TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : (
@@ -204,9 +173,7 @@ export const PacientePendenteItem = ({
                   <LogIn className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Regular Leito</p>
-              </TooltipContent>
+              <TooltipContent><p>Regular Leito</p></TooltipContent>
             </Tooltip>
 
             {/* Nova ação de Alta Direta */}
@@ -225,27 +192,19 @@ export const PacientePendenteItem = ({
                       </Button>
                     </AlertDialogTrigger>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Dar Alta</p>
-                  </TooltipContent>
+                  <TooltipContent><p>Dar Alta</p></TooltipContent>
                 </Tooltip>
 
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      Confirmar Alta do Paciente?
-                    </AlertDialogTitle>
+                    <AlertDialogTitle>Confirmar Alta do Paciente?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Esta ação removerá {paciente.nomeCompleto} do sistema e
-                      liberará o leito {paciente.leitoCodigo} para higienização.
-                      Deseja continuar?
+                      Esta ação removerá {paciente.nomeCompleto} do sistema e liberará o leito {paciente.leitoCodigo} para higienização. Deseja continuar?
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onAltaDireta(paciente)}>
-                      Confirmar Alta
-                    </AlertDialogAction>
+                    <AlertDialogAction onClick={() => onAltaDireta(paciente)}>Confirmar Alta</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -269,9 +228,7 @@ export const PacientePendenteItem = ({
                     </Button>
                   </AlertDialogTrigger>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Informar Alta</p>
-                </TooltipContent>
+                <TooltipContent><p>Informar Alta</p></TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
@@ -284,9 +241,7 @@ export const PacientePendenteItem = ({
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={onAlta}>
-                  Confirmar Alta
-                </AlertDialogAction>
+                <AlertDialogAction onClick={onAlta}>Confirmar Alta</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
