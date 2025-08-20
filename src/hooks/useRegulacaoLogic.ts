@@ -226,6 +226,7 @@ const registrarHistoricoRegulacao = async (
   
 
   // Lógica Inteligente de Sugestões de Regulação Refinada
+  // Lógica Inteligente de Sugestões de Regulação Refinada
   const sugestoesDeRegulacao = useMemo(() => {
     if (!leitosEnriquecidos || leitosEnriquecidos.length === 0) return [];
 
@@ -253,7 +254,7 @@ const registrarHistoricoRegulacao = async (
       'UNID. JS ORTOPEDIA': ['NEUROCIRURGIA', 'ODONTOLOGIA C.TRAUM.B.M.F.', 'ORTOPEDIA/TRAUMATOLOGIA'],
       'UNID. INT. GERAL - UIG': ['CLINICA GERAL', 'INTENSIVISTA', 'NEUROLOGIA', 'PROCTOLOGIA', 'UROLOGIA'],
       'UNID. CLINICA MEDICA': ['CLINICA GERAL', 'INTENSIVISTA', 'NEUROLOGIA', 'PROCTOLOGIA', 'UROLOGIA'],
-      'UNID. ONCOLOGIA': ['ONCOLOGIA CIRURGICA', 'ONCOLOGIA CLINICA/CANCEROLOGIA'],
+      'UNID. ONCOLOGIA': ['HEMATOLOGIA', 'ONCOLOGIA CIRURGICA', 'ONCOLOGIA CLINICA/CANCEROLOGIA'],
       'UNID. CIRURGICA': ['CIRURGIA CABECA E PESCOCO', 'CIRURGIA GERAL', 'CIRURGIA TORACICA', 'CIRURGIA VASCULAR', 'NEUROCIRURGIA', 'PROCTOLOGIA', 'UROLOGIA', 'ONCOLOGIA CIRURGICA'],
       'UNID. NEFROLOGIA TRANSPLANTE': ['NEFROLOGIA']
     };
@@ -314,10 +315,20 @@ const registrarHistoricoRegulacao = async (
             return false;
           }
 
+          // --- INÍCIO DA LÓGICA ATUALIZADA ---
           if (leito.leitoPCP) {
+            // REGRA 1: Se o leito é PCP, não pode receber paciente do CC - RECUPERAÇÃO.
+            if (p.setorOrigem === 'CC - RECUPERAÇÃO') {
+              return false;
+            }
+            
+            // REGRA 2: Mantém a regra de idade para leitos PCP.
             const idade = calcularIdade(p.dataNascimento);
-            if (idade < 18 || idade > 60) return false;
+            if (idade < 18 || idade > 60) {
+              return false;
+            }
           }
+          // --- FIM DA LÓGICA ATUALIZADA ---
 
           return true;
         })
