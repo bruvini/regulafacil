@@ -162,7 +162,7 @@ export const PanoramaVisualizacaoModal = ({
                 primeiraAlteracao.detalhes.split(' alterada de ')[1]?.split(' para ')[0] || reg.leitoDestinoCodigo :
                 `${reg.setorDestinoNome} ${reg.leitoDestinoCodigo}`;
 
-            texto += `- *${reg.pacienteNome}* (${reg.setorOrigemNome} -> ${destinoInicial})\n`;
+            texto += `- *${reg.pacienteNome}* (${reg.setorOrigemNome} - ${reg.leitoOrigemCodigo} -> ${destinoInicial})\n`;
             texto += `  _Iniciada em: ${dataCriacaoFormatada}_\n`;
 
             // **MELHORIA**: Itera sobre todos os eventos para criar a linha do tempo.
