@@ -85,7 +85,7 @@ const RegulacaoLeitos = () => {
     
     // --- FIM DA LÓGICA ATUALIZADA ---
 
-    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length + listas.recuperacaoCirurgica.length + listas.pacientesAguardandoUTI.length;
+    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length;
 
     const contagemStatus = {
       Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
