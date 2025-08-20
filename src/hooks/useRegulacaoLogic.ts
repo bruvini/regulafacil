@@ -545,37 +545,47 @@ const registrarHistoricoRegulacao = async (
     setActingOnPatientId(paciente.id);
 
     try {
+      // CORREÇÃO 1: Busca o paciente mais atualizado da nossa lista principal.
+      // Isso garante que temos a informação correta sobre 'aguardaUTI'.
+      const pacienteCompleto = pacientesComDadosCompletos.find(p => p.id === paciente.id);
+      if (!pacienteCompleto) {
+          toast({ title: "Erro", description: "Paciente não encontrado no sistema.", variant: "destructive"});
+          setActingOnPatientId(null);
+          return;
+      }
+
       const leitoDestino = leitos.find(l => l.codigoLeito === paciente.regulacao.paraLeito);
-      
-      // CORREÇÃO: Busca o setor pelo ID do leito, que é a forma correta.
       const setorDestino = leitoDestino ? setores.find(s => s.id === leitoDestino.setorId) : undefined;
 
       if (leitoDestino && setorDestino) {
-          const logMessage = `Regulação de ${paciente.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
+          const logMessage = `Regulação de ${pacienteCompleto.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
           
           await registrarHistoricoRegulacao(paciente.regulacao.regulacaoId, 'concluida', {
               detalhesLog: logMessage,
           });
 
-          await atualizarStatusLeito(paciente.leitoId, "Vago");
+          // CORREÇÃO 2: Altera o status do leito de origem para "Higienização".
+          await atualizarStatusLeito(pacienteCompleto.leitoId, "Higienizacao");
+
           await atualizarStatusLeito(leitoDestino.id, "Ocupado", {
-              pacienteId: paciente.id,
+              pacienteId: pacienteCompleto.id,
           });
 
-          const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
+          const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteCompleto.id);
           
           const dadosUpdate: any = {
               leitoId: leitoDestino.id,
               setorId: leitoDestino.setorId,
           };
 
-          if (paciente.aguardaUTI && setorDestino.tipoUnidade === 'UTI') {
-              const dataPedido = new Date(paciente.dataPedidoUTI);
+          // Agora a verificação usará os dados mais recentes de 'pacienteCompleto'.
+          if (pacienteCompleto.aguardaUTI && setorDestino.tipoUnidade === 'UTI') {
+              const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
               const dataConclusao = new Date();
               const duracao = intervalToDuration({ start: dataPedido, end: dataConclusao });
               const tempoDeEspera = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
               
-              const logUTI = `Pedido de UTI para ${paciente.nomeCompleto} finalizado após ${tempoDeEspera}. Paciente alocado no leito ${leitoDestino.codigoLeito}. Conclusão em: ${dataConclusao.toLocaleString('pt-BR')}.`;
+              const logUTI = `Pedido de UTI para ${pacienteCompleto.nomeCompleto} finalizado após ${tempoDeEspera}. Paciente alocado no leito ${leitoDestino.codigoLeito}. Conclusão em: ${dataConclusao.toLocaleString('pt-BR')}.`;
               registrarLog(logUTI, "Fila de UTI");
 
               dadosUpdate.aguardaUTI = false;
@@ -585,9 +595,8 @@ const registrarHistoricoRegulacao = async (
           await updateDoc(pacienteRef, dadosUpdate);
 
           registrarLog(logMessage, "Regulação de Leitos");
-          toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado." });
+          toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado para higienização." });
       } else {
-        // Adiciona um feedback de erro caso o leito ou setor não sejam encontrados
         toast({
             title: "Erro de Dados",
             description: "Não foi possível encontrar o leito ou setor de destino. A operação foi cancelada.",
