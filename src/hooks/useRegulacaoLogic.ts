@@ -546,7 +546,9 @@ const registrarHistoricoRegulacao = async (
 
     try {
       const leitoDestino = leitos.find(l => l.codigoLeito === paciente.regulacao.paraLeito);
-      const setorDestino = setores.find(s => s.nomeSetor === leitoDestino?.setorNome);
+      
+      // CORREÇÃO: Busca o setor pelo ID do leito, que é a forma correta.
+      const setorDestino = leitoDestino ? setores.find(s => s.id === leitoDestino.setorId) : undefined;
 
       if (leitoDestino && setorDestino) {
           const logMessage = `Regulação de ${paciente.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
@@ -562,39 +564,43 @@ const registrarHistoricoRegulacao = async (
 
           const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
           
-          // --- INÍCIO DA LÓGICA ATUALIZADA ---
-
-          // Prepara o objeto de atualização base
           const dadosUpdate: any = {
               leitoId: leitoDestino.id,
               setorId: leitoDestino.setorId,
           };
 
-          // Verifica se o paciente aguardava UTI e se o destino é uma UTI
           if (paciente.aguardaUTI && setorDestino.tipoUnidade === 'UTI') {
-              // Calcula o tempo de espera
               const dataPedido = new Date(paciente.dataPedidoUTI);
               const dataConclusao = new Date();
               const duracao = intervalToDuration({ start: dataPedido, end: dataConclusao });
               const tempoDeEspera = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
               
-              // Gera o log de auditoria
               const logUTI = `Pedido de UTI para ${paciente.nomeCompleto} finalizado após ${tempoDeEspera}. Paciente alocado no leito ${leitoDestino.codigoLeito}. Conclusão em: ${dataConclusao.toLocaleString('pt-BR')}.`;
               registrarLog(logUTI, "Fila de UTI");
 
-              // Adiciona os campos para limpar o pedido de UTI
               dadosUpdate.aguardaUTI = false;
               dadosUpdate.dataPedidoUTI = null;
           }
 
-          // Executa a atualização no documento do paciente
           await updateDoc(pacienteRef, dadosUpdate);
-
-          // --- FIM DA LÓGICA ATUALIZADA ---
 
           registrarLog(logMessage, "Regulação de Leitos");
           toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado." });
+      } else {
+        // Adiciona um feedback de erro caso o leito ou setor não sejam encontrados
+        toast({
+            title: "Erro de Dados",
+            description: "Não foi possível encontrar o leito ou setor de destino. A operação foi cancelada.",
+            variant: "destructive"
+        });
       }
+    } catch (error) {
+        console.error("Erro ao concluir regulação:", error);
+        toast({
+            title: "Erro Inesperado",
+            description: "Ocorreu um erro ao tentar concluir a regulação.",
+            variant: "destructive"
+        });
     } finally {
       setActingOnPatientId(null);
     }
