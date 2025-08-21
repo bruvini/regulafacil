@@ -235,13 +235,16 @@ const RegulacaoLeitos = () => {
         {/* 6. Bloco Agrupador: Espera por UTI e Transferências Externas */}
         <EsperaUTITransferencias
           pacientesAguardandoUTI={listas.pacientesAguardandoUTI}
-          pacientesAguardandoTransferencia={
-            listas.pacientesAguardandoTransferencia
-          }
+          pacientesAguardandoTransferencia={listas.pacientesAguardandoTransferencia}
           onCancelarUTI={handlers.cancelarPedidoUTI}
           onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-          onRegularUTI={(paciente) => {
-            handlers.handleOpenRegulacaoModal(paciente, "uti");
+          onRegularUTI={(leitoId) => {
+            const paciente = listas.pacientesAguardandoUTI.find((p) => p.leitoId === leitoId);
+            if (paciente) {
+              handlers.handleOpenRegulacaoModal(paciente, "uti");
+            } else {
+              console.warn("Paciente não encontrado para leito:", leitoId);
+            }
           }}
           onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
         />
@@ -325,3 +328,4 @@ const RegulacaoLeitos = () => {
 };
 
 export default RegulacaoLeitos;
+
