@@ -44,11 +44,6 @@ const RegulacaoLeitos = () => {
     setPanoramaVisualizacaoOpen(true);
   };
 
-  // Substitua todo este bloco 'useMemo' pelo novo código
-  // dentro do arquivo src/pages/RegulacaoLeitos.tsx
-
-// dentro do arquivo src/pages/RegulacaoLeitos.tsx
-
   const indicadores = useMemo(() => {
     const agora = new Date();
 
@@ -80,18 +75,16 @@ const RegulacaoLeitos = () => {
 
     let tempoMedioRegulacaoPendente = "0d 0h 0m";
 
-    // 1. Criamos um conjunto com os IDs dos pacientes que estão visíveis na lista de "Já Regulados".
-    //    Esta é a nossa fonte da verdade sobre quem está com uma regulação ativa.
-    const idsPacientesAtualmenteRegulados = new Set(listas.pacientesJaRegulados.map(p => p.id));
+    // Create a mapping from patient IDs to regulacao IDs for regulados patients
+    const pacientesReguladosIds = new Set(listas.pacientesJaRegulados.map(p => p.id));
 
-    // 2. Filtramos a lista geral de regulações para pegar apenas aquelas que:
-    //    a) Pertencem a um paciente que está na lista de ativos (`idsPacientesAtualmenteRegulados`).
-    //    b) Possuem o status 'Pendente'.
+    // Filter regulations that belong to currently regulated patients and are pending
     const regulacoesPendentesAtuais = regulacoes.filter(r => 
-      idsPacientesAtualmenteRegulados.has(r.pacienteId) && r.status === 'Pendente'
+      // Check if any regulated patient matches this regulation
+      listas.pacientesJaRegulados.some(p => p.id === r.id) && r.status === 'Pendente'
     );
 
-    // 3. O cálculo da média agora é feito apenas sobre esta lista filtrada e correta.
+    // Calculate average time for pending regulations
     if (regulacoesPendentesAtuais.length > 0) {
       const totalMinutosPendentes = regulacoesPendentesAtuais.reduce((acc, r) => {
           const dataInicioRegulacao = new Date(r.criadaEm);

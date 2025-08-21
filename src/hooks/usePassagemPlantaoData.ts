@@ -54,7 +54,7 @@ export const usePassagemPlantaoData = () => {
     // Processamento de cada categoria de informação
     const isolamentos = pacientesDoSetor
       .filter(p => p.isolamentosVigentes && p.isolamentosVigentes.length > 0)
-      .map(p => `${p.leitoCodigo} ${p.nomeCompleto} - ${p.isolamentosVigentes.map(i => i.sigla).join(', ')}`);
+      .map(p => `${p.leitoCodigo} ${p.nomeCompleto} - ${p.isolamentosVigentes!.map(i => i.sigla).join(', ')}`);
 
     const regulacoesPendentes = pacientesJaRegulados
       .filter(p => {
@@ -65,7 +65,9 @@ export const usePassagemPlantaoData = () => {
       .map(p => {
         const dataInternacao = parseISO(p.dataInternacao);
         const dataFormatada = isValid(dataInternacao) ? format(dataInternacao, 'dd/MM HH:mm') : 'N/A';
-        return `${p.leitoCodigo || 'N/A'} ${p.nomeCompleto} / Vem de ${p.setorOrigem || 'N/A'} - Regulado em ${dataFormatada}`;
+        const leito = leitos.find(l => l.id === p.leitoId);
+        const leitoCodigo = leito?.codigoLeito || 'N/A';
+        return `${leitoCodigo} ${p.nomeCompleto} / Vem de ${p.setorOrigem || 'N/A'} - Regulado em ${dataFormatada}`;
       });
 
     const leitosPCP = leitosDoSetor
