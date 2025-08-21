@@ -48,10 +48,17 @@ const RegulacaoLeitos = () => {
   const indicadores = useMemo(() => {
     const agora = new Date();
 
+    // Fallbacks seguros para evitar undefined
+    const regs = regulacoes ?? [];
+    const decisaoCirurgica = listas?.decisaoCirurgica ?? [];
+    const decisaoClinica = listas?.decisaoClinica ?? [];
+    const recuperacaoCirurgica = listas?.recuperacaoCirurgica ?? [];
+    const pacientesJaRegulados = listas?.pacientesJaRegulados ?? [];
+
     // --- LÓGICA CORRIGIDA: Tempo médio de espera (PS) ---
     const pacientesNoPs = [
-      ...listas.decisaoCirurgica,
-      ...listas.decisaoClinica,
+      ...decisaoCirurgica,
+      ...decisaoClinica,
     ];
     let tempoMedioInternacao = "0d 0h 0m";
     if (pacientesNoPs.length > 0) {
@@ -76,13 +83,9 @@ const RegulacaoLeitos = () => {
 
     let tempoMedioRegulacaoPendente = "0d 0h 0m";
 
-    // Create a mapping from patient IDs to regulacao IDs for regulados patients
-    const pacientesReguladosIds = new Set(listas.pacientesJaRegulados.map(p => p.id));
-
     // Filter regulations that belong to currently regulated patients and are pending
-    const regulacoesPendentesAtuais = regulacoes.filter(r => 
-      // Check if any regulated patient matches this regulation
-      listas.pacientesJaRegulados.some(p => p.id === r.id) && r.status === 'Pendente'
+    const regulacoesPendentesAtuais = regs.filter(r => 
+      (pacientesJaRegulados.some(p => p.id === r.id)) && r.status === 'Pendente'
     );
 
     // Calculate average time for pending regulations
@@ -108,27 +111,29 @@ const RegulacaoLeitos = () => {
     
     // --- FIM DA LÓGICA ATUALIZADA ---
 
-    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length;
+    const aguardandoLeito = decisaoCirurgica.length + decisaoClinica.length;
 
     const contagemStatus = {
-      Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
-      Concluidas: regulacoes.filter(r => r.status === 'Concluída').length,
-      Canceladas: regulacoes.filter(r => r.status === 'Cancelada').length,
-      Alteradas: regulacoes.filter(r => r.historicoEventos.some(e => e.evento === 'alterada')).length,
+      Pendentes: regs.filter(r => r.status === 'Pendente').length,
+      Concluidas: regs.filter(r => r.status === 'Concluída').length,
+      Canceladas: regs.filter(r => r.status === 'Cancelada').length,
+      Alteradas: regs.filter(r => r.historicoEventos?.some(e => e.evento === 'alterada')).length,
     };
     
-    const getTopComContagem = (arr: string[]) => {
-      if (!arr.length) return { nome: 'N/A', contagem: 0 };
-      const contagens = arr.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {} as Record<string, number>);
+    const getTopComContagem = (arr: string[] | undefined) => {
+      const safe = Array.isArray(arr) ? arr : [];
+      if (safe.length === 0) return { nome: 'N/A', contagem: 0 };
+      const contagens = safe.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {} as Record<string, number>);
       const [nome, contagem] = Object.entries(contagens).sort((a, b) => b[1] - a[1])[0];
       return { nome, contagem };
     };
     
-    const topOrigem = getTopComContagem(regulacoes.map(r => r.setorOrigemNome));
-    const topDestino = getTopComContagem(regulacoes.map(r => r.setorDestinoNome));
+    const topOrigem = getTopComContagem(regs.map(r => r.setorOrigemNome));
+    const topDestino = getTopComContagem(regs.map(r => r.setorDestinoNome));
     
-    const turnos = regulacoes.map(r => {
-      const hora = new Date(r.criadaEm).getHours() + new Date(r.criadaEm).getMinutes() / 60;
+    const turnos = regs.map(r => {
+      const d = new Date(r.criadaEm);
+      const hora = d.getHours() + d.getMinutes() / 60;
       if (hora >= 6.5 && hora < 12.5) return 'Manhã';
       if (hora >= 12.5 && hora < 18.5) return 'Tarde';
       return 'Noite';
