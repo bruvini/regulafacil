@@ -4,6 +4,8 @@ import { usePacientes } from './usePacientes';
 import { useLeitos } from './useLeitos';
 import { useSetores } from './useSetores';
 import { useLeitoFinder } from './useLeitoFinder';
+import { useRegulacoes } from './useRegulacoes';
+import { useFiltrosRegulacao } from './useFiltrosRegulacao';
 import { toast } from '@/hooks/use-toast';
 import { Paciente, DadosPaciente } from '@/types/hospital';
 
@@ -12,66 +14,149 @@ export const useRegulacaoLogic = () => {
   const { leitos, loading: loadingLeitos } = useLeitos();
   const { setores, loading: loadingSetores } = useSetores();
   const { findAvailableLeitos, generateSugestoes } = useLeitoFinder();
+  const { regulacoes } = useRegulacoes();
+  const filtrosProps = useFiltrosRegulacao();
 
-  const [selectedLeitoId, setSelectedLeitoId] = useState<string>('');
-  const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
-  const [selectedPacienteUTI, setSelectedPacienteUTI] = useState<Paciente | null>(null);
-  const [filtros, setFiltros] = useState({
-    setorSelecionado: '',
-    statusRegulacao: '',
-    dataInicio: '',
-    dataFim: ''
-  });
-  const [sortConfig, setSortConfig] = useState({
-    key: '',
-    direction: 'ascending' as 'ascending' | 'descending'
-  });
+  // Modal states
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [regulacaoModalOpen, setRegulacaoModalOpen] = useState(false);
+  const [cancelamentoModalOpen, setCancelamentoModalOpen] = useState(false);
+  const [transferenciaModalOpen, setTransferenciaModalOpen] = useState(false);
+  const [alocacaoCirurgiaModalOpen, setAlocacaoCirurgiaModalOpen] = useState(false);
+  const [gerenciarTransferenciaOpen, setGerenciarTransferenciaOpen] = useState(false);
+  const [resumoModalOpen, setResumoModalOpen] = useState(false);
+  const [sugestoesModalOpen, setSugestoesModalOpen] = useState(false);
+  
+  // Selected data states
+  const [pacienteParaRegular, setPacienteParaRegular] = useState<Paciente | null>(null);
+  const [pacienteParaAcao, setPacienteParaAcao] = useState<Paciente | null>(null);
+  const [cirurgiaParaAlocar, setCirurgiaParaAlocar] = useState<any>(null);
+  const [isAlteracaoMode, setIsAlteracaoMode] = useState(false);
+  const [modoRegulacao, setModoRegulacao] = useState<'normal' | 'uti'>('normal');
+  const [actingOnPatientId, setActingOnPatientId] = useState<string | null>(null);
+
+  // Validation and sync states
+  const [validationResult, setValidationResult] = useState<any>(null);
+  const [syncSummary, setSyncSummary] = useState<any>(null);
 
   const loading = loadingPacientes || loadingLeitos || loadingSetores;
 
-  // Pacientes pendentes de regulação
-  const pacientesPendentes = useMemo(() => {
-    return pacientes.filter(p => !p.leitoId);
-  }, [pacientes]);
+  // Computed lists based on pacientes data
+  const listas = useMemo(() => {
+    const decisaoCirurgica = pacientes.filter(p => 
+      p.setorAtual === 'PS DECISÃO CIRURGICA' && !p.leitoId
+    );
+    
+    const decisaoClinica = pacientes.filter(p => 
+      p.setorAtual === 'PS DECISÃO CLINICA' && !p.leitoId
+    );
+    
+    const recuperacaoCirurgica = pacientes.filter(p => 
+      p.setorAtual === 'CC - RECUPERAÇÃO' && !p.leitoId
+    );
+    
+    const pacientesJaRegulados = pacientes.filter(p => 
+      p.leitoId && p.regulacao
+    );
+    
+    const pacientesAguardandoUTI = pacientes.filter(p => 
+      p.solicitacaoUTI && !p.leitoUTI
+    );
+    
+    const pacientesAguardandoTransferencia = pacientes.filter(p => 
+      p.transferenciaExterna && p.transferenciaExterna.status === 'pendente'
+    );
+    
+    const pacientesAguardandoRemanejamento = pacientes.filter(p => 
+      p.remanejamento && p.remanejamento.status === 'pendente'
+    );
+    
+    const cirurgias = []; // TODO: Implement cirurgias logic
+    
+    const sugestoesDeRegulacao = generateSugestoes(
+      [...decisaoCirurgica, ...decisaoClinica, ...recuperacaoCirurgica]
+    );
+    
+    const totalPendentes = decisaoCirurgica.length + decisaoClinica.length + recuperacaoCirurgica.length;
 
-  // Pacientes já regulados
-  const pacientesRegulados = useMemo(() => {
-    return pacientes.filter(p => p.leitoId && p.regulacao);
-  }, [pacientes]);
+    return {
+      decisaoCirurgica,
+      decisaoClinica,
+      recuperacaoCirurgica,
+      pacientesJaRegulados,
+      pacientesAguardandoUTI,
+      pacientesAguardandoTransferencia,
+      pacientesAguardandoRemanejamento,
+      cirurgias,
+      sugestoesDeRegulacao,
+      totalPendentes
+    };
+  }, [pacientes, generateSugestoes]);
 
-  // Função para aplicar filtros
-  const handleFiltroChange = useCallback((name: string, value: string) => {
-    setFiltros(prev => ({ ...prev, [name]: value }));
+  // Handlers
+  const handleOpenRegulacaoModal = useCallback((paciente: Paciente, modo: 'normal' | 'uti' = 'normal') => {
+    setPacienteParaRegular(paciente);
+    setModoRegulacao(modo);
+    setRegulacaoModalOpen(true);
   }, []);
 
-  // Função para ordenação
-  const handleSort = useCallback((key: string) => {
-    setSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'ascending' ? 'descending' : 'ascending'
-    }));
+  const handleConcluir = useCallback((paciente: Paciente) => {
+    setPacienteParaAcao(paciente);
+    setActingOnPatientId(paciente.id);
+    // TODO: Implement conclude logic
   }, []);
 
-  // Função para regular paciente
-  const regularPaciente = useCallback(async (paciente: Paciente, leitoId: string) => {
-    try {
-      // Implementar lógica de regulação
-      toast({
-        title: "Sucesso",
-        description: `Paciente ${paciente.nomeCompleto} regulado com sucesso.`,
-      });
-    } catch (error) {
-      console.error('Erro ao regular paciente:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível regular o paciente.",
-        variant: "destructive",
-      });
-    }
+  const handleAlterar = useCallback((paciente: Paciente) => {
+    setPacienteParaRegular(paciente);
+    setIsAlteracaoMode(true);
+    setRegulacaoModalOpen(true);
   }, []);
 
-  // Função para importar dados
-  const handleImportacao = useCallback(async (dadosImportacao: any[]) => {
+  const handleCancelar = useCallback((paciente: Paciente) => {
+    setPacienteParaAcao(paciente);
+    setCancelamentoModalOpen(true);
+  }, []);
+
+  const altaAposRecuperacao = useCallback((leitoId: string) => {
+    // TODO: Implement alta logic
+    console.log('Alta após recuperação:', leitoId);
+  }, []);
+
+  const handleAltaDireta = useCallback((paciente: Paciente) => {
+    // TODO: Implement alta direta logic
+    console.log('Alta direta:', paciente.id);
+  }, []);
+
+  const cancelarPedidoUTI = useCallback((paciente: Paciente) => {
+    // TODO: Implement cancel UTI request
+    console.log('Cancelar UTI:', paciente.id);
+  }, []);
+
+  const handleIniciarTransferenciaExterna = useCallback((paciente: Paciente) => {
+    setPacienteParaAcao(paciente);
+    setTransferenciaModalOpen(true);
+  }, []);
+
+  const handleGerenciarTransferencia = useCallback((paciente: Paciente) => {
+    setPacienteParaAcao(paciente);
+    setGerenciarTransferenciaOpen(true);
+  }, []);
+
+  const handleAlocarLeitoCirurgia = useCallback((cirurgia: any) => {
+    setCirurgiaParaAlocar(cirurgia);
+    setAlocacaoCirurgiaModalOpen(true);
+  }, []);
+
+  const handleCancelarRemanejamento = useCallback((paciente: Paciente) => {
+    // TODO: Implement cancel remanejamento
+    console.log('Cancelar remanejamento:', paciente.id);
+  }, []);
+
+  const handleAbrirSugestoes = useCallback(() => {
+    setSugestoesModalOpen(true);
+  }, []);
+
+  const handleProcessFileRequest = useCallback(async (dadosImportacao: any[]) => {
     try {
       const resumo = await importarPacientesDaPlanilha(dadosImportacao);
       
@@ -82,6 +167,9 @@ export const useRegulacaoLogic = () => {
         title: "Importação Concluída",
         description: `${totalProcessados} registros processados com sucesso. ${totalErros} erros encontrados.`,
       });
+      
+      setValidationResult({ success: true, message: "Importação realizada com sucesso" });
+      setSyncSummary({ created: totalProcessados, updated: totalErros });
       
       return resumo;
     } catch (error) {
@@ -95,33 +183,88 @@ export const useRegulacaoLogic = () => {
     }
   }, [importarPacientesDaPlanilha]);
 
+  const handleConfirmSync = useCallback(() => {
+    // TODO: Implement sync confirmation logic
+    console.log('Sync confirmed');
+  }, []);
+
+  const handleConfirmarRegulacao = useCallback(() => {
+    // TODO: Implement regulation confirmation logic
+    console.log('Regulação confirmada');
+    setRegulacaoModalOpen(false);
+  }, []);
+
+  const onConfirmarCancelamento = useCallback(() => {
+    // TODO: Implement cancellation confirmation logic
+    console.log('Cancelamento confirmado');
+    setCancelamentoModalOpen(false);
+  }, []);
+
+  const handleConfirmarTransferenciaExterna = useCallback(() => {
+    // TODO: Implement external transfer confirmation logic
+    console.log('Transferência externa confirmada');
+    setTransferenciaModalOpen(false);
+  }, []);
+
+  const handleConfirmarAlocacaoCirurgia = useCallback(() => {
+    // TODO: Implement surgery allocation confirmation logic
+    console.log('Alocação de cirurgia confirmada');
+    setAlocacaoCirurgiaModalOpen(false);
+  }, []);
+
+  const modals = {
+    importModalOpen,
+    regulacaoModalOpen,
+    cancelamentoModalOpen,
+    transferenciaModalOpen,
+    alocacaoCirurgiaModalOpen,
+    gerenciarTransferenciaOpen,
+    resumoModalOpen,
+    sugestoesModalOpen,
+    pacienteParaRegular,
+    pacienteParaAcao,
+    cirurgiaParaAlocar,
+    isAlteracaoMode,
+    validationResult,
+    syncSummary,
+    modoRegulacao,
+    actingOnPatientId
+  };
+
+  const handlers = {
+    handleOpenRegulacaoModal,
+    handleConcluir,
+    handleAlterar,
+    handleCancelar,
+    altaAposRecuperacao,
+    handleAltaDireta,
+    cancelarPedidoUTI,
+    handleIniciarTransferenciaExterna,
+    handleGerenciarTransferencia,
+    handleAlocarLeitoCirurgia,
+    handleCancelarRemanejamento,
+    handleAbrirSugestoes,
+    handleProcessFileRequest,
+    handleConfirmSync,
+    handleConfirmarRegulacao,
+    onConfirmarCancelamento,
+    handleConfirmarTransferenciaExterna,
+    handleConfirmarAlocacaoCirurgia,
+    setImportModalOpen,
+    setRegulacaoModalOpen,
+    setCancelamentoModalOpen,
+    setTransferenciaModalOpen,
+    setAlocacaoCirurgiaModalOpen,
+    setGerenciarTransferenciaOpen,
+    setResumoModalOpen,
+    setSugestoesModalOpen
+  };
+
   return {
-    // Estados
-    pacientes,
-    pacientesPendentes,
-    pacientesRegulados,
-    leitos,
-    setores,
     loading,
-    selectedLeitoId,
-    selectedPaciente,
-    selectedPacienteUTI,
-    filtros,
-    sortConfig,
-
-    // Funções de estado
-    setSelectedLeitoId,
-    setSelectedPaciente,
-    setSelectedPacienteUTI,
-    setFiltros,
-    setSortConfig,
-
-    // Funções de negócio
-    handleFiltroChange,
-    handleSort,
-    regularPaciente,
-    handleImportacao,
-    findAvailableLeitos,
-    generateSugestoes,
+    listas,
+    modals,
+    handlers,
+    filtrosProps
   };
 };
