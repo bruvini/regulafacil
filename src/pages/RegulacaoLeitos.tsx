@@ -240,11 +240,8 @@ const RegulacaoLeitos = () => {
           }
           onCancelarUTI={handlers.cancelarPedidoUTI}
           onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-          onRegularUTI={(leitoId) => {
-            const paciente = listas.pacientesAguardandoUTI.find((p) => p.leitoId === leitoId);
-            if (paciente) {
-              handlers.handleOpenRegulacaoModal(paciente, "uti");
-            }
+          onRegularUTI={(paciente) => {
+            handlers.handleOpenRegulacaoModal(paciente, "uti");
           }}
           onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
         />
