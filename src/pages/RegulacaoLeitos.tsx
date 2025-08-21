@@ -274,6 +274,7 @@ const RegulacaoLeitos = () => {
           gerenciarTransferenciaOpen={modals.gerenciarTransferenciaOpen}
           resumoModalOpen={modals.resumoModalOpen}
           sugestoesModalOpen={modals.sugestoesModalOpen}
+          passagemPlantaoModalOpen={modals.passagemPlantaoModalOpen}
           pacienteParaRegular={modals.pacienteParaRegular}
           pacienteParaAcao={modals.pacienteParaAcao}
           cirurgiaParaAlocar={modals.cirurgiaParaAlocar}
@@ -290,9 +291,7 @@ const RegulacaoLeitos = () => {
           onConfirmSync={handlers.handleConfirmSync}
           onConfirmarRegulacao={handlers.handleConfirmarRegulacao}
           onConfirmarCancelamento={handlers.onConfirmarCancelamento}
-          onConfirmarTransferenciaExterna={
-            handlers.handleConfirmarTransferenciaExterna
-          }
+          onConfirmarTransferenciaExterna={handlers.handleConfirmarTransferenciaExterna}
           onConfirmarAlocacaoCirurgia={handlers.handleConfirmarAlocacaoCirurgia}
           setImportModalOpen={handlers.setImportModalOpen}
           setRegulacaoModalOpen={handlers.setRegulacaoModalOpen}
@@ -302,6 +301,7 @@ const RegulacaoLeitos = () => {
           setGerenciarTransferenciaOpen={handlers.setGerenciarTransferenciaOpen}
           setResumoModalOpen={handlers.setResumoModalOpen}
           setSugestoesModalOpen={handlers.setSugestoesModalOpen}
+          setPassagemPlantaoModalOpen={handlers.setPassagemPlantaoModalOpen}
         />
 
         {/* Novos Modais de Panorama */}

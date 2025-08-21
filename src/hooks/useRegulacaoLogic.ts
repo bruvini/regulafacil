@@ -55,6 +55,7 @@ export const useRegulacaoLogic = () => {
   const [gerenciarTransferenciaOpen, setGerenciarTransferenciaOpen] = useState(false);
   const [resumoModalOpen, setResumoModalOpen] = useState(false);
   const [sugestoesModalOpen, setSugestoesModalOpen] = useState(false);
+  const [passagemPlantaoModalOpen, setPassagemPlantaoModalOpen] = useState(false);
 
   // Estados de dados
   const [pacienteParaRegular, setPacienteParaRegular] = useState<any | null>(null);
@@ -1155,7 +1156,7 @@ const registrarHistoricoRegulacao = async (
   };
 
   const handlePassagemPlantao = () => {
-    console.log('Gerar passagem de plantão');
+    setPassagemPlantaoModalOpen(true);
   };
 
   const handleAbrirSugestoes = () => {
@@ -1232,13 +1233,7 @@ const registrarHistoricoRegulacao = async (
   };
 
   return {
-    // Estados de loading
     loading,
-    cirurgiasLoading,
-    processing,
-    isSyncing,
-
-    // Dados
     listas: {
       pacientesAguardandoRegulacao,
       pacientesAguardandoUTI,
@@ -1253,7 +1248,6 @@ const registrarHistoricoRegulacao = async (
       sugestoesDeRegulacao,
     },
 
-    // Estados dos modais
     modals: {
       importModalOpen,
       regulacaoModalOpen,
@@ -1263,6 +1257,7 @@ const registrarHistoricoRegulacao = async (
       gerenciarTransferenciaOpen,
       resumoModalOpen,
       sugestoesModalOpen,
+      passagemPlantaoModalOpen,
       pacienteParaRegular,
       pacienteParaAcao,
       cirurgiaParaAlocar,
@@ -1273,7 +1268,6 @@ const registrarHistoricoRegulacao = async (
       actingOnPatientId,
     },
 
-    // Handlers
     handlers: {
       handleOpenRegulacaoModal,
       handleConfirmarRegulacao,
@@ -1292,6 +1286,7 @@ const registrarHistoricoRegulacao = async (
       handleProcessFileRequest,
       handleConfirmSync,
       handlePassagemPlantao,
+      setPassagemPlantaoModalOpen,
       handleAbrirSugestoes,
       setImportModalOpen,
       setRegulacaoModalOpen,
@@ -1304,15 +1299,6 @@ const registrarHistoricoRegulacao = async (
       handleAltaDireta,
     },
 
-    // Props para filtros
-    filtrosProps: {
-      filtrosAvancados,
-      setFiltrosAvancados,
-      searchTerm,
-      setSearchTerm,
-      resetFiltros,
-      sortConfig,
-      setSortConfig,
-    },
+    filtrosProps,
   };
 };

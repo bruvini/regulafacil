@@ -1,4 +1,3 @@
-
 import { ImportacaoMVModal } from '../ImportacaoMVModal';
 import { RegulacaoModal } from '../RegulacaoModal';
 import { CancelamentoModal } from '../CancelamentoModal';
@@ -7,6 +6,7 @@ import { AlocacaoCirurgiaModal } from '../AlocacaoCirurgiaModal';
 import { GerenciarTransferenciaModal } from '../GerenciarTransferenciaModal';
 import { ResumoRegulacoesModal } from '../ResumoRegulacoesModal';
 import { SugestoesRegulacaoModal } from '../SugestoesRegulacaoModal';
+import { PassagemPlantaoModal } from '../PassagemPlantaoModal';
 import { ResultadoValidacao, SyncSummary } from '../ValidacaoImportacao';
 
 interface RegulacaoModalsProps {
@@ -19,6 +19,7 @@ interface RegulacaoModalsProps {
   gerenciarTransferenciaOpen: boolean;
   resumoModalOpen: boolean;
   sugestoesModalOpen: boolean;
+  passagemPlantaoModalOpen: boolean;
   
   // Dados dos modais
   pacienteParaRegular: any;
@@ -51,6 +52,7 @@ interface RegulacaoModalsProps {
   setGerenciarTransferenciaOpen: (open: boolean) => void;
   setResumoModalOpen: (open: boolean) => void;
   setSugestoesModalOpen: (open: boolean) => void;
+  setPassagemPlantaoModalOpen: (open: boolean) => void;
 }
 
 export const RegulacaoModals = ({
@@ -62,6 +64,7 @@ export const RegulacaoModals = ({
   gerenciarTransferenciaOpen,
   resumoModalOpen,
   sugestoesModalOpen,
+  passagemPlantaoModalOpen,
   pacienteParaRegular,
   pacienteParaAcao,
   cirurgiaParaAlocar,
@@ -88,6 +91,7 @@ export const RegulacaoModals = ({
   setGerenciarTransferenciaOpen,
   setResumoModalOpen,
   setSugestoesModalOpen,
+  setPassagemPlantaoModalOpen,
 }: RegulacaoModalsProps) => {
   return (
     <>
@@ -149,6 +153,12 @@ export const RegulacaoModals = ({
         onOpenChange={setSugestoesModalOpen}
         sugestoes={sugestoes}
         totalPendentes={totalPendentes}
+      />
+
+      <PassagemPlantaoModal
+        open={passagemPlantaoModalOpen}
+        onOpenChange={setPassagemPlantaoModalOpen}
+        pacientesJaRegulados={pacientesRegulados}
       />
     </>
   );
