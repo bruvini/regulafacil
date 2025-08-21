@@ -10,6 +10,7 @@ export interface Regulacao {
   concluidaEm?: string; // ISO string
   setorOrigemNome: string;
   setorDestinoNome: string;
+  pacienteId: string; // Adicionado para resolver o erro
   historicoEventos: Array<{ evento: string; timestamp: string }>;
 }
 

@@ -21,6 +21,7 @@ import { RemanejamentosPendentesBloco } from "@/components/RemanejamentosPendent
 // Novos modals
 import { PanoramaSelecaoPeriodoModal } from "@/components/modals/PanoramaSelecaoPeriodoModal";
 import { PanoramaVisualizacaoModal } from "@/components/modals/PanoramaVisualizacaoModal";
+import { PassagemPlantaoModal } from "@/components/modals/PassagemPlantaoModal";
 
 const RegulacaoLeitos = () => {
   const { loading, listas, modals, handlers, filtrosProps } = useRegulacaoLogic();
@@ -35,6 +36,9 @@ const RegulacaoLeitos = () => {
     fim: "",
   });
 
+  // Estado para o modal de passagem de plantão
+  const [passagemPlantaoOpen, setPassagemPlantaoOpen] = useState(false);
+
   const handleAbrirPanorama = () => {
     setPanoramaSelecaoOpen(true);
   };
@@ -44,18 +48,17 @@ const RegulacaoLeitos = () => {
     setPanoramaVisualizacaoOpen(true);
   };
 
-  // Substitua todo este bloco 'useMemo' pelo novo código
-  // dentro do arquivo src/pages/RegulacaoLeitos.tsx
-
-// dentro do arquivo src/pages/RegulacaoLeitos.tsx
+  const handlePassagemPlantao = () => {
+    setPassagemPlantaoOpen(true);
+  };
 
   const indicadores = useMemo(() => {
     const agora = new Date();
 
     // --- LÓGICA CORRIGIDA: Tempo médio de espera (PS) ---
     const pacientesNoPs = [
-      ...listas.decisaoCirurgica,
-      ...listas.decisaoClinica,
+      ...(listas.decisaoCirurgica || []),
+      ...(listas.decisaoClinica || []),
     ];
     let tempoMedioInternacao = "0d 0h 0m";
     if (pacientesNoPs.length > 0) {
@@ -82,13 +85,13 @@ const RegulacaoLeitos = () => {
 
     // 1. Criamos um conjunto com os IDs dos pacientes que estão visíveis na lista de "Já Regulados".
     //    Esta é a nossa fonte da verdade sobre quem está com uma regulação ativa.
-    const idsPacientesAtualmenteRegulados = new Set(listas.pacientesJaRegulados.map(p => p.id));
+    const idsPacientesAtualmenteRegulados = new Set((listas.pacientesJaRegulados || []).map(p => p.id));
 
     // 2. Filtramos a lista geral de regulações para pegar apenas aquelas que:
     //    a) Pertencem a um paciente que está na lista de ativos (`idsPacientesAtualmenteRegulados`).
     //    b) Possuem o status 'Pendente'.
-    const regulacoesPendentesAtuais = regulacoes.filter(r => 
-      idsPacientesAtualmenteRegulados.has(r.pacienteId) && r.status === 'Pendente'
+    const regulacoesPendentesAtuais = (regulacoes || []).filter(r => 
+      r.pacienteId && idsPacientesAtualmenteRegulados.has(r.pacienteId) && r.status === 'Pendente'
     );
 
     // 3. O cálculo da média agora é feito apenas sobre esta lista filtrada e correta.
@@ -114,13 +117,13 @@ const RegulacaoLeitos = () => {
     
     // --- FIM DA LÓGICA ATUALIZADA ---
 
-    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length;
+    const aguardandoLeito = (listas.decisaoCirurgica || []).length + (listas.decisaoClinica || []).length;
 
     const contagemStatus = {
-      Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
-      Concluidas: regulacoes.filter(r => r.status === 'Concluída').length,
-      Canceladas: regulacoes.filter(r => r.status === 'Cancelada').length,
-      Alteradas: regulacoes.filter(r => r.historicoEventos.some(e => e.evento === 'alterada')).length,
+      Pendentes: (regulacoes || []).filter(r => r.status === 'Pendente').length,
+      Concluidas: (regulacoes || []).filter(r => r.status === 'Concluída').length,
+      Canceladas: (regulacoes || []).filter(r => r.status === 'Cancelada').length,
+      Alteradas: (regulacoes || []).filter(r => r.historicoEventos?.some(e => e.evento === 'alterada')).length,
     };
     
     const getTopComContagem = (arr: string[]) => {
@@ -130,10 +133,10 @@ const RegulacaoLeitos = () => {
       return { nome, contagem };
     };
     
-    const topOrigem = getTopComContagem(regulacoes.map(r => r.setorOrigemNome));
-    const topDestino = getTopComContagem(regulacoes.map(r => r.setorDestinoNome));
+    const topOrigem = getTopComContagem((regulacoes || []).map(r => r.setorOrigemNome));
+    const topDestino = getTopComContagem((regulacoes || []).map(r => r.setorDestinoNome));
     
-    const turnos = regulacoes.map(r => {
+    const turnos = (regulacoes || []).map(r => {
       const hora = new Date(r.criadaEm).getHours() + new Date(r.criadaEm).getMinutes() / 60;
       if (hora >= 6.5 && hora < 12.5) return 'Manhã';
       if (hora >= 12.5 && hora < 18.5) return 'Tarde';
@@ -184,11 +187,11 @@ const RegulacaoLeitos = () => {
           </div>
           <AcoesRapidas
             onImportarClick={() => handlers.setImportModalOpen(true)}
-            onPassagemClick={handlers.handlePassagemPlantao}
+            onPassagemClick={handlePassagemPlantao}
             onSugestoesClick={handlers.handleAbrirSugestoes}
             onPanoramaClick={handleAbrirPanorama}
             showAllButtons={true}
-            sugestoesDisponiveis={listas.sugestoesDeRegulacao.length > 0}
+            sugestoesDisponiveis={(listas.sugestoesDeRegulacao || []).length > 0}
             panoramaDisponivel={true}
           />
         </header>
@@ -202,11 +205,11 @@ const RegulacaoLeitos = () => {
         {/* 4. Bloco Principal: Pacientes Aguardando Regulação */}
         <PacientesAguardandoRegulacao
           listas={{
-            decisaoCirurgica: listas.decisaoCirurgica,
-            decisaoClinica: listas.decisaoClinica,
-            recuperacaoCirurgica: listas.recuperacaoCirurgica,
-            totalPendentes: listas.totalPendentes,
-            pacientesJaRegulados: listas.pacientesJaRegulados,
+            decisaoCirurgica: listas.decisaoCirurgica || [],
+            decisaoClinica: listas.decisaoClinica || [],
+            recuperacaoCirurgica: listas.recuperacaoCirurgica || [],
+            totalPendentes: listas.totalPendentes || 0,
+            pacientesJaRegulados: listas.pacientesJaRegulados || [],
           }}
           handlers={{
             handleOpenRegulacaoModal: handlers.handleOpenRegulacaoModal,
@@ -225,7 +228,7 @@ const RegulacaoLeitos = () => {
 
         {/* 5. Bloco: Pacientes Regulados */}
         <PacientesReguladosBloco
-          pacientesRegulados={listas.pacientesJaRegulados}
+          pacientesRegulados={listas.pacientesJaRegulados || []}
           onConcluir={handlers.handleConcluir}
           onAlterar={handlers.handleAlterar}
           onCancelar={handlers.handleCancelar}
@@ -235,28 +238,30 @@ const RegulacaoLeitos = () => {
 
         {/* 6. Bloco Agrupador: Espera por UTI e Transferências Externas */}
         <EsperaUTITransferencias
-          pacientesAguardandoUTI={listas.pacientesAguardandoUTI}
-          pacientesAguardandoTransferencia={
-            listas.pacientesAguardandoTransferencia
-          }
+          pacientesAguardandoUTI={listas.pacientesAguardandoUTI || []}
+          pacientesAguardandoTransferencia={listas.pacientesAguardandoTransferencia || []}
           onCancelarUTI={handlers.cancelarPedidoUTI}
           onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-          onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
+          onRegularUTI={(leitoId: string) => {
+            // Encontra o paciente pelo leitoId
+            const paciente = (listas.pacientesAguardandoUTI || []).find(p => p.leitoId === leitoId);
+            if (paciente) {
+              handlers.handleOpenRegulacaoModal(paciente, "uti");
+            }
+          }}
           onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
         />
 
         {/* 7. Bloco: Pacientes Aguardando Cirurgia Eletiva */}
         <CirurgiasEletivasBloco
-          cirurgias={listas.cirurgias}
+          cirurgias={listas.cirurgias || []}
           onAlocarCirurgia={handlers.handleAlocarLeitoCirurgia}
         />
 
         {/* 8. Bloco: Remanejamentos Pendentes */}
-        {listas.pacientesAguardandoRemanejamento.length > 0 && (
+        {(listas.pacientesAguardandoRemanejamento || []).length > 0 && (
           <RemanejamentosPendentesBloco
-            pacientesAguardandoRemanejamento={
-              listas.pacientesAguardandoRemanejamento
-            }
+            pacientesAguardandoRemanejamento={listas.pacientesAguardandoRemanejamento || []}
             onRemanejar={(paciente) =>
               handlers.handleOpenRegulacaoModal(paciente, "normal")
             }
@@ -283,9 +288,9 @@ const RegulacaoLeitos = () => {
           modoRegulacao={modals.modoRegulacao}
           processing={loading}
           isSyncing={loading}
-          pacientesRegulados={listas.pacientesJaRegulados}
-          sugestoes={listas.sugestoesDeRegulacao}
-          totalPendentes={listas.totalPendentes}
+          pacientesRegulados={listas.pacientesJaRegulados || []}
+          sugestoes={listas.sugestoesDeRegulacao || []}
+          totalPendentes={listas.totalPendentes || 0}
           onProcessFileRequest={handlers.handleProcessFileRequest}
           onConfirmSync={handlers.handleConfirmSync}
           onConfirmarRegulacao={handlers.handleConfirmarRegulacao}
@@ -314,9 +319,16 @@ const RegulacaoLeitos = () => {
         <PanoramaVisualizacaoModal
           open={panoramaVisualizacaoOpen}
           onOpenChange={setPanoramaVisualizacaoOpen}
-          pacientesRegulados={listas.pacientesJaRegulados}
+          pacientesRegulados={listas.pacientesJaRegulados || []}
           dataInicio={periodoSelecionado.inicio}
           dataFim={periodoSelecionado.fim}
+        />
+
+        {/* Modal de Passagem de Plantão */}
+        <PassagemPlantaoModal
+          open={passagemPlantaoOpen}
+          onOpenChange={setPassagemPlantaoOpen}
+          pacientesJaRegulados={listas.pacientesJaRegulados || []}
         />
       </div>
     </div>
