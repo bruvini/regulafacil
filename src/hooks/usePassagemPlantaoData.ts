@@ -15,14 +15,28 @@ export interface DadosPlantaoSetor {
   pacientesTransferencia: string[];
   pacientesRemanejamento: string[];
   pacientesAltaProvavel: string[];
-  internacoesProlongadas: string[];
   observacoesGerais: string[];
+}
+
+export interface DadosSetor {
+  nomeSetor: string;
+  dados: DadosPlantaoSetor;
 }
 
 export const usePassagemPlantaoData = () => {
   const { pacientes } = usePacientes();
   const { leitos } = useLeitos();
   const { setores } = useSetores();
+
+  // Setores relevantes para a regulação
+  const setoresRegulaçao = [
+    "UNID. CLINICA MEDICA", 
+    "UNID. CIRURGICA", 
+    "UNID. NEFROLOGIA TRANSPLANTE", 
+    "UNID. JS ORTOPEDIA", 
+    "UNID. ONCOLOGIA", 
+    "UNID. INT. GERAL - UIG"
+  ];
 
   // Combine e enriqueça os dados
   const pacientesComDadosCompletos = useMemo(() => {
@@ -38,6 +52,30 @@ export const usePassagemPlantaoData = () => {
       };
     });
   }, [pacientes, leitos, setores]);
+
+  // Função auxiliar para determinar sexo compatível do leito
+  const determinarSexoCompativel = (leito: any, todosLeitos: any[], todosPacientes: any[]): string => {
+    const getQuartoId = (codigoLeito: string): string => {
+      const match = codigoLeito.match(/^(\d+[\s-]?\w*|\w+[\s-]?\d+)\s/);
+      return match ? match[1].trim() : codigoLeito;
+    };
+
+    const quartoId = getQuartoId(leito.codigoLeito);
+    const leitosDoQuarto = todosLeitos.filter(l => getQuartoId(l.codigoLeito) === quartoId);
+    
+    // Buscar pacientes ocupando leitos do mesmo quarto
+    for (const leitoQuarto of leitosDoQuarto) {
+      const ultimoHistorico = leitoQuarto.historicoMovimentacao?.[leitoQuarto.historicoMovimentacao.length - 1];
+      if (ultimoHistorico?.statusLeito === 'Ocupado') {
+        const pacienteOcupante = todosPacientes.find(p => p.leitoId === leitoQuarto.id);
+        if (pacienteOcupante?.sexoPaciente) {
+          return pacienteOcupante.sexoPaciente;
+        }
+      }
+    }
+    
+    return 'Ambos';
+  };
 
   const gerarDadosParaSetor = (nomeSetor: string, pacientesRegulados: Paciente[]): DadosPlantaoSetor => {
     const pacientesDoSetor = pacientesComDadosCompletos.filter(p => p.setorNome === nomeSetor);
@@ -56,9 +94,33 @@ export const usePassagemPlantaoData = () => {
       .filter(p => p.regulacao?.paraSetor === nomeSetor)
       .sort((a, b) => (a.regulacao?.paraLeito || '').localeCompare(b.regulacao?.paraLeito || ''))
       .map(p => {
-        const dataRegulacao = p.regulacao?.data ? new Date(p.regulacao.data) : null;
-        const dataFormatada = dataRegulacao && isValid(dataRegulacao) ? 
-          format(dataRegulacao, 'dd/MM HH:mm') : 'Data Inválida';
+        let dataFormatada = 'Data Inválida';
+        
+        if (p.regulacao?.data) {
+          try {
+            let dataRegulacao: Date;
+            
+            // Tentar diferentes formatos de data
+            if (typeof p.regulacao.data === 'string') {
+              if (p.regulacao.data.includes('T') || p.regulacao.data.includes('Z')) {
+                // Formato ISO
+                dataRegulacao = parseISO(p.regulacao.data);
+              } else {
+                // Tentar como string direta
+                dataRegulacao = new Date(p.regulacao.data);
+              }
+            } else {
+              dataRegulacao = new Date(p.regulacao.data);
+            }
+            
+            if (isValid(dataRegulacao)) {
+              dataFormatada = format(dataRegulacao, 'dd/MM HH:mm');
+            }
+          } catch (error) {
+            console.error('Erro ao formatar data da regulação:', error);
+          }
+        }
+        
         return `[${p.regulacao?.paraLeito}] ${p.nomeCompleto} / Vem de [${p.siglaSetorOrigem}] [${p.leitoCodigo}] - Regulado em [${dataFormatada}]`;
       });
 
@@ -79,15 +141,34 @@ export const usePassagemPlantaoData = () => {
         const ultimoHistorico = l.historicoMovimentacao?.[l.historicoMovimentacao.length - 1];
         return ultimoHistorico?.statusLeito === 'Vago';
       })
-      .map(l => `[${l.codigoLeito}] ${l.tipoLeito}${l.leitoIsolamento ? ' - Isolamento' : ''}${l.leitoPCP ? ' - PCP' : ''}`);
+      .map(l => {
+        const sexoCompativel = determinarSexoCompativel(l, leitos, pacientesComDadosCompletos);
+        const detalhesLeito = [
+          l.tipoLeito,
+          l.leitoIsolamento ? 'Isolamento' : null,
+          l.leitoPCP ? 'PCP' : null,
+          sexoCompativel !== 'Ambos' ? sexoCompativel : null
+        ].filter(Boolean).join(' - ');
+        
+        return `[${l.codigoLeito}] ${detalhesLeito}`;
+      });
 
     // 5. PACIENTES AGUARDANDO UTI
     const pacientesUTI = pacientesDoSetor
       .filter(p => p.aguardaUTI)
       .map(p => {
-        const dataPedido = p.dataPedidoUTI ? new Date(p.dataPedidoUTI) : null;
-        const tempoEspera = dataPedido && isValid(dataPedido) ? 
-          `${differenceInHours(new Date(), dataPedido)}h` : 'N/A';
+        let tempoEspera = 'N/A';
+        if (p.dataPedidoUTI) {
+          try {
+            const dataPedido = new Date(p.dataPedidoUTI);
+            if (isValid(dataPedido)) {
+              const horas = differenceInHours(new Date(), dataPedido);
+              tempoEspera = `${horas}h`;
+            }
+          } catch (error) {
+            console.error('Erro ao calcular tempo de espera UTI:', error);
+          }
+        }
         return `[${p.leitoCodigo}] ${p.nomeCompleto} - Aguardando há ${tempoEspera}`;
       });
 
@@ -106,37 +187,44 @@ export const usePassagemPlantaoData = () => {
       .filter(p => p.provavelAlta)
       .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - ${p.especialidadePaciente}`);
 
-    // 9. INTERNAÇÕES PROLONGADAS (>7 dias)
-    const internacoesProlongadas = pacientesDoSetor
-      .filter(p => {
-        const dataInternacao = p.dataInternacao ? new Date(p.dataInternacao) : null;
-        return dataInternacao && isValid(dataInternacao) && 
-               differenceInHours(new Date(), dataInternacao) > 168; // 7 dias = 168 horas
-      })
-      .map(p => {
-        const dataInternacao = new Date(p.dataInternacao);
-        const diasInternado = Math.floor(differenceInHours(new Date(), dataInternacao) / 24);
-        return `[${p.leitoCodigo}] ${p.nomeCompleto} - ${diasInternado} dias internado`;
-      });
-
-    // 10. OBSERVAÇÕES GERAIS
+    // 9. OBSERVAÇÕES GERAIS
     const observacoesGerais = pacientesDoSetor
       .filter(p => p.obsPaciente && p.obsPaciente.length > 0)
       .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - ${p.obsPaciente![0].texto}`);
 
     return {
-      isolamentos: isolamentos.length > 0 ? isolamentos : ["Sem registros"],
-      regulacoesPendentes: regulacoesPendentes.length > 0 ? regulacoesPendentes : ["Sem registros"],
-      leitosPCP: leitosPCP.length > 0 ? leitosPCP : ["Sem registros"],
-      leitosVagos: leitosVagos.length > 0 ? leitosVagos : ["Sem registros"],
-      pacientesUTI: pacientesUTI.length > 0 ? pacientesUTI : ["Sem registros"],
-      pacientesTransferencia: pacientesTransferencia.length > 0 ? pacientesTransferencia : ["Sem registros"],
-      pacientesRemanejamento: pacientesRemanejamento.length > 0 ? pacientesRemanejamento : ["Sem registros"],
-      pacientesAltaProvavel: pacientesAltaProvavel.length > 0 ? pacientesAltaProvavel : ["Sem registros"],
-      internacoesProlongadas: internacoesProlongadas.length > 0 ? internacoesProlongadas : ["Sem registros"],
-      observacoesGerais: observacoesGerais.length > 0 ? observacoesGerais : ["Sem registros"]
+      isolamentos,
+      regulacoesPendentes,
+      leitosPCP,
+      leitosVagos,
+      pacientesUTI,
+      pacientesTransferencia,
+      pacientesRemanejamento,
+      pacientesAltaProvavel,
+      observacoesGerais,
     };
   };
 
-  return { gerarDadosParaSetor };
+  // Função principal que retorna dados para todos os setores
+  const getDadosPassagemPlantao = (pacientesRegulados: Paciente[]): DadosSetor[] => {
+    const dadosSetores: DadosSetor[] = [];
+
+    setoresRegulaçao.forEach(nomeSetor => {
+      const dados = gerarDadosParaSetor(nomeSetor, pacientesRegulados);
+      
+      // Só adiciona o setor se tiver algum dado relevante
+      const temDados = Object.values(dados).some(array => array.length > 0);
+      
+      if (temDados) {
+        dadosSetores.push({
+          nomeSetor,
+          dados
+        });
+      }
+    });
+
+    return dadosSetores;
+  };
+
+  return { getDadosPassagemPlantao };
 };
