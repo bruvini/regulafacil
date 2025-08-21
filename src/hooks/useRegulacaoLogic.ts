@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { usePacientes } from './usePacientes';
 import { useLeitos } from './useLeitos';
@@ -228,7 +229,7 @@ export const useRegulacaoLogic = () => {
 
   const pacientesAguardandoRemanejamento = useMemo(() => {
     return pacientesAtivos.filter(paciente => paciente.remanejarPaciente);
-  }, [pacientesAtivos);
+  }, [pacientesAtivos]);
 
   const pacientesJaRegulados = useMemo(() => {
     return pacientesAtivos.filter(paciente => {
@@ -292,7 +293,12 @@ export const useRegulacaoLogic = () => {
     return solicitacoesCirurgicas.filter(cirurgia => !cirurgia.leitoReservado);
   }, [solicitacoesCirurgicas]);
 
-  const filtrosProps = useFiltrosRegulacao();
+  // Initialize the filtros hook with all patients
+  const allPatients = useMemo(() => {
+    return [...decisaoCirurgica, ...decisaoClinica, ...recuperacaoCirurgica, ...pacientesJaRegulados];
+  }, [decisaoCirurgica, decisaoClinica, recuperacaoCirurgica, pacientesJaRegulados]);
+
+  const filtrosProps = useFiltrosRegulacao(allPatients);
 
   const setoresComContadores = useMemo(() => {
     if (!setores.length || !pacientesAtivos.length) return [];
