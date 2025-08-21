@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
@@ -45,20 +44,18 @@ const RegulacaoLeitos = () => {
     setPanoramaVisualizacaoOpen(true);
   };
 
+  // Substitua todo este bloco 'useMemo' pelo novo código
+  // dentro do arquivo src/pages/RegulacaoLeitos.tsx
+
+// dentro do arquivo src/pages/RegulacaoLeitos.tsx
+
   const indicadores = useMemo(() => {
     const agora = new Date();
 
-    // Fallbacks seguros para evitar undefined
-    const regs = regulacoes ?? [];
-    const decisaoCirurgica = listas?.decisaoCirurgica ?? [];
-    const decisaoClinica = listas?.decisaoClinica ?? [];
-    const recuperacaoCirurgica = listas?.recuperacaoCirurgica ?? [];
-    const pacientesJaRegulados = listas?.pacientesJaRegulados ?? [];
-
     // --- LÓGICA CORRIGIDA: Tempo médio de espera (PS) ---
     const pacientesNoPs = [
-      ...decisaoCirurgica,
-      ...decisaoClinica,
+      ...listas.decisaoCirurgica,
+      ...listas.decisaoClinica,
     ];
     let tempoMedioInternacao = "0d 0h 0m";
     if (pacientesNoPs.length > 0) {
@@ -83,12 +80,18 @@ const RegulacaoLeitos = () => {
 
     let tempoMedioRegulacaoPendente = "0d 0h 0m";
 
-    // Filter regulations that belong to currently regulated patients and are pending
-    const regulacoesPendentesAtuais = regs.filter(r => 
-      (pacientesJaRegulados.some(p => p.id === r.id)) && r.status === 'Pendente'
+    // 1. Criamos um conjunto com os IDs dos pacientes que estão visíveis na lista de "Já Regulados".
+    //    Esta é a nossa fonte da verdade sobre quem está com uma regulação ativa.
+    const idsPacientesAtualmenteRegulados = new Set(listas.pacientesJaRegulados.map(p => p.id));
+
+    // 2. Filtramos a lista geral de regulações para pegar apenas aquelas que:
+    //    a) Pertencem a um paciente que está na lista de ativos (`idsPacientesAtualmenteRegulados`).
+    //    b) Possuem o status 'Pendente'.
+    const regulacoesPendentesAtuais = regulacoes.filter(r => 
+      idsPacientesAtualmenteRegulados.has(r.pacienteId) && r.status === 'Pendente'
     );
 
-    // Calculate average time for pending regulations
+    // 3. O cálculo da média agora é feito apenas sobre esta lista filtrada e correta.
     if (regulacoesPendentesAtuais.length > 0) {
       const totalMinutosPendentes = regulacoesPendentesAtuais.reduce((acc, r) => {
           const dataInicioRegulacao = new Date(r.criadaEm);
@@ -111,29 +114,27 @@ const RegulacaoLeitos = () => {
     
     // --- FIM DA LÓGICA ATUALIZADA ---
 
-    const aguardandoLeito = decisaoCirurgica.length + decisaoClinica.length;
+    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length;
 
     const contagemStatus = {
-      Pendentes: regs.filter(r => r.status === 'Pendente').length,
-      Concluidas: regs.filter(r => r.status === 'Concluída').length,
-      Canceladas: regs.filter(r => r.status === 'Cancelada').length,
-      Alteradas: regs.filter(r => r.historicoEventos?.some(e => e.evento === 'alterada')).length,
+      Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
+      Concluidas: regulacoes.filter(r => r.status === 'Concluída').length,
+      Canceladas: regulacoes.filter(r => r.status === 'Cancelada').length,
+      Alteradas: regulacoes.filter(r => r.historicoEventos.some(e => e.evento === 'alterada')).length,
     };
     
-    const getTopComContagem = (arr: string[] | undefined) => {
-      const safe = Array.isArray(arr) ? arr : [];
-      if (safe.length === 0) return { nome: 'N/A', contagem: 0 };
-      const contagens = safe.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {} as Record<string, number>);
+    const getTopComContagem = (arr: string[]) => {
+      if (!arr.length) return { nome: 'N/A', contagem: 0 };
+      const contagens = arr.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {} as Record<string, number>);
       const [nome, contagem] = Object.entries(contagens).sort((a, b) => b[1] - a[1])[0];
       return { nome, contagem };
     };
     
-    const topOrigem = getTopComContagem(regs.map(r => r.setorOrigemNome));
-    const topDestino = getTopComContagem(regs.map(r => r.setorDestinoNome));
+    const topOrigem = getTopComContagem(regulacoes.map(r => r.setorOrigemNome));
+    const topDestino = getTopComContagem(regulacoes.map(r => r.setorDestinoNome));
     
-    const turnos = regs.map(r => {
-      const d = new Date(r.criadaEm);
-      const hora = d.getHours() + d.getMinutes() / 60;
+    const turnos = regulacoes.map(r => {
+      const hora = new Date(r.criadaEm).getHours() + new Date(r.criadaEm).getMinutes() / 60;
       if (hora >= 6.5 && hora < 12.5) return 'Manhã';
       if (hora >= 12.5 && hora < 18.5) return 'Tarde';
       return 'Noite';
@@ -235,17 +236,12 @@ const RegulacaoLeitos = () => {
         {/* 6. Bloco Agrupador: Espera por UTI e Transferências Externas */}
         <EsperaUTITransferencias
           pacientesAguardandoUTI={listas.pacientesAguardandoUTI}
-          pacientesAguardandoTransferencia={listas.pacientesAguardandoTransferencia}
+          pacientesAguardandoTransferencia={
+            listas.pacientesAguardandoTransferencia
+          }
           onCancelarUTI={handlers.cancelarPedidoUTI}
           onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-          onRegularUTI={(leitoId) => {
-            const paciente = listas.pacientesAguardandoUTI.find((p) => p.leitoId === leitoId);
-            if (paciente) {
-              handlers.handleOpenRegulacaoModal(paciente, "uti");
-            } else {
-              console.warn("Paciente não encontrado para leito:", leitoId);
-            }
-          }}
+          onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
           onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
         />
 
@@ -278,7 +274,6 @@ const RegulacaoLeitos = () => {
           gerenciarTransferenciaOpen={modals.gerenciarTransferenciaOpen}
           resumoModalOpen={modals.resumoModalOpen}
           sugestoesModalOpen={modals.sugestoesModalOpen}
-          passagemPlantaoModalOpen={modals.passagemPlantaoModalOpen}
           pacienteParaRegular={modals.pacienteParaRegular}
           pacienteParaAcao={modals.pacienteParaAcao}
           cirurgiaParaAlocar={modals.cirurgiaParaAlocar}
@@ -295,7 +290,9 @@ const RegulacaoLeitos = () => {
           onConfirmSync={handlers.handleConfirmSync}
           onConfirmarRegulacao={handlers.handleConfirmarRegulacao}
           onConfirmarCancelamento={handlers.onConfirmarCancelamento}
-          onConfirmarTransferenciaExterna={handlers.handleConfirmarTransferenciaExterna}
+          onConfirmarTransferenciaExterna={
+            handlers.handleConfirmarTransferenciaExterna
+          }
           onConfirmarAlocacaoCirurgia={handlers.handleConfirmarAlocacaoCirurgia}
           setImportModalOpen={handlers.setImportModalOpen}
           setRegulacaoModalOpen={handlers.setRegulacaoModalOpen}
@@ -305,7 +302,6 @@ const RegulacaoLeitos = () => {
           setGerenciarTransferenciaOpen={handlers.setGerenciarTransferenciaOpen}
           setResumoModalOpen={handlers.setResumoModalOpen}
           setSugestoesModalOpen={handlers.setSugestoesModalOpen}
-          setPassagemPlantaoModalOpen={handlers.setPassagemPlantaoModalOpen}
         />
 
         {/* Novos Modais de Panorama */}
@@ -328,4 +324,3 @@ const RegulacaoLeitos = () => {
 };
 
 export default RegulacaoLeitos;
-
