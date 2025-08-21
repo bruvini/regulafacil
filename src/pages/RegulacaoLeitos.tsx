@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
@@ -234,7 +235,12 @@ const RegulacaoLeitos = () => {
           }
           onCancelarUTI={handlers.cancelarPedidoUTI}
           onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-          onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
+          onRegularUTI={(leitoId) => {
+            const paciente = listas.pacientesAguardandoUTI.find((p) => p.leitoId === leitoId);
+            if (paciente) {
+              handlers.handleOpenRegulacaoModal(paciente, "uti");
+            }
+          }}
           onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
         />
 

@@ -3,15 +3,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { usePacientes } from './usePacientes';
 import { useLeitos } from './useLeitos';
 import { useSetores } from './useSetores';
-import { useSolicitacoesCirurgicas } from './useSolicitacoesCirurgicas';
+import { useCirurgiasEletivas } from './useCirurgiasEletivas';
 import { Paciente } from '@/types/hospital';
 import { Regulacao } from './useRegulacoes';
 import { useToast } from "@/hooks/use-toast"
 import {
-  TipoFiltro,
-  StatusRegulacao,
   useFiltrosRegulacao,
-  ConfiguracaoOrdenacao,
 } from './useFiltrosRegulacao';
 import {
   addDays,
@@ -50,7 +47,15 @@ export const useRegulacaoLogic = () => {
   const { pacientes, loading: pacientesLoading } = usePacientes();
   const { leitos, loading: leitosLoading } = useLeitos();
   const { setores, loading: setoresLoading } = useSetores();
-  const { solicitacoesCirurgicas, loading: cirurgiasLoading } = useSolicitacoesCirurgicas();
+
+  // Ajuste: usar hook existente de cirurgias eletivas e criar fallback de campos
+  const cirurgiasEletivasData: any = useCirurgiasEletivas() as any;
+  const solicitacoesCirurgicas: any[] = (cirurgiasEletivasData?.solicitacoesCirurgicas
+    ?? cirurgiasEletivasData?.cirurgias
+    ?? cirurgiasEletivasData?.data
+    ?? []) as any[];
+  const cirurgiasLoading: boolean = Boolean(cirurgiasEletivasData?.loading);
+
   const { toast } = useToast();
 
   // Estados locais para controlar a abertura dos modais
