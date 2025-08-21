@@ -38,16 +38,6 @@ export interface Paciente {
   obsAltaProvavel?: Observacao[];
   obsInternacaoProlongada?: Observacao[];
   setorOrigem?: string;
-  // Propriedades adicionadas para resolver erros
-  leitoCodigo?: string;
-  siglaSetorOrigem?: string;
-  setorNome?: string;
-  regulacao?: {
-    paraSetor: string;
-    paraLeito: string;
-    data: string;
-    observacoes?: string;
-  };
 }
 
 export interface IsolamentoVigente {
