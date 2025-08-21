@@ -15,7 +15,7 @@ export const useRegulacaoLogic = () => {
   const { setores, loading: loadingSetores } = useSetores();
   const { findAvailableLeitos, generateSugestoes } = useLeitoFinder();
   const { regulacoes } = useRegulacoes();
-  const filtrosProps = useFiltrosRegulacao();
+  const filtrosProps = useFiltrosRegulacao(pacientes);
 
   // Modal states
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -60,15 +60,15 @@ export const useRegulacaoLogic = () => {
     );
     
     const pacientesAguardandoUTI = pacientes.filter(p => 
-      p.solicitacaoUTI && !p.leitoUTI
+      p.aguardaUTI
     );
     
     const pacientesAguardandoTransferencia = pacientes.filter(p => 
-      p.transferenciaExterna && p.transferenciaExterna.status === 'pendente'
+      p.transferirPaciente
     );
     
     const pacientesAguardandoRemanejamento = pacientes.filter(p => 
-      p.remanejamento && p.remanejamento.status === 'pendente'
+      p.remanejarPaciente
     );
     
     const cirurgias = []; // TODO: Implement cirurgias logic
@@ -156,12 +156,14 @@ export const useRegulacaoLogic = () => {
     setSugestoesModalOpen(true);
   }, []);
 
-  const handleProcessFileRequest = useCallback(async (dadosImportacao: any[]) => {
+  const handleProcessFileRequest = useCallback(async (file: File) => {
     try {
+      // TODO: Process file and convert to appropriate format
+      const dadosImportacao = []; // Convert file to data array
       const resumo = await importarPacientesDaPlanilha(dadosImportacao);
       
-      const totalProcessados = resumo.processados || 0;
-      const totalErros = resumo.erros || 0;
+      const totalProcessados = resumo.pacientesProcessados || 0;
+      const totalErros = resumo.pacientesComErro || 0;
       
       toast({
         title: "Importação Concluída",

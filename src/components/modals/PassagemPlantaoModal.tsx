@@ -21,7 +21,11 @@ import {
   Move, 
   Home, 
   MessageSquare,
-  FileDown 
+  FileDown,
+  Users,
+  Calendar,
+  Stethoscope,
+  FileText
 } from 'lucide-react';
 
 interface PassagemPlantaoModalProps {
@@ -76,6 +80,14 @@ export const PassagemPlantaoModal = ({
                   </h2>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {setorInfo.dados.contagemPacientes && setorInfo.dados.contagemPacientes.length > 0 && (
+                      <InfoBlock
+                        title="Contagem de Pacientes"
+                        icon={<Users className="h-4 w-4" />}
+                        data={setorInfo.dados.contagemPacientes}
+                      />
+                    )}
+                    
                     {setorInfo.dados.isolamentos.length > 0 && (
                       <InfoBlock
                         title="Isolamentos Vigentes"
@@ -105,6 +117,30 @@ export const PassagemPlantaoModal = ({
                         title="Leitos Vagos"
                         icon={<BedDouble className="h-4 w-4" />}
                         data={setorInfo.dados.leitosVagos}
+                      />
+                    )}
+                    
+                    {setorInfo.dados.reservas && setorInfo.dados.reservas.length > 0 && (
+                      <InfoBlock
+                        title="Reservas"
+                        icon={<Calendar className="h-4 w-4" />}
+                        data={setorInfo.dados.reservas}
+                      />
+                    )}
+                    
+                    {setorInfo.dados.utq && setorInfo.dados.utq.length > 0 && (
+                      <InfoBlock
+                        title="UTQ (Unidade 504)"
+                        icon={<Stethoscope className="h-4 w-4" />}
+                        data={setorInfo.dados.utq}
+                      />
+                    )}
+                    
+                    {setorInfo.dados.naoRegulados && setorInfo.dados.naoRegulados.length > 0 && (
+                      <InfoBlock
+                        title="Não Regulados"
+                        icon={<FileText className="h-4 w-4" />}
+                        data={setorInfo.dados.naoRegulados}
                       />
                     )}
                     

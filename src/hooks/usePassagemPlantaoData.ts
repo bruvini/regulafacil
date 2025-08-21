@@ -16,6 +16,11 @@ export interface DadosPlantaoSetor {
   pacientesRemanejamento: string[];
   pacientesAltaProvavel: string[];
   observacoesGerais: string[];
+  // Novos blocos
+  contagemPacientes?: string[];
+  reservas?: string[];
+  utq?: string[];
+  naoRegulados?: string[];
 }
 
 export interface DadosSetor {
@@ -23,20 +28,53 @@ export interface DadosSetor {
   dados: DadosPlantaoSetor;
 }
 
+// Configuração dos setores e seus blocos
+const configPassagemPlantao = {
+  'SALA DE EMERGENCIA': {
+    blocos: ['contagemPacientes', 'aguardandoUTI', 'pacientesTransferencia']
+  },
+  'SALA LARANJA': {
+    blocos: ['contagemPacientes', 'aguardandoUTI', 'isolamentos', 'pacientesTransferencia']
+  },
+  'PS DECISÃO CLINICA': {
+    blocos: ['contagemPacientes', 'aguardandoUTI', 'pacientesTransferencia']
+  },
+  'PS DECISÃO CIRURGICA': {
+    blocos: ['contagemPacientes', 'aguardandoUTI', 'pacientesTransferencia']
+  },
+  'CC - RECUPERAÇÃO': {
+    blocos: ['contagemPacientes', 'naoRegulados', 'aguardandoUTI']
+  },
+  'UNID. NEFROLOGIA TRANSPLANTE': {
+    blocos: ['isolamentos', 'regulacoesPendentes', 'leitosPCP', 'leitosVagos', 'pacientesUTI', 'pacientesTransferencia', 'pacientesRemanejamento', 'pacientesAltaProvavel', 'observacoesGerais'],
+    regrasEspeciais: {
+      leitosPCPAdicionais: ['EX 1 UNT', 'EX 2 UNT', 'EX 3 UNT']
+    }
+  },
+  'UNID. ONCOLOGIA': {
+    blocos: ['isolamentos', 'regulacoesPendentes', 'leitosPCP', 'leitosVagos', 'reservas', 'pacientesUTI', 'pacientesTransferencia', 'pacientesRemanejamento', 'pacientesAltaProvavel', 'observacoesGerais']
+  },
+  'UNID. CLINICA MEDICA': {
+    blocos: ['isolamentos', 'regulacoesPendentes', 'leitosPCP', 'leitosVagos', 'utq', 'pacientesUTI', 'pacientesTransferencia', 'pacientesRemanejamento', 'pacientesAltaProvavel', 'observacoesGerais']
+  },
+  'UNID. CIRURGICA': {
+    blocos: ['isolamentos', 'regulacoesPendentes', 'leitosPCP', 'leitosVagos', 'pacientesUTI', 'pacientesTransferencia', 'pacientesRemanejamento', 'pacientesAltaProvavel', 'observacoesGerais']
+  },
+  'UNID. JS ORTOPEDIA': {
+    blocos: ['isolamentos', 'regulacoesPendentes', 'leitosPCP', 'leitosVagos', 'pacientesUTI', 'pacientesTransferencia', 'pacientesRemanejamento', 'pacientesAltaProvavel', 'observacoesGerais']
+  },
+  'UNID. INT. GERAL - UIG': {
+    blocos: ['isolamentos', 'regulacoesPendentes', 'leitosPCP', 'leitosVagos', 'pacientesUTI', 'pacientesTransferencia', 'pacientesRemanejamento', 'pacientesAltaProvavel', 'observacoesGerais']
+  },
+  'UTI': {
+    blocos: ['leitosVagos', 'pacientesRemanejamento', 'pacientesTransferencia', 'pacientesAltaProvavel']
+  }
+};
+
 export const usePassagemPlantaoData = () => {
   const { pacientes } = usePacientes();
   const { leitos } = useLeitos();
   const { setores } = useSetores();
-
-  // Setores relevantes para a regulação
-  const setoresRegulaçao = [
-    "UNID. CLINICA MEDICA", 
-    "UNID. CIRURGICA", 
-    "UNID. NEFROLOGIA TRANSPLANTE", 
-    "UNID. JS ORTOPEDIA", 
-    "UNID. ONCOLOGIA", 
-    "UNID. INT. GERAL - UIG"
-  ];
 
   // Combine e enriqueça os dados
   const pacientesComDadosCompletos = useMemo(() => {
@@ -77,20 +115,19 @@ export const usePassagemPlantaoData = () => {
     return 'Ambos';
   };
 
-  const gerarDadosParaSetor = (nomeSetor: string, pacientesRegulados: Paciente[]): DadosPlantaoSetor => {
-    const pacientesDoSetor = pacientesComDadosCompletos.filter(p => p.setorNome === nomeSetor);
-    const leitosDoSetor = leitos.filter(l => {
-      const setor = setores.find(s => s.id === l.setorId);
-      return setor?.nomeSetor === nomeSetor;
-    });
+  // Geradores de bloco individuais
+  const gerarBlocoContagemPacientes = (pacientesDoSetor: any[]): string[] => {
+    return [`${pacientesDoSetor.length} pacientes internados`];
+  };
 
-    // 1. ISOLAMENTOS
-    const isolamentos = pacientesDoSetor
+  const gerarBlocoIsolamentos = (pacientesDoSetor: any[]): string[] => {
+    return pacientesDoSetor
       .filter(p => p.isolamentosVigentes && p.isolamentosVigentes.length > 0)
       .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - [${p.isolamentosVigentes!.map(i => i.sigla).join(', ')}]`);
+  };
 
-    // 2. REGULAÇÕES PENDENTES
-    const regulacoesPendentes = pacientesRegulados
+  const gerarBlocoRegulacoesPendentes = (pacientesRegulados: Paciente[], nomeSetor: string): string[] => {
+    return pacientesRegulados
       .filter(p => p.regulacao?.paraSetor === nomeSetor)
       .sort((a, b) => (a.regulacao?.paraLeito || '').localeCompare(b.regulacao?.paraLeito || ''))
       .map(p => {
@@ -100,15 +137,14 @@ export const usePassagemPlantaoData = () => {
           try {
             let dataRegulacao: Date;
             
-            // Tentar diferentes formatos de data
             if (typeof p.regulacao.data === 'string') {
               if (p.regulacao.data.includes('T') || p.regulacao.data.includes('Z')) {
-                // Formato ISO
                 dataRegulacao = parseISO(p.regulacao.data);
               } else {
-                // Tentar como string direta
                 dataRegulacao = new Date(p.regulacao.data);
               }
+            } else if (p.regulacao.data instanceof Date) {
+              dataRegulacao = p.regulacao.data;
             } else {
               dataRegulacao = new Date(p.regulacao.data);
             }
@@ -123,20 +159,27 @@ export const usePassagemPlantaoData = () => {
         
         return `[${p.regulacao?.paraLeito}] ${p.nomeCompleto} / Vem de [${p.siglaSetorOrigem}] [${p.leitoCodigo}] - Regulado em [${dataFormatada}]`;
       });
+  };
 
-    // 3. LEITOS PCP
-    const leitosPCP = leitosDoSetor
-      .filter(l => l.leitoPCP)
-      .map(l => {
-        const paciente = pacientesDoSetor.find(p => p.leitoId === l.id);
-        if (paciente) {
-          return `[${l.codigoLeito}] ${paciente.nomeCompleto} - ${paciente.especialidadePaciente}`;
-        }
-        return `[${l.codigoLeito}] VAGO - Leito PCP`;
-      });
+  const gerarBlocoLeitosPCP = (leitosDoSetor: any[], pacientesDoSetor: any[], leitosPCPAdicionais?: string[]): string[] => {
+    const leitosComFlag = leitosDoSetor.filter(l => l.leitoPCP);
+    const leitosAdicionais = leitosPCPAdicionais 
+      ? leitosDoSetor.filter(l => leitosPCPAdicionais.some(codigo => l.codigoLeitor.includes(codigo)))
+      : [];
+    
+    const todosLeitosPCP = [...leitosComFlag, ...leitosAdicionais];
+    
+    return todosLeitosPCP.map(l => {
+      const paciente = pacientesDoSetor.find(p => p.leitoId === l.id);
+      if (paciente) {
+        return `[${l.codigoLeito}] ${paciente.nomeCompleto} - ${paciente.especialidadePaciente}`;
+      }
+      return `[${l.codigoLeito}] VAGO - Leito PCP`;
+    });
+  };
 
-    // 4. LEITOS VAGOS
-    const leitosVagos = leitosDoSetor
+  const gerarBlocoLeitosVagos = (leitosDoSetor: any[], pacientesDoSetor: any[]): string[] => {
+    return leitosDoSetor
       .filter(l => {
         const ultimoHistorico = l.historicoMovimentacao?.[l.historicoMovimentacao.length - 1];
         return ultimoHistorico?.statusLeito === 'Vago';
@@ -152,9 +195,10 @@ export const usePassagemPlantaoData = () => {
         
         return `[${l.codigoLeito}] ${detalhesLeito}`;
       });
+  };
 
-    // 5. PACIENTES AGUARDANDO UTI
-    const pacientesUTI = pacientesDoSetor
+  const gerarBlocoAguardandoUTI = (pacientesDoSetor: any[]): string[] => {
+    return pacientesDoSetor
       .filter(p => p.aguardaUTI)
       .map(p => {
         let tempoEspera = 'N/A';
@@ -171,49 +215,145 @@ export const usePassagemPlantaoData = () => {
         }
         return `[${p.leitoCodigo}] ${p.nomeCompleto} - Aguardando há ${tempoEspera}`;
       });
-
-    // 6. TRANSFERÊNCIAS EXTERNAS
-    const pacientesTransferencia = pacientesDoSetor
-      .filter(p => p.transferirPaciente)
-      .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - Destino: ${p.destinoTransferencia} - Motivo: ${p.motivoTransferencia}`);
-
-    // 7. REMANEJAMENTOS
-    const pacientesRemanejamento = pacientesDoSetor
-      .filter(p => p.remanejarPaciente)
-      .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - Motivo: ${p.motivoRemanejamento}`);
-
-    // 8. ALTA PROVÁVEL
-    const pacientesAltaProvavel = pacientesDoSetor
-      .filter(p => p.provavelAlta)
-      .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - ${p.especialidadePaciente}`);
-
-    // 9. OBSERVAÇÕES GERAIS
-    const observacoesGerais = pacientesDoSetor
-      .filter(p => p.obsPaciente && p.obsPaciente.length > 0)
-      .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - ${p.obsPaciente![0].texto}`);
-
-    return {
-      isolamentos,
-      regulacoesPendentes,
-      leitosPCP,
-      leitosVagos,
-      pacientesUTI,
-      pacientesTransferencia,
-      pacientesRemanejamento,
-      pacientesAltaProvavel,
-      observacoesGerais,
-    };
   };
 
-  // Função principal que retorna dados para todos os setores
+  const gerarBlocoTransferencias = (pacientesDoSetor: any[]): string[] => {
+    return pacientesDoSetor
+      .filter(p => p.transferirPaciente)
+      .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - Destino: ${p.destinoTransferencia} - Motivo: ${p.motivoTransferencia}`);
+  };
+
+  const gerarBlocoRemanejamentos = (pacientesDoSetor: any[]): string[] => {
+    return pacientesDoSetor
+      .filter(p => p.remanejarPaciente)
+      .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - Motivo: ${p.motivoRemanejamento}`);
+  };
+
+  const gerarBlocoAltaProvavel = (pacientesDoSetor: any[]): string[] => {
+    return pacientesDoSetor
+      .filter(p => p.provavelAlta)
+      .map(p => {
+        const isolamentos = p.isolamentosVigentes && p.isolamentosVigentes.length > 0 
+          ? ` (Isolamentos: ${p.isolamentosVigentes.map(i => i.sigla).join(', ')})`
+          : '';
+        return `[${p.leitoCodigo}] ${p.nomeCompleto} - ${p.especialidadePaciente}${isolamentos}`;
+      });
+  };
+
+  const gerarBlocoObservacoes = (pacientesDoSetor: any[]): string[] => {
+    return pacientesDoSetor
+      .filter(p => p.obsPaciente && p.obsPaciente.length > 0)
+      .map(p => `[${p.leitoCodigo}] ${p.nomeCompleto} - ${p.obsPaciente![0].texto}`);
+  };
+
+  const gerarBlocoReservas = (pacientesDoSetor: any[]): string[] => {
+    return pacientesDoSetor
+      .filter(p => p.origemPaciente === 'Externa' && p.reservaLeito)
+      .map(p => `${p.nomeCompleto} - Reservado`);
+  };
+
+  const gerarBlocoUTQ = (leitosDoSetor: any[], pacientesDoSetor: any[]): string[] => {
+    return leitosDoSetor
+      .filter(l => l.codigoLeito.startsWith('504'))
+      .map(l => {
+        const ultimoHistorico = l.historicoMovimentacao?.[l.historicoMovimentacao.length - 1];
+        const status = ultimoHistorico?.statusLeito || 'Vago';
+        
+        if (status === 'Ocupado') {
+          const paciente = pacientesDoSetor.find(p => p.leitoId === l.id);
+          if (paciente) {
+            const isolamentos = paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0
+              ? ` - Isolamento: ${paciente.isolamentosVigentes.map(i => i.sigla).join(', ')}`
+              : '';
+            return `[${l.codigoLeito}] - ${paciente.nomeCompleto} / ${paciente.especialidadePaciente}${isolamentos}`;
+          }
+        }
+        
+        return `[${l.codigoLeito}] - ${status}`;
+      });
+  };
+
+  const gerarBlocoNaoRegulados = (pacientesDoSetor: any[]): string[] => {
+    return pacientesDoSetor
+      .filter(p => !p.regulacao || !p.leitoId)
+      .map(p => `${p.nomeCompleto} - ${p.especialidadePaciente}`);
+  };
+
+  const gerarDadosParaSetor = (nomeSetor: string, pacientesRegulados: Paciente[]): DadosPlantaoSetor => {
+    const pacientesDoSetor = pacientesComDadosCompletos.filter(p => p.setorNome === nomeSetor);
+    const leitosDoSetor = leitos.filter(l => {
+      const setor = setores.find(s => s.id === l.setorId);
+      return setor?.nomeSetor === nomeSetor;
+    });
+
+    const config = configPassagemPlantao[nomeSetor as keyof typeof configPassagemPlantao];
+    const dados: DadosPlantaoSetor = {
+      isolamentos: [],
+      regulacoesPendentes: [],
+      leitosPCP: [],
+      leitosVagos: [],
+      pacientesUTI: [],
+      pacientesTransferencia: [],
+      pacientesRemanejamento: [],
+      pacientesAltaProvavel: [],
+      observacoesGerais: []
+    };
+
+    if (!config) return dados;
+
+    // Gerar blocos baseado na configuração
+    if (config.blocos.includes('contagemPacientes')) {
+      dados.contagemPacientes = gerarBlocoContagemPacientes(pacientesDoSetor);
+    }
+    if (config.blocos.includes('isolamentos')) {
+      dados.isolamentos = gerarBlocoIsolamentos(pacientesDoSetor);
+    }
+    if (config.blocos.includes('regulacoesPendentes')) {
+      dados.regulacoesPendentes = gerarBlocoRegulacoesPendentes(pacientesRegulados, nomeSetor);
+    }
+    if (config.blocos.includes('leitosPCP')) {
+      dados.leitosPCP = gerarBlocoLeitosPCP(leitosDoSetor, pacientesDoSetor, config.regrasEspeciais?.leitosPCPAdicionais);
+    }
+    if (config.blocos.includes('leitosVagos')) {
+      dados.leitosVagos = gerarBlocoLeitosVagos(leitosDoSetor, pacientesDoSetor);
+    }
+    if (config.blocos.includes('aguardandoUTI')) {
+      dados.pacientesUTI = gerarBlocoAguardandoUTI(pacientesDoSetor);
+    }
+    if (config.blocos.includes('pacientesTransferencia')) {
+      dados.pacientesTransferencia = gerarBlocoTransferencias(pacientesDoSetor);
+    }
+    if (config.blocos.includes('pacientesRemanejamento')) {
+      dados.pacientesRemanejamento = gerarBlocoRemanejamentos(pacientesDoSetor);
+    }
+    if (config.blocos.includes('pacientesAltaProvavel')) {
+      dados.pacientesAltaProvavel = gerarBlocoAltaProvavel(pacientesDoSetor);
+    }
+    if (config.blocos.includes('observacoesGerais')) {
+      dados.observacoesGerais = gerarBlocoObservacoes(pacientesDoSetor);
+    }
+    if (config.blocos.includes('reservas')) {
+      dados.reservas = gerarBlocoReservas(pacientesDoSetor);
+    }
+    if (config.blocos.includes('utq')) {
+      dados.utq = gerarBlocoUTQ(leitosDoSetor, pacientesDoSetor);
+    }
+    if (config.blocos.includes('naoRegulados')) {
+      dados.naoRegulados = gerarBlocoNaoRegulados(pacientesDoSetor);
+    }
+
+    return dados;
+  };
+
+  // Função principal que retorna dados para todos os setores configurados
   const getDadosPassagemPlantao = (pacientesRegulados: Paciente[]): DadosSetor[] => {
     const dadosSetores: DadosSetor[] = [];
 
-    setoresRegulaçao.forEach(nomeSetor => {
+    Object.keys(configPassagemPlantao).forEach(nomeSetor => {
       const dados = gerarDadosParaSetor(nomeSetor, pacientesRegulados);
       
       // Só adiciona o setor se tiver algum dado relevante
-      const temDados = Object.values(dados).some(array => array.length > 0);
+      const temDados = Object.values(dados).some(array => Array.isArray(array) && array.length > 0);
       
       if (temDados) {
         dadosSetores.push({
