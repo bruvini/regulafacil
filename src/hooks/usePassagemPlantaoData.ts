@@ -28,8 +28,15 @@ export interface DadosSetor {
   dados: DadosPlantaoSetor;
 }
 
-// Configuração dos setores e seus blocos
-const configPassagemPlantao = {
+// Configuração dos setores e seus blocos com tipagem adequada
+interface ConfigSetor {
+  blocos: string[];
+  regrasEspeciais?: {
+    leitosPCPAdicionais?: string[];
+  };
+}
+
+const configPassagemPlantao: Record<string, ConfigSetor> = {
   'SALA DE EMERGENCIA': {
     blocos: ['contagemPacientes', 'aguardandoUTI', 'pacientesTransferencia']
   },
@@ -137,16 +144,18 @@ export const usePassagemPlantaoData = () => {
           try {
             let dataRegulacao: Date;
             
-            if (typeof p.regulacao.data === 'string') {
-              if (p.regulacao.data.includes('T') || p.regulacao.data.includes('Z')) {
-                dataRegulacao = parseISO(p.regulacao.data);
+            // Fix the instanceof check by ensuring we have the right type
+            const dataValue = p.regulacao.data;
+            if (typeof dataValue === 'string') {
+              if (dataValue.includes('T') || dataValue.includes('Z')) {
+                dataRegulacao = parseISO(dataValue);
               } else {
-                dataRegulacao = new Date(p.regulacao.data);
+                dataRegulacao = new Date(dataValue);
               }
-            } else if (p.regulacao.data instanceof Date) {
-              dataRegulacao = p.regulacao.data;
+            } else if (dataValue && typeof dataValue === 'object' && 'getTime' in dataValue) {
+              dataRegulacao = dataValue as Date;
             } else {
-              dataRegulacao = new Date(p.regulacao.data);
+              dataRegulacao = new Date(dataValue);
             }
             
             if (isValid(dataRegulacao)) {
@@ -164,7 +173,7 @@ export const usePassagemPlantaoData = () => {
   const gerarBlocoLeitosPCP = (leitosDoSetor: any[], pacientesDoSetor: any[], leitosPCPAdicionais?: string[]): string[] => {
     const leitosComFlag = leitosDoSetor.filter(l => l.leitoPCP);
     const leitosAdicionais = leitosPCPAdicionais 
-      ? leitosDoSetor.filter(l => leitosPCPAdicionais.some(codigo => l.codigoLeitor.includes(codigo)))
+      ? leitosDoSetor.filter(l => leitosPCPAdicionais.some(codigo => l.codigoLeito.includes(codigo)))
       : [];
     
     const todosLeitosPCP = [...leitosComFlag, ...leitosAdicionais];
@@ -286,7 +295,7 @@ export const usePassagemPlantaoData = () => {
       return setor?.nomeSetor === nomeSetor;
     });
 
-    const config = configPassagemPlantao[nomeSetor as keyof typeof configPassagemPlantao];
+    const config = configPassagemPlantao[nomeSetor];
     const dados: DadosPlantaoSetor = {
       isolamentos: [],
       regulacoesPendentes: [],

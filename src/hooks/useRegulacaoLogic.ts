@@ -43,17 +43,21 @@ export const useRegulacaoLogic = () => {
 
   // Computed lists based on pacientes data
   const listas = useMemo(() => {
-    const decisaoCirurgica = pacientes.filter(p => 
-      p.setorAtual === 'PS DECISÃO CIRURGICA' && !p.leitoId
-    );
+    // Get sector information to filter patients by sector name instead of setorAtual
+    const decisaoCirurgica = pacientes.filter(p => {
+      const setor = setores.find(s => s.id === p.setorId);
+      return setor?.nomeSetor === 'PS DECISÃO CIRURGICA' && !p.leitoId;
+    });
     
-    const decisaoClinica = pacientes.filter(p => 
-      p.setorAtual === 'PS DECISÃO CLINICA' && !p.leitoId
-    );
+    const decisaoClinica = pacientes.filter(p => {
+      const setor = setores.find(s => s.id === p.setorId);
+      return setor?.nomeSetor === 'PS DECISÃO CLINICA' && !p.leitoId;
+    });
     
-    const recuperacaoCirurgica = pacientes.filter(p => 
-      p.setorAtual === 'CC - RECUPERAÇÃO' && !p.leitoId
-    );
+    const recuperacaoCirurgica = pacientes.filter(p => {
+      const setor = setores.find(s => s.id === p.setorId);
+      return setor?.nomeSetor === 'CC - RECUPERAÇÃO' && !p.leitoId;
+    });
     
     const pacientesJaRegulados = pacientes.filter(p => 
       p.leitoId && p.regulacao
@@ -91,7 +95,7 @@ export const useRegulacaoLogic = () => {
       sugestoesDeRegulacao,
       totalPendentes
     };
-  }, [pacientes, generateSugestoes]);
+  }, [pacientes, setores, generateSugestoes]);
 
   // Handlers
   const handleOpenRegulacaoModal = useCallback((paciente: Paciente, modo: 'normal' | 'uti' = 'normal') => {
@@ -162,8 +166,9 @@ export const useRegulacaoLogic = () => {
       const dadosImportacao = []; // Convert file to data array
       const resumo = await importarPacientesDaPlanilha(dadosImportacao);
       
-      const totalProcessados = resumo.pacientesProcessados || 0;
-      const totalErros = resumo.pacientesComErro || 0;
+      // Fix property access to match actual ImportacaoResumo interface
+      const totalProcessados = resumo.totalProcessados || 0;
+      const totalErros = resumo.totalErros || 0;
       
       toast({
         title: "Importação Concluída",
