@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { AcoesRapidas } from "@/components/AcoesRapidas";
 import { RegulacaoModals } from "@/components/modals/regulacao/RegulacaoModals";
 import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRegulacoes } from "@/hooks/useRegulacoes";
 import { IndicadoresRegulacao } from "@/components/IndicadoresRegulacao";
 // Importações necessárias para o cálculo
@@ -243,7 +243,6 @@ const RegulacaoLeitos = () => {
           onCancelarUTI={handlers.cancelarPedidoUTI}
           onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
           onRegularUTI={(leitoId: string) => {
-            // Encontra o paciente pelo leitoId
             const paciente = (listas.pacientesAguardandoUTI || []).find(p => p.leitoId === leitoId);
             if (paciente) {
               handlers.handleOpenRegulacaoModal(paciente, "uti");
