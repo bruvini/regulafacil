@@ -12,8 +12,11 @@ import { Accordion } from '@/components/ui/accordion';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
-import { Users } from 'lucide-react';
+import { Users, KanbanSquare } from 'lucide-react';
 import { Observacao } from '@/types/observacao';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { KanbanModal } from '@/components/kanban/KanbanModal';
 
 const Huddle = () => {
   const { pacientes, loading: pacientesLoading } = usePacientes();
@@ -21,6 +24,7 @@ const Huddle = () => {
   const { setores, loading: setoresLoading } = useSetores();
   const { userData } = useAuth();
   const { registrarLog } = useAuditoria();
+  const [kanbanOpen, setKanbanOpen] = useState(false);
 
   const loading = pacientesLoading || leitosLoading || setoresLoading;
 
@@ -116,18 +120,24 @@ const Huddle = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 rounded-lg bg-medical-primary flex items-center justify-center">
-            <Users className="h-6 w-6 text-white" />
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-lg bg-medical-primary flex items-center justify-center">
+              <Users className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-medical-primary">
+                Huddle - Panorama de Pacientes
+              </h1>
+              <p className="text-muted-foreground">
+                Acompanhamento de pacientes com necessidades específicas
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold text-medical-primary">
-              Huddle - Panorama de Pacientes
-            </h1>
-            <p className="text-muted-foreground">
-              Acompanhamento de pacientes com necessidades específicas
-            </p>
-          </div>
+          <Button onClick={() => setKanbanOpen(true)}>
+            <KanbanSquare className="h-4 w-4 mr-2" />
+            KANBAN NIR
+          </Button>
         </div>
 
         <Accordion type="multiple" className="space-y-4">
@@ -156,6 +166,7 @@ const Huddle = () => {
           />
         </Accordion>
       </div>
+      <KanbanModal open={kanbanOpen} onOpenChange={setKanbanOpen} />
     </div>
   );
 };
