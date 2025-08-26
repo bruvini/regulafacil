@@ -1,6 +1,6 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -22,15 +22,15 @@ export const PacientesAguardandoUTI = ({ pacientes, setores }: Props) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <AccordionItem value="aguardando-uti">
+      <AccordionTrigger className="text-left">
+        <div className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-red-600" />
-          Pacientes Aguardando UTI
+          <span className="font-medium">Pacientes Aguardando UTI</span>
           <Badge variant="secondary">{pacientesUTI.length}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent>
         {pacientesUTI.length === 0 ? (
           <p className="text-center text-muted-foreground py-4">
             Nenhum paciente aguardando UTI
@@ -49,7 +49,7 @@ export const PacientesAguardandoUTI = ({ pacientes, setores }: Props) => {
                   <div className="text-right text-sm">
                     <p className="text-muted-foreground">Solicitado em:</p>
                     <p className="font-medium">
-                      {paciente.dataPedidoUTI 
+                      {paciente.dataPedidoUTI
                         ? format(new Date(paciente.dataPedidoUTI), "dd/MM/yyyy HH:mm", { locale: ptBR })
                         : 'Data não informada'
                       }
@@ -65,7 +65,7 @@ export const PacientesAguardandoUTI = ({ pacientes, setores }: Props) => {
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </AccordionContent>
+    </AccordionItem>
   );
 };

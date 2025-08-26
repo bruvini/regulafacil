@@ -1,15 +1,14 @@
 
 import { PacientesAguardandoUTI } from '@/components/huddle/PacientesAguardandoUTI';
-import { AltaProvavel } from '@/components/huddle/AltaProvavel';
+import { PacientesEmFluxoDeAlta } from '@/components/huddle/PacientesEmFluxoDeAlta';
 import { InternacaoProlongada } from '@/components/huddle/InternacaoProlongada';
 import { PacientesComObservacoes } from '@/components/huddle/PacientesComObservacoes';
 import { usePacientes } from '@/hooks/usePacientes';
 import { useLeitos } from '@/hooks/useLeitos';
 import { useSetores } from '@/hooks/useSetores';
-import { useHuddleList } from '@/hooks/useHuddleList';
-import { AltaNoLeito } from '@/components/huddle/AltaNoLeito';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
+import { Accordion } from '@/components/ui/accordion';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
@@ -20,7 +19,6 @@ const Huddle = () => {
   const { pacientes, loading: pacientesLoading } = usePacientes();
   const { leitos, loading: leitosLoading } = useLeitos();
   const { setores, loading: setoresLoading } = useSetores();
-  const { altasPendentes } = useHuddleList(pacientes);
   const { userData } = useAuth();
   const { registrarLog } = useAuditoria();
 
@@ -132,20 +130,17 @@ const Huddle = () => {
           </div>
         </div>
 
-        <div className="space-y-8">
-          <PacientesAguardandoUTI 
-            pacientes={pacientes} 
-            setores={setores} 
-          />
-          
-          <AltaProvavel 
+        <Accordion type="multiple" className="space-y-4">
+          <PacientesAguardandoUTI pacientes={pacientes} setores={setores} />
+
+          <PacientesEmFluxoDeAlta
             pacientes={pacientes}
             leitos={leitos}
             setores={setores}
             onAdicionarObservacao={handleAdicionarObservacao}
             onRemoverObservacao={handleRemoverObservacao}
           />
-          
+
           <InternacaoProlongada
             pacientes={pacientes}
             leitos={leitos}
@@ -154,18 +149,12 @@ const Huddle = () => {
             onRemoverObservacao={handleRemoverObservacao}
           />
 
-          <AltaNoLeito
-            altasPendentes={altasPendentes}
-            leitos={leitos}
-            setores={setores}
-          />
-
           <PacientesComObservacoes
             pacientes={pacientes}
             leitos={leitos}
             setores={setores}
           />
-        </div>
+        </Accordion>
       </div>
     </div>
   );
