@@ -4,6 +4,14 @@ import { useSetores } from './useSetores';
 import { Leito, DadosPaciente } from '@/types/hospital';
 import { parse, differenceInHours, isValid } from 'date-fns';
 
+// Interface para leito compatível com informação de homônimo
+export interface LeitoCompativel extends Leito {
+  setorNome: string;
+  setorId: string;
+  temHomonimo: boolean;
+  nomesHomonimos?: string[];
+}
+
 // Função para calcular idade, já que a usaremos aqui
 const calcularIdade = (dataNascimento: string): number => {
   if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return 999;
@@ -29,6 +37,29 @@ const isQuartoUTQ = (leito: { setorNome: string; codigoLeito: string }): boolean
         leito.setorNome === 'UNID. CLINICA MEDICA' &&
         getQuartoId(leito.codigoLeito).startsWith('504')
     );
+};
+
+// Função para verificar homônimos no quarto
+const verificarHomonimos = (
+    paciente: DadosPaciente,
+    companheirosDeQuarto: any[]
+): { temHomonimo: boolean; nomesHomonimos: string[] } => {
+    const primeiroNomePaciente = paciente.nomeCompleto.split(' ')[0].toUpperCase();
+    const nomesHomonimos: string[] = [];
+    
+    companheirosDeQuarto.forEach(companheiro => {
+        if (companheiro.dadosPaciente) {
+            const primeiroNomeCompanheiro = companheiro.dadosPaciente.nomeCompleto.split(' ')[0].toUpperCase();
+            if (primeiroNomePaciente === primeiroNomeCompanheiro) {
+                nomesHomonimos.push(companheiro.dadosPaciente.nomeCompleto);
+            }
+        }
+    });
+    
+    return {
+        temHomonimo: nomesHomonimos.length > 0,
+        nomesHomonimos
+    };
 };
 
 // Nova função para determinar o sexo compatível para um leito
@@ -118,7 +149,7 @@ const verificarCompatibilidadeIsolamento = (
 export const useLeitoFinder = () => {
     const { setores } = useSetores();
 
-    const findAvailableLeitos = useCallback((paciente: DadosPaciente, modo: 'normal' | 'uti' = 'normal') => {
+    const findAvailableLeitos = useCallback((paciente: DadosPaciente, modo: 'normal' | 'uti' = 'normal'): LeitoCompativel[] => {
         if (!paciente || !setores) return [];
 
         const todosLeitosComSetor = setores.flatMap(setor => 
@@ -127,9 +158,15 @@ export const useLeitoFinder = () => {
 
         // Se o modo for 'uti', filtre apenas leitos da UTI
         if (modo === 'uti') {
-            return todosLeitosComSetor.filter(leito => {
-                return leito.setorNome === 'UTI' && ['Vago', 'Higienizacao'].includes(leito.statusLeito);
-            });
+            return todosLeitosComSetor
+                .filter(leito => {
+                    return leito.setorNome === 'UTI' && ['Vago', 'Higienizacao'].includes(leito.statusLeito);
+                })
+                .map(leito => ({
+                    ...leito,
+                    temHomonimo: false,
+                    nomesHomonimos: []
+                }));
         }
 
         const setoresExcluidos = [
@@ -186,7 +223,21 @@ export const useLeitoFinder = () => {
             return true; // Se passou por todas as regras, o leito está disponível
         });
 
-        return leitosDisponiveis;
+        // Mapear para LeitoCompativel com verificação de homônimos
+        return leitosDisponiveis.map(leito => {
+            const quartoId = getQuartoId(leito.codigoLeito);
+            const companheirosDeQuarto = todosLeitosComSetor.filter(
+                l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado'
+            );
+
+            const { temHomonimo, nomesHomonimos } = verificarHomonimos(paciente, companheirosDeQuarto);
+
+            return {
+                ...leito,
+                temHomonimo,
+                nomesHomonimos
+            };
+        });
     }, [setores]);
 
     // Nova função para gerar sugestões inteligentes

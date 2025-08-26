@@ -1,3 +1,4 @@
+
 // src/components/modals/RegulacaoModal.tsx
 
 import { useState, useEffect, useMemo } from 'react';
@@ -7,17 +8,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AlertTriangle, Copy, CheckCircle, BedDouble } from 'lucide-react';
-import { Paciente } from '@/types/hospital'; // CORREÇÃO: Importa o tipo correto
-import { useLeitoFinder } from '@/hooks/useLeitoFinder';
+import { AlertTriangle, Copy, CheckCircle, BedDouble, Users2 } from 'lucide-react';
+import { Paciente } from '@/types/hospital';
+import { useLeitoFinder, LeitoCompativel } from '@/hooks/useLeitoFinder';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface RegulacaoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  paciente: Paciente | null; // CORREÇÃO: Usa o tipo Paciente
+  paciente: Paciente | null;
   origem: { setor: string, leito: string };
   onConfirmRegulacao: (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => void;
   isAlteracao?: boolean;
@@ -36,8 +38,8 @@ const calcularIdade = (dataNascimento?: string): string => {
 export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao, isAlteracao = false, modo = 'normal' }: RegulacaoModalProps) => {
   const { findAvailableLeitos } = useLeitoFinder();
   const { toast } = useToast();
-  const [leitosDisponiveis, setLeitosDisponiveis] = useState<any[]>([]);
-  const [leitoSelecionado, setLeitoSelecionado] = useState<any | null>(null);
+  const [leitosDisponiveis, setLeitosDisponiveis] = useState<LeitoCompativel[]>([]);
+  const [leitoSelecionado, setLeitoSelecionado] = useState<LeitoCompativel | null>(null);
   const [etapa, setEtapa] = useState(1);
   const [observacoes, setObservacoes] = useState('');
   const [motivoAlteracao, setMotivoAlteracao] = useState('');
@@ -75,10 +77,10 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
     return leitosDisponiveis.reduce((acc, leito) => {
       (acc[leito.setorNome] = acc[leito.setorNome] || []).push(leito);
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, LeitoCompativel[]>);
   }, [leitosDisponiveis]);
 
-  const handleSelectLeito = (leito: any) => {
+  const handleSelectLeito = (leito: LeitoCompativel) => {
     setLeitoSelecionado(leito);
     setEtapa(isAlteracao ? 3 : 2);
   };
@@ -200,11 +202,11 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                     <AccordionTrigger className="hover:no-underline">
                       <div className="flex justify-between items-center w-full pr-4">
                         <span className="font-semibold">{setorNome}</span>
-                        <Badge variant="secondary">{(leitos as any[]).length}</Badge>
+                        <Badge variant="secondary">{leitos.length}</Badge>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="space-y-2">
-                      {(leitos as any[]).map(leito => (
+                      {leitos.map(leito => (
                         <Card 
                           key={leito.id} 
                           className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -217,6 +219,29 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                                 <span className="font-medium">{leito.codigoLeito}</span>
                                 {leito.leitoPCP && <Badge variant="outline">PCP</Badge>}
                                 {leito.leitoIsolamento && <Badge variant="destructive">Isolamento</Badge>}
+                                {leito.temHomonimo && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <Badge variant="destructive" className="bg-amber-500 hover:bg-amber-600">
+                                          <Users2 className="h-3 w-3 mr-1" />
+                                          Homônimo
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        <div className="space-y-1">
+                                          <p className="font-medium">⚠️ Alerta: Paciente homônimo no quarto</p>
+                                          <p className="text-xs">Pacientes com o mesmo primeiro nome:</p>
+                                          <ul className="text-xs list-disc list-inside">
+                                            {leito.nomesHomonimos?.map((nome, idx) => (
+                                              <li key={idx}>{nome}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </div>
                               <Badge variant={leito.statusLeito === 'Vago' ? 'default' : 'secondary'}>
                                 {leito.statusLeito}
@@ -252,8 +277,24 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                   </ul>
                 </div>
               )}
+              {leitoSelecionado?.temHomonimo && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm space-y-2">
+                  <p className="font-bold flex items-center gap-2">
+                    <Users2 className="h-4 w-4" />
+                    ⚠️ Atenção: Paciente Homônimo Detectado!
+                  </p>
+                  <p>O quarto já possui paciente(s) com o mesmo primeiro nome:</p>
+                  <ul className="list-disc list-inside pl-2 text-xs">
+                    {leitoSelecionado.nomesHomonimos?.map((nome, idx) => (
+                      <li key={idx}>{nome}</li>
+                    ))}
+                  </ul>
+                  <p className="text-red-600 font-medium">
+                    Uma justificativa será solicitada antes da confirmação.
+                  </p>
+                </div>
+              )}
               <div className="p-4 bg-blue-50 dark:bg-blue-900/50 rounded-lg border border-blue-200">
-                {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
                 <p className="whitespace-pre-wrap font-mono text-xs">{getMensagemConfirmacao()}</p>
               </div>
               <Textarea 
@@ -284,7 +325,6 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
             {modo === 'uti' ? 'Regular Leito de UTI para' : isAlteracao ? 'Alterar Regulação para' : 'Regular Leito para'}: {paciente?.nomeCompleto}
           </DialogTitle>
         </DialogHeader>

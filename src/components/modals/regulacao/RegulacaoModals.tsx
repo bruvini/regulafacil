@@ -7,6 +7,7 @@ import { AlocacaoCirurgiaModal } from '../AlocacaoCirurgiaModal';
 import { GerenciarTransferenciaModal } from '../GerenciarTransferenciaModal';
 import { ResumoRegulacoesModal } from '../ResumoRegulacoesModal';
 import { SugestoesRegulacaoModal } from '../SugestoesRegulacaoModal';
+import { JustificativaHomonimoModal } from '../JustificativaHomonimoModal';
 import { ResultadoValidacao, SyncSummary } from '../ValidacaoImportacao';
 
 interface RegulacaoModalsProps {
@@ -19,6 +20,7 @@ interface RegulacaoModalsProps {
   gerenciarTransferenciaOpen: boolean;
   resumoModalOpen: boolean;
   sugestoesModalOpen: boolean;
+  justificativaHomonimoOpen: boolean;
   
   // Dados dos modais
   pacienteParaRegular: any;
@@ -33,6 +35,7 @@ interface RegulacaoModalsProps {
   pacientesRegulados: any[];
   sugestoes: any[];
   totalPendentes: number;
+  leitoComHomonimo: any;
   
   // Handlers
   onProcessFileRequest: (file: File) => void;
@@ -41,6 +44,7 @@ interface RegulacaoModalsProps {
   onConfirmarCancelamento: (motivo: string) => void;
   onConfirmarTransferenciaExterna: (destino: string, motivo: string) => void;
   onConfirmarAlocacaoCirurgia: (cirurgia: any, leito: any) => void;
+  onConfirmarJustificativaHomonimo: (justificativa: string) => void;
   
   // Setters
   setImportModalOpen: (open: boolean) => void;
@@ -49,8 +53,9 @@ interface RegulacaoModalsProps {
   setTransferenciaModalOpen: (open: boolean) => void;
   setAlocacaoCirurgiaModalOpen: (open: boolean) => void;
   setGerenciarTransferenciaOpen: (open: boolean) => void;
-  setResumoModalOpen: (open: boolean) => void;
+  setResumoMLongidalOpen: (open: boolean) => void;
   setSugestoesModalOpen: (open: boolean) => void;
+  setJustificativaHomonimoOpen: (open: boolean) => void;
 }
 
 export const RegulacaoModals = ({
@@ -62,6 +67,7 @@ export const RegulacaoModals = ({
   gerenciarTransferenciaOpen,
   resumoModalOpen,
   sugestoesModalOpen,
+  justificativaHomonimoOpen,
   pacienteParaRegular,
   pacienteParaAcao,
   cirurgiaParaAlocar,
@@ -74,12 +80,14 @@ export const RegulacaoModals = ({
   pacientesRegulados,
   sugestoes,
   totalPendentes,
+  leitoComHomonimo,
   onProcessFileRequest,
   onConfirmSync,
   onConfirmarRegulacao,
   onConfirmarCancelamento,
   onConfirmarTransferenciaExterna,
   onConfirmarAlocacaoCirurgia,
+  onConfirmarJustificativaHomonimo,
   setImportModalOpen,
   setRegulacaoModalOpen,
   setCancelamentoModalOpen,
@@ -88,6 +96,7 @@ export const RegulacaoModals = ({
   setGerenciarTransferenciaOpen,
   setResumoModalOpen,
   setSugestoesModalOpen,
+  setJustificativaHomonimoOpen,
 }: RegulacaoModalsProps) => {
   return (
     <>
@@ -110,6 +119,15 @@ export const RegulacaoModals = ({
         onConfirmRegulacao={onConfirmarRegulacao}
         isAlteracao={isAlteracaoMode}
         modo={modoRegulacao}
+      />
+
+      <JustificativaHomonimoModal
+        open={justificativaHomonimoOpen}
+        onOpenChange={setJustificativaHomonimoOpen}
+        onConfirm={onConfirmarJustificativaHomonimo}
+        pacienteNome={pacienteParaRegular?.nomeCompleto || ''}
+        leitoCodigo={leitoComHomonimo?.codigoLeito || ''}
+        nomesHomonimos={leitoComHomonimo?.nomesHomonimos || []}
       />
 
       <CancelamentoModal
