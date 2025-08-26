@@ -1,3 +1,4 @@
+
 import { PacientesAguardandoUTI } from '@/components/huddle/PacientesAguardandoUTI';
 import { PacientesEmFluxoDeAlta } from '@/components/huddle/PacientesEmFluxoDeAlta';
 import { InternacaoProlongada } from '@/components/huddle/InternacaoProlongada';
@@ -8,6 +9,7 @@ import { useSetores } from '@/hooks/useSetores';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
 import { Accordion } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
