@@ -23,8 +23,17 @@ const getQuartoId = (codigoLeito: string): string => {
     return match ? match[1].trim() : codigoLeito; // Retorna o prefixo do quarto ou o código do leito se não houver
 };
 
+// Identifica se o leito pertence ao quarto 504 da Clínica Médica (UTQ)
+const isQuartoUTQ = (leito: { setorNome: string; codigoLeito: string }): boolean => {
+    return (
+        leito.setorNome === 'UNID. CLINICA MEDICA' &&
+        getQuartoId(leito.codigoLeito).startsWith('504')
+    );
+};
+
 // Nova função para determinar o sexo compatível para um leito
 const determinarSexoLeito = (leito: any, todosLeitosComSetor: any[]): 'Masculino' | 'Feminino' | 'Ambos' => {
+    if (isQuartoUTQ(leito)) return 'Ambos';
     const quartoId = getQuartoId(leito.codigoLeito);
     const companheirosDeQuarto = todosLeitosComSetor.filter(
         l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado' && l.dadosPaciente
@@ -68,6 +77,42 @@ const priorizarPacientes = (pacientes: any[]): any[] => {
         
         return idadeB - idadeA; // Mais velho primeiro
     });
+};
+
+// Verifica compatibilidade de sexo entre paciente e ocupantes do quarto
+const verificarCompatibilidadeSexo = (
+    leito: any,
+    paciente: DadosPaciente,
+    companheirosDeQuarto: any[]
+): boolean => {
+    if (isQuartoUTQ(leito)) return true;
+    if (companheirosDeQuarto.length > 0) {
+        const sexoCompanheiros = companheirosDeQuarto[0].dadosPaciente?.sexoPaciente;
+        if (sexoCompanheiros && sexoCompanheiros !== paciente.sexoPaciente) {
+            return false;
+        }
+    }
+    return true;
+};
+
+// Verifica compatibilidade de isolamento entre paciente e ocupantes do quarto
+const verificarCompatibilidadeIsolamento = (
+    leito: any,
+    isolamentosPacienteStr: string,
+    isolamentosCompanheirosStr: string,
+    companheirosDeQuarto: any[]
+): boolean => {
+    if (isQuartoUTQ(leito)) return true;
+    if (isolamentosPacienteStr) {
+        if (companheirosDeQuarto.length > 0) {
+            if (isolamentosCompanheirosStr !== isolamentosPacienteStr) return false;
+        }
+    } else {
+        if (isolamentosCompanheirosStr) {
+            return false;
+        }
+    }
+    return true;
 };
 
 export const useLeitoFinder = () => {
@@ -117,30 +162,17 @@ export const useLeitoFinder = () => {
                 l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado'
             );
 
-            // 3. Lógica de Isolamento
+            // 3. Lógicas de isolamento e sexo com regra de exceção para o quarto 504
             const isolamentosCompanheirosStr = companheirosDeQuarto.length > 0
                 ? companheirosDeQuarto[0].dadosPaciente?.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || ''
                 : '';
 
-            if (isolamentosPacienteStr) { // Se o paciente que precisa de leito TEM isolamento
-                if (companheirosDeQuarto.length > 0) {
-                    // O quarto já tem gente. Os isolamentos precisam ser idênticos.
-                    if (isolamentosCompanheirosStr !== isolamentosPacienteStr) return false;
-                }
-                // Se o quarto está vazio, ele pode entrar.
-            } else { // Se o paciente que precisa de leito NÃO TEM isolamento
-                if (isolamentosCompanheirosStr) {
-                    // Não pode entrar em um quarto que já tem isolamento
-                    return false;
-                }
+            if (!verificarCompatibilidadeIsolamento(leito, isolamentosPacienteStr, isolamentosCompanheirosStr, companheirosDeQuarto)) {
+                return false;
             }
 
-            // 4. Lógica de Sexo (SÓ se o quarto já tiver ocupantes)
-            if (companheirosDeQuarto.length > 0) {
-                const sexoCompanheiros = companheirosDeQuarto[0].dadosPaciente?.sexoPaciente;
-                if (sexoCompanheiros && sexoCompanheiros !== paciente.sexoPaciente) {
-                    return false; // Sexos incompatíveis
-                }
+            if (!verificarCompatibilidadeSexo(leito, paciente, companheirosDeQuarto)) {
+                return false;
             }
 
             // 5. Filtro de Leito PCP
@@ -203,29 +235,31 @@ export const useLeitoFinder = () => {
                 );
             }
 
-            // Aplicar lógicas de isolamento
+            // Aplicar lógicas de isolamento, exceto para o quarto 504 (UTQ)
             const quartoId = getQuartoId(leito.codigoLeito);
             const companheirosDeQuarto = todosLeitosComSetor.filter(
                 l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado'
             );
 
-            if (companheirosDeQuarto.length > 0) {
-                const isolamentosQuarto = companheirosDeQuarto[0].dadosPaciente?.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
-                
-                pacientesCompativeis = pacientesCompativeis.filter(paciente => {
-                    const isolamentosPaciente = paciente.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
-                    return isolamentosPaciente === isolamentosQuarto;
-                });
-            } else {
-                // Quarto vazio - pode receber pacientes com ou sem isolamento
-                // Mas se for paciente com isolamento, deve ser em leito de isolamento quando possível
-                if (leito.leitoIsolamento) {
-                    // Priorizar pacientes com isolamento para leitos de isolamento
-                    const pacientesComIsolamento = pacientesCompativeis.filter(p => 
-                        p.isolamentosVigentes && p.isolamentosVigentes.length > 0
-                    );
-                    if (pacientesComIsolamento.length > 0) {
-                        pacientesCompativeis = pacientesComIsolamento;
+            if (!isQuartoUTQ(leito)) {
+                if (companheirosDeQuarto.length > 0) {
+                    const isolamentosQuarto = companheirosDeQuarto[0].dadosPaciente?.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
+
+                    pacientesCompativeis = pacientesCompativeis.filter(paciente => {
+                        const isolamentosPaciente = paciente.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
+                        return isolamentosPaciente === isolamentosQuarto;
+                    });
+                } else {
+                    // Quarto vazio - pode receber pacientes com ou sem isolamento
+                    // Mas se for paciente com isolamento, deve ser em leito de isolamento quando possível
+                    if (leito.leitoIsolamento) {
+                        // Priorizar pacientes com isolamento para leitos de isolamento
+                        const pacientesComIsolamento = pacientesCompativeis.filter(p =>
+                            p.isolamentosVigentes && p.isolamentosVigentes.length > 0
+                        );
+                        if (pacientesComIsolamento.length > 0) {
+                            pacientesCompativeis = pacientesComIsolamento;
+                        }
                     }
                 }
             }
