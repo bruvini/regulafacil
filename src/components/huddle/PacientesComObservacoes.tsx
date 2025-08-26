@@ -1,6 +1,6 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -74,15 +74,15 @@ export const PacientesComObservacoes = ({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <AccordionItem value="observacoes">
+      <AccordionTrigger className="text-left">
+        <div className="flex items-center gap-2">
           <MessageSquare className="h-5 w-5 text-purple-600" />
-          Pacientes com Observações
+          <span className="font-medium">Pacientes com Observações</span>
           <Badge variant="secondary">{pacientesComObservacoes.length}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent>
         {pacientesComObservacoes.length === 0 ? (
           <p className="text-center text-muted-foreground py-4">
             Nenhum paciente com observações registradas
@@ -91,7 +91,7 @@ export const PacientesComObservacoes = ({
           <div className="space-y-4">
             {pacientesComObservacoes.map((paciente) => {
               const todasObservacoes = obterTodasObservacoes(paciente);
-              
+
               return (
                 <div key={paciente.id} className="border rounded-lg p-4 bg-purple-50/30">
                   <div className="mb-3">
@@ -103,13 +103,13 @@ export const PacientesComObservacoes = ({
                       {todasObservacoes.length} observação(ões) registrada(s)
                     </p>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {todasObservacoes.map((observacao, index) => (
                       <div key={`${observacao.id}-${index}`} className="bg-white rounded-lg p-3 border-l-4 border-purple-200">
                         <div className="flex justify-between items-start gap-2 mb-2">
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={`text-xs ${getCorTipo(observacao.tipo)}`}
                           >
                             {observacao.tipo}
@@ -128,7 +128,7 @@ export const PacientesComObservacoes = ({
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </AccordionContent>
+    </AccordionItem>
   );
 };
