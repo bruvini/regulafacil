@@ -4,21 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@/components/ui/table';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Plus,
-  Calendar,
-  User,
-  BedDouble,
-  MapPin,
-  Stethoscope,
-  Clock,
-  CalendarDays,
-  ClipboardList,
-  FileText,
-  CheckSquare,
-  Dot
-} from 'lucide-react';
+
+import { Plus, Calendar } from 'lucide-react';
 import { useKanban } from '@/hooks/useKanban';
 import { usePacientes } from '@/hooks/usePacientes';
 import { useLeitos } from '@/hooks/useLeitos';
@@ -26,7 +13,6 @@ import { useSetores } from '@/hooks/useSetores';
 import { AdicionarPacienteModal } from './AdicionarPacienteModal';
 import { format, differenceInDays } from 'date-fns';
 import { KanbanEntry } from '@/types/kanban';
-import { parseDateFromString } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -38,12 +24,9 @@ const PendenciasCell = ({ entry, onAdd }: { entry: KanbanEntry; onAdd: (id: stri
   const [texto, setTexto] = useState('');
   return (
     <div className="space-y-1">
-      {entry.pendencias.map((p) => (
-        <div key={p.id} className="flex items-start text-xs gap-1">
-          <Dot className="h-3 w-3 mt-0.5" />
-          <span>
-            {p.texto} - {format(new Date(p.criadaEm), 'dd/MM')} ({p.criadaPor})
-          </span>
+      {entry.pendencias.map(p => (
+        <div key={p.id} className="text-xs">
+          {p.texto} - {format(new Date(p.criadaEm), 'dd/MM')} ({p.criadaPor})
         </div>
       ))}
       <Popover open={open} onOpenChange={setOpen}>
@@ -52,7 +35,7 @@ const PendenciasCell = ({ entry, onAdd }: { entry: KanbanEntry; onAdd: (id: stri
             <Plus className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-64 space-y-2">
+        <PopoverContent className="w-64 space-y-2">
           <Input
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
@@ -80,12 +63,9 @@ const TratativasCell = ({ entry, onAdd }: { entry: KanbanEntry; onAdd: (id: stri
   const [texto, setTexto] = useState('');
   return (
     <div className="space-y-1">
-      {entry.tratativas.map((t) => (
-        <div key={t.id} className="flex items-start text-xs gap-1">
-          <Dot className="h-3 w-3 mt-0.5" />
-          <span>
-            {t.texto} - {format(new Date(t.criadaEm), 'dd/MM')} ({t.criadaPor})
-          </span>
+      {entry.tratativas.map(t => (
+        <div key={t.id} className="text-xs">
+          {t.texto} - {format(new Date(t.criadaEm), 'dd/MM')} ({t.criadaPor})
         </div>
       ))}
       <Popover open={open} onOpenChange={setOpen}>
@@ -94,7 +74,7 @@ const TratativasCell = ({ entry, onAdd }: { entry: KanbanEntry; onAdd: (id: stri
             <Plus className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-64 space-y-2">
+        <PopoverContent className="w-64 space-y-2">
           <Input
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
@@ -123,12 +103,12 @@ const PrevisaoAltaCell = ({ entry, onUpdate }: { entry: KanbanEntry; onUpdate: (
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-      <Button variant="ghost" size="sm">
-        <Calendar className="h-4 w-4 mr-1" />
-        {entry.previsaoAlta ? format(new Date(entry.previsaoAlta), 'dd/MM') : 'Definir'}
-      </Button>
+        <Button variant="ghost" size="sm">
+          <Calendar className="h-4 w-4 mr-1" />
+          {entry.previsaoAlta ? format(new Date(entry.previsaoAlta), 'dd/MM') : 'Definir'}
+        </Button>
       </PopoverTrigger>
-      <PopoverContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-48 space-y-2">
+      <PopoverContent className="w-48 space-y-2">
         <Input type="date" value={data} onChange={(e) => setData(e.target.value)} />
         <Button
           size="sm"
@@ -148,36 +128,22 @@ const PrevisaoAltaCell = ({ entry, onUpdate }: { entry: KanbanEntry; onUpdate: (
 export const KanbanModal = ({ open, onOpenChange }: Props) => {
   const [adicionarOpen, setAdicionarOpen] = useState(false);
   const [filtroNome, setFiltroNome] = useState('');
-  const [mostrarFinalizados, setMostrarFinalizados] = useState(false);
-  const {
-    kanban,
-    adicionarPendencia,
-    adicionarTratativa,
-    atualizarPrevisaoAlta,
-    adicionarPacienteAoKanban,
-    finalizarMonitoramento,
-  } = useKanban();
+  const { kanban, adicionarPendencia, adicionarTratativa, atualizarPrevisaoAlta, adicionarPacienteAoKanban } = useKanban();
   const { pacientes } = usePacientes();
   const { leitos } = useLeitos();
   const { setores } = useSetores();
 
   const dados = useMemo(() => {
     return kanban
-      .filter((entry) => (mostrarFinalizados ? true : !entry.finalizado))
-      .map((entry) => {
-        const paciente = pacientes.find((p) => p.id === entry.pacienteId);
-        const leito = paciente ? leitos.find((l) => l.id === paciente.leitoId) : undefined;
-        const setor = paciente ? setores.find((s) => s.id === paciente.setorId) : undefined;
-        const dataInternacaoDate = paciente ? parseDateFromString(paciente.dataInternacao) : null;
-        const tempoInternacao = dataInternacaoDate ? differenceInDays(new Date(), dataInternacaoDate) : null;
+      .map(entry => {
+        const paciente = pacientes.find(p => p.id === entry.pacienteId);
+        const leito = paciente ? leitos.find(l => l.id === paciente.leitoId) : undefined;
+        const setor = paciente ? setores.find(s => s.id === paciente.setorId) : undefined;
+        const tempoInternacao = paciente ? differenceInDays(new Date(), new Date(paciente.dataInternacao)) : null;
         return { entry, paciente, leito, setor, tempoInternacao };
       })
-      .filter(
-        (d) =>
-          d.paciente &&
-          d.paciente.nomeCompleto.toUpperCase().includes(filtroNome.toUpperCase())
-      );
-  }, [kanban, pacientes, leitos, setores, filtroNome, mostrarFinalizados]);
+      .filter(d => d.paciente && d.paciente.nomeCompleto.toUpperCase().includes(filtroNome.toUpperCase()));
+  }, [kanban, pacientes, leitos, setores, filtroNome]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -187,115 +153,47 @@ export const KanbanModal = ({ open, onOpenChange }: Props) => {
           <Button onClick={() => setAdicionarOpen(true)}>Adicionar Paciente ao Monitoramento</Button>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <Input
-              placeholder="Filtrar por nome"
-              value={filtroNome}
-              onChange={(e) => setFiltroNome(e.target.value)}
-              className="max-w-sm"
-            />
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="mostrarFinalizados"
-                checked={mostrarFinalizados}
-                onCheckedChange={(v) => setMostrarFinalizados(!!v)}
-              />
-              <label htmlFor="mostrarFinalizados" className="text-sm text-muted-foreground">
-                Mostrar finalizados
-              </label>
-            </div>
-          </div>
+        <div className="py-4">
+          <Input
+            placeholder="Filtrar por nome"
+            value={filtroNome}
+            onChange={(e) => setFiltroNome(e.target.value)}
+            className="max-w-sm mb-4"
+          />
           <div className="overflow-auto max-h-[70vh]">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>
-                    <User className="inline h-4 w-4 mr-1" /> Nome
-                  </TableHead>
-                  <TableHead>
-                    <BedDouble className="inline h-4 w-4 mr-1" /> Leito
-                  </TableHead>
-                  <TableHead>
-                    <MapPin className="inline h-4 w-4 mr-1" /> Setor
-                  </TableHead>
-                  <TableHead>
-                    <Stethoscope className="inline h-4 w-4 mr-1" /> Especialidade
-                  </TableHead>
-                  <TableHead>
-                    <Clock className="inline h-4 w-4 mr-1" /> Tempo Internação
-                  </TableHead>
-                  <TableHead>
-                    <CalendarDays className="inline h-4 w-4 mr-1" /> Previsão de Alta
-                  </TableHead>
-                  <TableHead>
-                    <ClipboardList className="inline h-4 w-4 mr-1" /> Pendências para Alta
-                  </TableHead>
-                  <TableHead>
-                    <FileText className="inline h-4 w-4 mr-1" /> Tratativas
-                  </TableHead>
-                  <TableHead>
-                    <CheckSquare className="inline h-4 w-4 mr-1" /> Ações
-                  </TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Leito</TableHead>
+                  <TableHead>Setor</TableHead>
+                  <TableHead>Tempo Internação</TableHead>
+                  <TableHead>Previsão de Alta</TableHead>
+                  <TableHead>Pendências para Alta</TableHead>
+                  <TableHead>Tratativas</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dados.map(({ entry, paciente, leito, setor, tempoInternacao }) => {
-                  const tempoClasse =
-                    tempoInternacao === null
-                      ? ''
-                      : tempoInternacao > 60
-                      ? 'text-red-600 font-bold'
-                      : tempoInternacao > 30
-                      ? 'text-yellow-600 font-medium'
-                      : '';
-                  return (
-                    <TableRow key={entry.id} className="hover:bg-muted/50">
-                      <TableCell>
-                        <div>
-                          <p className="font-bold text-base">
-                            {paciente?.nomeCompleto || 'Paciente não encontrado'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Adicionado por {entry.monitoradoPor} em{' '}
-                            {format(new Date(entry.monitoradoDesde), 'dd/MM/yyyy HH:mm')}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>{leito?.codigoLeito || ''}</TableCell>
-                      <TableCell>{setor?.siglaSetor || ''}</TableCell>
-                      <TableCell>{paciente?.especialidadePaciente || ''}</TableCell>
-                      <TableCell className={tempoClasse}>
-                        {tempoInternacao !== null ? `${tempoInternacao}d` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <PrevisaoAltaCell entry={entry} onUpdate={atualizarPrevisaoAlta} />
-                      </TableCell>
-                      <TableCell>
-                        <PendenciasCell entry={entry} onAdd={adicionarPendencia} />
-                      </TableCell>
-                      <TableCell>
-                        <TratativasCell entry={entry} onAdd={adicionarTratativa} />
-                      </TableCell>
-                      <TableCell>
-                        {entry.finalizado ? (
-                          <span className="text-xs text-muted-foreground">Finalizado</span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => finalizarMonitoramento(entry.pacienteId)}
-                          >
-                            <CheckSquare className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {dados.map(({ entry, paciente, leito, setor, tempoInternacao }) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{paciente?.nomeCompleto || 'Paciente não encontrado'}</TableCell>
+                    <TableCell>{leito?.codigoLeito || ''}</TableCell>
+                    <TableCell>{setor?.siglaSetor || ''}</TableCell>
+                    <TableCell>{tempoInternacao !== null ? `${tempoInternacao}d` : '-'}</TableCell>
+                    <TableCell>
+                      <PrevisaoAltaCell entry={entry} onUpdate={atualizarPrevisaoAlta} />
+                    </TableCell>
+                    <TableCell>
+                      <PendenciasCell entry={entry} onAdd={adicionarPendencia} />
+                    </TableCell>
+                    <TableCell>
+                      <TratativasCell entry={entry} onAdd={adicionarTratativa} />
+                    </TableCell>
+                  </TableRow>
+                ))}
                 {dados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
                       Nenhum paciente encontrado
                     </TableCell>
                   </TableRow>
