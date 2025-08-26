@@ -159,6 +159,46 @@ export const useLeitos = () => {
   };
 
   /**
+   * Vincula um paciente a um leito de forma atômica, garantindo que
+   * tanto o documento do paciente quanto o do leito sejam atualizados
+   * em um único batch write.
+   */
+  const vincularPacienteLeito = async (leitoId: string, pacienteId: string, setorId: string) => {
+    setLoading(true);
+    try {
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+      batch.update(pacienteRef, { leitoId, setorId });
+
+      const leitoRef = doc(db, 'leitosRegulaFacil', leitoId);
+      const novoHistorico: HistoricoMovimentacao = {
+        statusLeito: 'Ocupado',
+        dataAtualizacaoStatus: agora,
+        pacienteId,
+      };
+      batch.update(leitoRef, { historicoMovimentacao: arrayUnion(novoHistorico) });
+
+      await batch.commit();
+      const leito = leitos.find(l => l.id === leitoId);
+      if (leito) {
+        registrarLog(`Ocupou o leito ${leito.codigoLeito} com o paciente ${pacienteId}.`, 'Gestão de Leitos');
+      }
+    } catch (error) {
+      console.error('Erro ao vincular paciente ao leito:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível vincular o paciente ao leito.',
+        variant: 'destructive',
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
    * Exclui um leito do sistema.
    */
   const excluirLeito = async (leitoId: string) => {
@@ -229,5 +269,6 @@ export const useLeitos = () => {
     atualizarLeito,
     excluirLeito,
     atualizarStatusLeito,
+    vincularPacienteLeito,
   };
 };

@@ -26,7 +26,7 @@ import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamen
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
 import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido } from '@/types/hospital';
-import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Observacao } from '@/types/observacao';
@@ -54,7 +54,7 @@ const MapaLeitos = () => {
 
   // --- Hooks de Dados (Nova Arquitetura) ---
   const { setores, loading: setoresLoading } = useSetores();
-  const { leitos, loading: leitosLoading, atualizarStatusLeito } = useLeitos();
+  const { leitos, loading: leitosLoading, atualizarStatusLeito, vincularPacienteLeito } = useLeitos();
   const { pacientes, loading: pacientesLoading, criarPacienteManual } = usePacientes();
   const loading = setoresLoading || leitosLoading || pacientesLoading;
 
@@ -106,23 +106,28 @@ const MapaLeitos = () => {
   // Funções de confirmação para internação e reserva
   const handleConfirmarInternacao = async (dadosForm: any) => {
     if (!leitoParaAcao) return;
-    
+
     try {
       const pacienteId = await criarPacienteManual({
         ...dadosForm,
         leitoId: leitoParaAcao.id,
         setorId: leitoParaAcao.setorId,
       });
-      
-      await atualizarStatusLeito(leitoParaAcao.id, 'Ocupado', { pacienteId });
-      
-      registrarLog(`Internou manualmente o paciente ${dadosForm.nomeCompleto} no leito ${leitoParaAcao.codigoLeito}.`, 'Mapa de Leitos');
-      
-      toast({ 
-        title: "Sucesso!", 
-        description: "Paciente internado e leito ocupado." 
-      });
-      
+
+      if (pacienteId) {
+        await vincularPacienteLeito(leitoParaAcao.id, pacienteId, leitoParaAcao.setorId);
+
+        registrarLog(
+          `Internou manualmente o paciente ${dadosForm.nomeCompleto} no leito ${leitoParaAcao.codigoLeito}.`,
+          'Mapa de Leitos'
+        );
+
+        toast({
+          title: 'Sucesso!',
+          description: 'Paciente internado e leito ocupado.'
+        });
+      }
+
       setInternacaoModalOpen(false);
       setLeitoParaAcao(null);
     } catch (error) {
@@ -132,10 +137,10 @@ const MapaLeitos = () => {
 
   const handleConfirmarReserva = async (dadosForm: any) => {
     if (!leitoParaAcao) return;
-    
+
     try {
       const setorInfo = setores.find(s => s.id === leitoParaAcao.setorId);
-      
+
       const pacienteId = await criarPacienteManual({
         ...dadosForm,
         leitoId: leitoParaAcao.id,
@@ -143,24 +148,42 @@ const MapaLeitos = () => {
         dataInternacao: new Date().toISOString(),
         especialidadePaciente: 'Não Informada',
       });
-      
-      await atualizarStatusLeito(leitoParaAcao.id, 'Reservado', {
-        pacienteId,
-        infoRegulacao: {
-          paraSetor: setorInfo?.nomeSetor || 'Setor não encontrado',
-          paraLeito: leitoParaAcao.codigoLeito,
-          origemExterna: dadosForm.origem,
-          tipoReserva: 'externo',
-        },
-      });
-      
-      registrarLog(`Reservou o leito ${leitoParaAcao.codigoLeito} para o paciente externo ${dadosForm.nomeCompleto} (origem: ${dadosForm.origem}).`, 'Mapa de Leitos');
-      
-      toast({ 
-        title: "Sucesso!", 
-        description: "Leito reservado para paciente externo." 
-      });
-      
+
+      if (pacienteId) {
+        const batch = writeBatch(db);
+        const agora = new Date().toISOString();
+
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+        batch.update(pacienteRef, { leitoId: leitoParaAcao.id, setorId: leitoParaAcao.setorId });
+
+        const leitoRef = doc(db, 'leitosRegulaFacil', leitoParaAcao.id);
+        batch.update(leitoRef, {
+          historicoMovimentacao: arrayUnion({
+            statusLeito: 'Reservado',
+            dataAtualizacaoStatus: agora,
+            pacienteId,
+            infoRegulacao: {
+              paraSetor: setorInfo?.nomeSetor || 'Setor não encontrado',
+              paraLeito: leitoParaAcao.codigoLeito,
+              origemExterna: dadosForm.origem,
+              tipoReserva: 'externo',
+            },
+          })
+        });
+
+        await batch.commit();
+
+        registrarLog(
+          `Reservou o leito ${leitoParaAcao.codigoLeito} para o paciente externo ${dadosForm.nomeCompleto} (origem: ${dadosForm.origem}).`,
+          'Mapa de Leitos'
+        );
+
+        toast({
+          title: 'Sucesso!',
+          description: 'Leito reservado para paciente externo.'
+        });
+      }
+
       setReservaModalOpen(false);
       setLeitoParaAcao(null);
     } catch (error) {
@@ -289,11 +312,32 @@ const MapaLeitos = () => {
 
   const handleConfirmarMovimentacao = async (leitoDestino: Leito) => {
     if (pacienteParaMover && leitoDestino) {
-        await atualizarStatusLeito(pacienteParaMover.leitoOrigemId, 'Higienizacao');
-        await atualizarStatusLeito(leitoDestino.id, 'Ocupado', { pacienteId: pacienteParaMover.dados.id });
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaMover.dados.id);
-        await updateDoc(pacienteRef, { leitoId: leitoDestino.id, setorId: leitoDestino.setorId });
-        toast({ title: "Sucesso!", description: "Paciente movido com sucesso." });
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      const leitoOrigemRef = doc(db, 'leitosRegulaFacil', pacienteParaMover.leitoOrigemId);
+      batch.update(leitoOrigemRef, {
+        historicoMovimentacao: arrayUnion({
+          statusLeito: 'Higienizacao',
+          dataAtualizacaoStatus: agora,
+          pacienteId: pacienteParaMover.dados.id,
+        }),
+      });
+
+      const leitoDestinoRef = doc(db, 'leitosRegulaFacil', leitoDestino.id);
+      batch.update(leitoDestinoRef, {
+        historicoMovimentacao: arrayUnion({
+          statusLeito: 'Ocupado',
+          dataAtualizacaoStatus: agora,
+          pacienteId: pacienteParaMover.dados.id,
+        }),
+      });
+
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaMover.dados.id);
+      batch.update(pacienteRef, { leitoId: leitoDestino.id, setorId: leitoDestino.setorId });
+
+      await batch.commit();
+      toast({ title: 'Sucesso!', description: 'Paciente movido com sucesso.' });
     }
     setMovimentacaoModalOpen(false);
     setPacienteParaMover(null);
