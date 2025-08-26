@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -5,9 +6,9 @@ import * as yup from 'yup';
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
-import { Paciente } from '@/types/paciente';
-import { Leito } from '@/types/leito';
-import { Setor } from '@/types/setor';
+import { Paciente } from '@/types/hospital';
+import { Leito } from '@/types/hospital';
+import { Setor } from '@/types/hospital';
 import { useLeitos } from '@/hooks/useLeitos';
 import { useSetores } from '@/hooks/useSetores';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -62,28 +63,39 @@ const schema = yup.object({
 const MapaLeitos = () => {
   const { leitos } = useLeitos();
   const { setores } = useSetores();
-  const { pacientes, refreshPacientes } = usePacientes();
+  const { pacientes } = usePacientes();
   const { registrarLog } = useAuditoria();
   const [pacienteSelecionado, setPacienteSelecionado] = useState<Paciente | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [dataInternacao, setDataInternacao] = useState<Date>();
+  const [dataNascimento, setDataNascimento] = useState<Date>();
 
   const { register, handleSubmit, setValue, formState: { errors }, reset } = useForm<yup.InferType<typeof schema>>({
     resolver: yupResolver(schema)
   });
+
+  const refreshPacientes = () => {
+    // Function to refresh patients list - this would normally trigger a refetch
+    window.location.reload();
+  };
 
   useEffect(() => {
     if (pacienteSelecionado) {
       setIsEditMode(true);
       setValue('leitoId', pacienteSelecionado.leitoId);
       setValue('setorId', pacienteSelecionado.setorId);
+      setDataInternacao(new Date(pacienteSelecionado.dataInternacao));
       setValue('dataInternacao', new Date(pacienteSelecionado.dataInternacao));
       setValue('especialidadePaciente', pacienteSelecionado.especialidadePaciente);
       setValue('nomeCompleto', pacienteSelecionado.nomeCompleto);
+      setDataNascimento(new Date(pacienteSelecionado.dataNascimento));
       setValue('dataNascimento', new Date(pacienteSelecionado.dataNascimento));
       setValue('sexoPaciente', pacienteSelecionado.sexoPaciente);
-      setValue('origem', pacienteSelecionado.origem.deSetor);
+      setValue('origem', pacienteSelecionado.origem?.deSetor || '');
     } else {
       setIsEditMode(false);
+      setDataInternacao(undefined);
+      setDataNascimento(undefined);
       reset();
     }
   }, [pacienteSelecionado, setValue, reset]);
@@ -199,7 +211,7 @@ const MapaLeitos = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {leitos.map(leito => (
-                    <SelectItem key={leito.id} value={leito.id}>{leito.codigo}</SelectItem>
+                    <SelectItem key={leito.id} value={leito.id}>{leito.codigoLeito}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -214,7 +226,7 @@ const MapaLeitos = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {setores.map(setor => (
-                    <SelectItem key={setor.id} value={setor.id}>{setor.nome}</SelectItem>
+                    <SelectItem key={setor.id} value={setor.id}>{setor.nomeSetor}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -229,12 +241,12 @@ const MapaLeitos = () => {
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !setValue("dataInternacao") && "text-muted-foreground"
+                      !dataInternacao && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {setValue("dataInternacao") ? (
-                      format(new Date(pacienteSelecionado?.dataInternacao || Date.now()), "dd/MM/yyyy", { locale: ptBR })
+                    {dataInternacao ? (
+                      format(dataInternacao, "dd/MM/yyyy", { locale: ptBR })
                     ) : (
                       <span>Selecione a data</span>
                     )}
@@ -244,9 +256,10 @@ const MapaLeitos = () => {
                   <Calendar
                     mode="single"
                     locale={ptBR}
-                    selected={pacienteSelecionado ? new Date(pacienteSelecionado.dataInternacao) : null}
+                    selected={dataInternacao}
                     onSelect={(date) => {
-                      setValue("dataInternacao", date)
+                      setDataInternacao(date);
+                      setValue("dataInternacao", date);
                     }}
                     disabled={(date) =>
                       date > new Date()
@@ -278,12 +291,12 @@ const MapaLeitos = () => {
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !setValue("dataNascimento") && "text-muted-foreground"
+                      !dataNascimento && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {setValue("dataNascimento") ? (
-                      format(new Date(pacienteSelecionado?.dataNascimento || Date.now()), "dd/MM/yyyy", { locale: ptBR })
+                    {dataNascimento ? (
+                      format(dataNascimento, "dd/MM/yyyy", { locale: ptBR })
                     ) : (
                       <span>Selecione a data</span>
                     )}
@@ -293,9 +306,10 @@ const MapaLeitos = () => {
                   <Calendar
                     mode="single"
                     locale={ptBR}
-                    selected={pacienteSelecionado ? new Date(pacienteSelecionado.dataNascimento) : null}
+                    selected={dataNascimento}
                     onSelect={(date) => {
-                      setValue("dataNascimento", date)
+                      setDataNascimento(date);
+                      setValue("dataNascimento", date);
                     }}
                     disabled={(date) =>
                       date > new Date()
@@ -370,8 +384,8 @@ const MapaLeitos = () => {
               {pacientes.map(paciente => (
                 <TableRow key={paciente.id}>
                   <TableCell>{paciente.nomeCompleto}</TableCell>
-                  <TableCell>{leitos.find(leito => leito.id === paciente.leitoId)?.codigo || 'N/A'}</TableCell>
-                  <TableCell>{setores.find(setor => setor.id === paciente.setorId)?.nome || 'N/A'}</TableCell>
+                  <TableCell>{leitos.find(leito => leito.id === paciente.leitoId)?.codigoLeito || 'N/A'}</TableCell>
+                  <TableCell>{setores.find(setor => setor.id === paciente.setorId)?.nomeSetor || 'N/A'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="secondary" size="sm" onClick={() => setPacienteSelecionado(paciente)}>
                       Editar
