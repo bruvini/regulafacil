@@ -21,6 +21,7 @@ import { RemanejamentosPendentesBloco } from "@/components/RemanejamentosPendent
 // Novos modals
 import { PanoramaSelecaoPeriodoModal } from "@/components/modals/PanoramaSelecaoPeriodoModal";
 import { PanoramaVisualizacaoModal } from "@/components/modals/PanoramaVisualizacaoModal";
+import { JustificativaHomonimoModal } from "@/components/modals/JustificativaHomonimoModal";
 
 const RegulacaoLeitos = () => {
   const { loading, listas, modals, handlers, filtrosProps } = useRegulacaoLogic();
@@ -34,6 +35,12 @@ const RegulacaoLeitos = () => {
     inicio: "",
     fim: "",
   });
+  const [justificativaOpen, setJustificativaOpen] = useState(false);
+  const [regulacaoPendente, setRegulacaoPendente] = useState<{
+    leitoDestino: any;
+    observacoes: string;
+    motivoAlteracao?: string;
+  } | null>(null);
 
   const handleAbrirPanorama = () => {
     setPanoramaSelecaoOpen(true);
@@ -42,6 +49,32 @@ const RegulacaoLeitos = () => {
   const handleGerarPanorama = (dataInicio: string, dataFim: string) => {
     setPeriodoSelecionado({ inicio: dataInicio, fim: dataFim });
     setPanoramaVisualizacaoOpen(true);
+  };
+
+  const handleConfirmarRegulacao = (
+    leitoDestino: any,
+    observacoes: string,
+    motivoAlteracao?: string
+  ) => {
+    if (leitoDestino.temHomonimo) {
+      setRegulacaoPendente({ leitoDestino, observacoes, motivoAlteracao });
+      setJustificativaOpen(true);
+    } else {
+      handlers.handleConfirmarRegulacao(leitoDestino, observacoes, motivoAlteracao);
+    }
+  };
+
+  const handleConfirmarJustificativa = (justificativa: string) => {
+    if (regulacaoPendente) {
+      handlers.handleConfirmarRegulacao(
+        regulacaoPendente.leitoDestino,
+        regulacaoPendente.observacoes,
+        regulacaoPendente.motivoAlteracao,
+        justificativa
+      );
+      setRegulacaoPendente(null);
+    }
+    setJustificativaOpen(false);
   };
 
   // Substitua todo este bloco 'useMemo' pelo novo código
@@ -288,7 +321,7 @@ const RegulacaoLeitos = () => {
           totalPendentes={listas.totalPendentes}
           onProcessFileRequest={handlers.handleProcessFileRequest}
           onConfirmSync={handlers.handleConfirmSync}
-          onConfirmarRegulacao={handlers.handleConfirmarRegulacao}
+          onConfirmarRegulacao={handleConfirmarRegulacao}
           onConfirmarCancelamento={handlers.onConfirmarCancelamento}
           onConfirmarTransferenciaExterna={
             handlers.handleConfirmarTransferenciaExterna
@@ -302,6 +335,17 @@ const RegulacaoLeitos = () => {
           setGerenciarTransferenciaOpen={handlers.setGerenciarTransferenciaOpen}
           setResumoModalOpen={handlers.setResumoModalOpen}
           setSugestoesModalOpen={handlers.setSugestoesModalOpen}
+        />
+
+        <JustificativaHomonimoModal
+          open={justificativaOpen}
+          onOpenChange={(open) => {
+            if (!open) setRegulacaoPendente(null);
+            setJustificativaOpen(open);
+          }}
+          onConfirm={handleConfirmarJustificativa}
+          pacienteNome={modals.pacienteParaRegular?.nomeCompleto || ''}
+          leitoCodigo={regulacaoPendente?.leitoDestino.codigoLeito || ''}
         />
 
         {/* Novos Modais de Panorama */}

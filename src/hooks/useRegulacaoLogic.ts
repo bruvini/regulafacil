@@ -93,7 +93,7 @@ const registrarHistoricoRegulacao = async (
     };
 
     if (tipoEvento === 'criada') {
-        const docRef = await addDoc(collection(db, "regulacoesRegulaFacil"), {
+        const payload: any = {
             pacienteId: dados.paciente.id,
             pacienteNome: dados.paciente.nomeCompleto,
             setorOrigemNome: dados.paciente.setorOrigem,
@@ -105,7 +105,11 @@ const registrarHistoricoRegulacao = async (
             criadaEm: agora,
             criadaPor: usuario,
             historicoEventos: [evento],
-        });
+        };
+        if (dados.justificativaHomonimo) {
+            payload.justificativaHomonimo = dados.justificativaHomonimo;
+        }
+        const docRef = await addDoc(collection(db, "regulacoesRegulaFacil"), payload);
         return docRef.id;
     }
 
@@ -458,7 +462,8 @@ const registrarHistoricoRegulacao = async (
   const handleConfirmarRegulacao = async (
     leitoDestino: any,
     observacoes: string,
-    motivoAlteracao?: string
+    motivoAlteracao?: string,
+    justificativaHomonimo?: string
   ) => {
       if (!userData) {
           toast({ title: "Aguarde", description: "Carregando dados do usuário...", variant: "default" });
@@ -494,6 +499,7 @@ const registrarHistoricoRegulacao = async (
                 paciente: pacienteParaRegular,
                 leitoDestino: leitoDestino,
                 modoRegulacao: modoRegulacao,
+                justificativaHomonimo,
                 detalhesLog: `Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`,
             });
         }
@@ -521,7 +527,13 @@ const registrarHistoricoRegulacao = async (
             });
         }
 
-        registrarLog(logMessage || `Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`, "Regulação de Leitos");
+        const baseLog =
+          logMessage ||
+          `Regulou ${pacienteParaRegular.nomeCompleto} para o leito ${leitoDestino.codigoLeito}.`;
+        const logComJustificativa = justificativaHomonimo
+          ? `${baseLog} Justificativa homônimo: ${justificativaHomonimo}`
+          : baseLog;
+        registrarLog(logComJustificativa, "Regulação de Leitos");
         toast({ title: isAlteracaoMode ? "Alteração Confirmada!" : "Regulação Confirmada!", description: "A mensagem foi copiada para a área de transferência." });
 
         setRegulacaoModalOpen(false);

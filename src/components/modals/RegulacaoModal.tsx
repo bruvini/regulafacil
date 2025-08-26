@@ -7,12 +7,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AlertTriangle, Copy, CheckCircle, BedDouble } from 'lucide-react';
+import { AlertTriangle, Copy, CheckCircle, BedDouble, Users2 } from 'lucide-react';
 import { Paciente } from '@/types/hospital'; // CORREÇÃO: Importa o tipo correto
-import { useLeitoFinder } from '@/hooks/useLeitoFinder';
+import { useLeitoFinder, LeitoCompativel } from '@/hooks/useLeitoFinder';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface RegulacaoModalProps {
   open: boolean;
@@ -36,8 +42,8 @@ const calcularIdade = (dataNascimento?: string): string => {
 export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao, isAlteracao = false, modo = 'normal' }: RegulacaoModalProps) => {
   const { findAvailableLeitos } = useLeitoFinder();
   const { toast } = useToast();
-  const [leitosDisponiveis, setLeitosDisponiveis] = useState<any[]>([]);
-  const [leitoSelecionado, setLeitoSelecionado] = useState<any | null>(null);
+  const [leitosDisponiveis, setLeitosDisponiveis] = useState<LeitoCompativel[]>([]);
+  const [leitoSelecionado, setLeitoSelecionado] = useState<LeitoCompativel | null>(null);
   const [etapa, setEtapa] = useState(1);
   const [observacoes, setObservacoes] = useState('');
   const [motivoAlteracao, setMotivoAlteracao] = useState('');
@@ -75,10 +81,10 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
     return leitosDisponiveis.reduce((acc, leito) => {
       (acc[leito.setorNome] = acc[leito.setorNome] || []).push(leito);
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, LeitoCompativel[]>);
   }, [leitosDisponiveis]);
 
-  const handleSelectLeito = (leito: any) => {
+  const handleSelectLeito = (leito: LeitoCompativel) => {
     setLeitoSelecionado(leito);
     setEtapa(isAlteracao ? 3 : 2);
   };
@@ -204,9 +210,9 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="space-y-2">
-                      {(leitos as any[]).map(leito => (
-                        <Card 
-                          key={leito.id} 
+                      {(leitos as LeitoCompativel[]).map(leito => (
+                        <Card
+                          key={leito.id}
                           className="cursor-pointer hover:bg-muted/50 transition-colors"
                           onClick={() => handleSelectLeito(leito)}
                         >
@@ -217,6 +223,23 @@ Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
                                 <span className="font-medium">{leito.codigoLeito}</span>
                                 {leito.leitoPCP && <Badge variant="outline">PCP</Badge>}
                                 {leito.leitoIsolamento && <Badge variant="destructive">Isolamento</Badge>}
+                                {leito.temHomonimo && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge variant="destructive" className="flex items-center gap-1">
+                                          <Users2 className="h-3 w-3" />
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>
+                                          Alerta: Já existe um paciente com o mesmo primeiro nome neste
+                                          quarto.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </div>
                               <Badge variant={leito.statusLeito === 'Vago' ? 'default' : 'secondary'}>
                                 {leito.statusLeito}

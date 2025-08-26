@@ -2,16 +2,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
-export interface Regulacao {
-  id: string;
-  status: 'Pendente' | 'Concluída' | 'Cancelada';
-  criadaEm: string; // ISO string
-  concluidaEm?: string; // ISO string
-  setorOrigemNome: string;
-  setorDestinoNome: string;
-  historicoEventos: Array<{ evento: string; timestamp: string }>;
-}
+import { Regulacao } from '@/types/hospital';
 
 export const useRegulacoes = () => {
   const [regulacoes, setRegulacoes] = useState<Regulacao[]>([]);
