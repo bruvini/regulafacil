@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Download, FileText, Lightbulb, BarChart3 } from 'lucide-react';
+import { Download, FileText, Lightbulb, BarChart3, Stethoscope } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AcoesRapidasProps {
@@ -14,16 +14,18 @@ interface AcoesRapidasProps {
   onPassagemClick?: () => void;
   onSugestoesClick?: () => void;
   onPanoramaClick?: () => void;
+  onRelatorioEspecialidadeClick?: () => void;
   showAllButtons?: boolean;
   sugestoesDisponiveis?: boolean;
   panoramaDisponivel?: boolean;
 }
 
-export const AcoesRapidas = ({ 
-  onImportarClick, 
-  onPassagemClick, 
+export const AcoesRapidas = ({
+  onImportarClick,
+  onPassagemClick,
   onSugestoesClick,
   onPanoramaClick,
+  onRelatorioEspecialidadeClick,
   showAllButtons = false,
   sugestoesDisponiveis = false,
   panoramaDisponivel = false
@@ -45,6 +47,23 @@ export const AcoesRapidas = ({
             <p>Importar pacientes MV</p>
           </TooltipContent>
         </Tooltip>
+
+        {onRelatorioEspecialidadeClick && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onRelatorioEspecialidadeClick}
+              >
+                <Stethoscope className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Ocupação por Especialidade</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         {showAllButtons && (
           <>
