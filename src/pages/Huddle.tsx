@@ -1,4 +1,3 @@
-
 import { PacientesAguardandoUTI } from '@/components/huddle/PacientesAguardandoUTI';
 import { PacientesEmFluxoDeAlta } from '@/components/huddle/PacientesEmFluxoDeAlta';
 import { InternacaoProlongada } from '@/components/huddle/InternacaoProlongada';
@@ -14,6 +13,9 @@ import { db } from '@/lib/firebase';
 import { toast } from '@/hooks/use-toast';
 import { Users } from 'lucide-react';
 import { Observacao } from '@/types/observacao';
+import { useState } from 'react';
+import { KanbanSquare } from 'lucide-react';
+import KanbanModal from '@/components/modals/KanbanModal';
 
 const Huddle = () => {
   const { pacientes, loading: pacientesLoading } = usePacientes();
@@ -102,6 +104,8 @@ const Huddle = () => {
     }
   };
 
+  const [showKanbanModal, setShowKanbanModal] = useState(false);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
@@ -120,7 +124,7 @@ const Huddle = () => {
           <div className="w-12 h-12 rounded-lg bg-medical-primary flex items-center justify-center">
             <Users className="h-6 w-6 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold text-medical-primary">
               Huddle - Panorama de Pacientes
             </h1>
@@ -128,6 +132,14 @@ const Huddle = () => {
               Acompanhamento de pacientes com necessidades específicas
             </p>
           </div>
+          <Button 
+            onClick={() => setShowKanbanModal(true)}
+            variant="medical"
+            className="flex items-center gap-2"
+          >
+            <KanbanSquare className="h-5 w-5" />
+            KANBAN NIR
+          </Button>
         </div>
 
         <Accordion type="multiple" className="space-y-4">
@@ -156,6 +168,11 @@ const Huddle = () => {
           />
         </Accordion>
       </div>
+
+      <KanbanModal
+        open={showKanbanModal}
+        onOpenChange={setShowKanbanModal}
+      />
     </div>
   );
 };
