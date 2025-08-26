@@ -1,30 +1,29 @@
+import { useMemo } from 'react';
+import { differenceInDays } from 'date-fns';
+import { Paciente } from '@/types/hospital';
+import { parseDateFromString } from '@/lib/utils';
 
-import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { Huddle } from '@/types/huddle';
-
-export const useHuddleList = () => {
-  const [huddleList, setHuddleList] = useState<Huddle[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const huddleRef = collection(db, 'huddleRegulaFacil');
-    const q = query(huddleRef, orderBy('data', 'desc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const huddleData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        data: doc.data().data?.toDate() || new Date()
-      })) as Huddle[];
-      
-      setHuddleList(huddleData);
-      setLoading(false);
+export const useHuddleList = (pacientes: Paciente[]) => {
+  const internacoesProlongadas = useMemo(() => {
+    return pacientes.filter(paciente => {
+      const dataInternacao = parseDateFromString(paciente.dataInternacao);
+      if (!dataInternacao) return false;
+      return differenceInDays(new Date(), dataInternacao) > 30;
     });
+  }, [pacientes]);
 
-    return () => unsubscribe();
-  }, []);
+  const altasPendentes = useMemo(() => {
+    return pacientes
+      .filter(p => p.altaPendente)
+      .reduce((acc, paciente) => {
+        const tipo = paciente.altaPendente!.tipo;
+        if (!acc[tipo]) {
+          acc[tipo] = [];
+        }
+        acc[tipo].push(paciente);
+        return acc;
+      }, {} as Record<string, Paciente[]>);
+  }, [pacientes]);
 
-  return { huddleList, loading };
+  return { internacoesProlongadas, altasPendentes };
 };

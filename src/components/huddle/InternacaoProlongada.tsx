@@ -5,10 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Calendar, MessageSquare } from 'lucide-react';
-import { format, differenceInDays, parse, isValid } from 'date-fns';
+import { format, differenceInDays, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ObservacoesAprimoradaModal } from '@/components/modals/ObservacoesAprimoradaModal';
 import { Paciente, Leito, Setor } from '@/types/hospital';
+import { parseDateFromString } from '@/lib/utils';
 
 interface Props {
   pacientes: Paciente[];
@@ -19,25 +20,12 @@ interface Props {
 }
 
 const parseDataInternacao = (dataStr: string): Date => {
-  // Primeiro tenta como ISO string (formato padrão)
-  let data = new Date(dataStr);
-  if (isValid(data)) {
-    return data;
-  }
+  const parsed = parseDateFromString(dataStr);
+  if (parsed) return parsed;
 
-  // Se não for válida, tenta como formato brasileiro DD/MM/YYYY
-  data = parse(dataStr, 'dd/MM/yyyy', new Date());
-  if (isValid(data)) {
-    return data;
-  }
+  const isoDate = new Date(dataStr);
+  if (isValid(isoDate)) return isoDate;
 
-  // Como último recurso, tenta DD/MM/YYYY HH:mm
-  data = parse(dataStr, 'dd/MM/yyyy HH:mm', new Date());
-  if (isValid(data)) {
-    return data;
-  }
-
-  // Se ainda não conseguir, retorna data atual como fallback
   console.warn('Data de internação inválida:', dataStr);
   return new Date();
 };

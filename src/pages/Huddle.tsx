@@ -6,6 +6,8 @@ import { PacientesComObservacoes } from '@/components/huddle/PacientesComObserva
 import { usePacientes } from '@/hooks/usePacientes';
 import { useLeitos } from '@/hooks/useLeitos';
 import { useSetores } from '@/hooks/useSetores';
+import { useHuddleList } from '@/hooks/useHuddleList';
+import { AltaNoLeito } from '@/components/huddle/AltaNoLeito';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
 import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -18,6 +20,7 @@ const Huddle = () => {
   const { pacientes, loading: pacientesLoading } = usePacientes();
   const { leitos, loading: leitosLoading } = useLeitos();
   const { setores, loading: setoresLoading } = useSetores();
+  const { altasPendentes } = useHuddleList(pacientes);
   const { userData } = useAuth();
   const { registrarLog } = useAuditoria();
 
@@ -143,7 +146,7 @@ const Huddle = () => {
             onRemoverObservacao={handleRemoverObservacao}
           />
           
-          <InternacaoProlongada 
+          <InternacaoProlongada
             pacientes={pacientes}
             leitos={leitos}
             setores={setores}
@@ -151,7 +154,13 @@ const Huddle = () => {
             onRemoverObservacao={handleRemoverObservacao}
           />
 
-          <PacientesComObservacoes 
+          <AltaNoLeito
+            altasPendentes={altasPendentes}
+            leitos={leitos}
+            setores={setores}
+          />
+
+          <PacientesComObservacoes
             pacientes={pacientes}
             leitos={leitos}
             setores={setores}

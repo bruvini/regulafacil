@@ -7,6 +7,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Converte uma string de data no formato 'dd/MM/yyyy HH:mm' para um objeto Date.
+ * Retorna null se a data for inválida.
+ * @param dateString A data em formato de string.
+ */
+export const parseDateFromString = (dateString: string): Date | null => {
+  if (!dateString) return null;
+
+  // O 'dd/MM/yyyy HH:mm' é o formato exato que vem do Firestore e da planilha.
+  const parsedDate = parse(dateString, 'dd/MM/yyyy HH:mm', new Date());
+
+  return isValid(parsedDate) ? parsedDate : null;
+};
+
 export const formatarDuracao = (dataISOouString: string | Date | undefined | null): string => {
   if (!dataISOouString) return 'N/A';
 
