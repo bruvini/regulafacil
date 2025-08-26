@@ -1,3 +1,4 @@
+
 import { Observacao } from './observacao';
 
 export interface AltaLeitoInfo {
@@ -18,7 +19,6 @@ export interface Paciente {
   id: string;
   leitoId: string;
   setorId: string;
-  setorAtual?: string;
   nomeCompleto: string;
   dataNascimento: string;
   sexoPaciente: 'Masculino' | 'Feminino';
@@ -76,19 +76,16 @@ export interface HistoricoLeito {
 export interface InfoRegulacao {
   regulacaoId?: string;
   paraSetor: string;
-  paraSetorSigla?: string;
   paraLeito: string;
   observacoes?: string;
-  origemExterna?: string;
-  tipoReserva?: 'regulacao' | 'externo';
-  data?: string;
+  origemExterna?: string; // Novo campo para origem externa
+  tipoReserva?: 'regulacao' | 'externo'; // Novo campo para tipo de reserva
 }
 
 export interface Setor {
   id: string;
   nomeSetor: string;
   siglaSetor: string;
-  tipoUnidade?: string;
 }
 
 // Tipo para leito enriquecido com dados do paciente
@@ -145,10 +142,9 @@ export interface SolicitacaoCirurgicaFormData {
 // Informações básicas das regulações para listagens e auditoria
 export interface Regulacao {
   id: string;
-  pacienteId?: string;
   status: 'Pendente' | 'Concluída' | 'Cancelada';
-  criadaEm: string;
-  concluidaEm?: string;
+  criadaEm: string; // ISO string
+  concluidaEm?: string; // ISO string
   setorOrigemNome: string;
   setorDestinoNome: string;
   historicoEventos: Array<{ evento: string; timestamp: string }>;
