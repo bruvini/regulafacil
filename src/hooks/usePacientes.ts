@@ -7,15 +7,19 @@ import {
   addDoc,
   where,
   getDocs,
+  doc,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Paciente } from '@/types/hospital';
+import { Leito, Paciente } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
 import { reconciliarPacientesComPlanilha, PacientePlanilha, ImportacaoResumo } from '@/services/importacaoPacientes';
+import { useLeitos } from './useLeitos';
 
 export const usePacientes = () => {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(true);
+  const { vincularPacienteLeito } = useLeitos();
 
   useEffect(() => {
     // A consulta é na nova coleção 'pacientesRegulaFacil'
@@ -52,43 +56,54 @@ export const usePacientes = () => {
   }, []); // O array de dependências vazio garante que o listener seja configurado apenas uma vez.
 
   const criarPacienteManual = async (dadosPaciente: Omit<Paciente, 'id'>): Promise<string | null> => {
-    // 1. Padroniza o nome para maiúsculas para a verificação e salvamento
     const nomeEmMaiusculo = dadosPaciente.nomeCompleto.toUpperCase();
 
     try {
-      // 2. Cria a query para verificar duplicatas
       const q = query(
         collection(db, 'pacientesRegulaFacil'),
         where('nomeCompleto', '==', nomeEmMaiusculo),
         where('dataNascimento', '==', dadosPaciente.dataNascimento)
       );
 
-      // 3. Executa a query
       const querySnapshot = await getDocs(q);
 
-      // 4. Se o resultado não for vazio, um duplicado existe
       if (!querySnapshot.empty) {
+        const pacienteExistente = querySnapshot.docs[0];
+
+        // Verifica se há possibilidade de dessincronização
+        if (dadosPaciente.leitoId) {
+          const leitoSnap = await getDoc(doc(db, 'leitosRegulaFacil', dadosPaciente.leitoId));
+          if (leitoSnap.exists()) {
+            const leitoData = leitoSnap.data() as Leito;
+            const historico = leitoData.historicoMovimentacao || [];
+            const ultimo = historico[historico.length - 1];
+            if (!ultimo.pacienteId || ultimo.statusLeito === 'Vago') {
+              await vincularPacienteLeito(dadosPaciente.leitoId, pacienteExistente.id, dadosPaciente.setorId);
+              return pacienteExistente.id;
+            }
+          }
+        }
+
         toast({
-          title: "Erro de Duplicidade",
-          description: "Este paciente já está cadastrado no sistema (mesmo nome e data de nascimento).",
-          variant: "destructive",
+          title: 'Erro de Duplicidade',
+          description: 'Este paciente já está cadastrado no sistema (mesmo nome e data de nascimento).',
+          variant: 'destructive',
         });
-        return null; // Retorna nulo para indicar que a criação falhou
+        return null;
       }
 
-      // 5. Se não houver duplicatas, cria o novo paciente com o nome padronizado
+      const { leitoId, setorId, ...resto } = dadosPaciente;
       const docRef = await addDoc(collection(db, 'pacientesRegulaFacil'), {
-        ...dadosPaciente,
-        nomeCompleto: nomeEmMaiusculo, // Garante que o nome salvo esteja em maiúsculas
+        ...resto,
+        nomeCompleto: nomeEmMaiusculo,
       });
       return docRef.id;
-
     } catch (error) {
-      console.error("Erro ao criar paciente manualmente:", error);
+      console.error('Erro ao criar paciente manualmente:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível criar o paciente.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível criar o paciente.',
+        variant: 'destructive',
       });
       throw error;
     }
