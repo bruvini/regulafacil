@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, orderBy, addDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export interface Regulacao {
@@ -30,25 +30,5 @@ export const useRegulacoes = () => {
     return () => unsubscribe();
   }, []);
 
-  // Adiciona uma nova regulação básica (mantém compatibilidade com quem chama este hook)
-  const criarRegulacao = async (dados: {
-    pacienteId: string;
-    leitoDestinoId: string;
-    observacoes?: string;
-    motivoAlteracao?: string;
-    justificativaHomonimo?: string;
-  }) => {
-    await addDoc(collection(db, 'regulacoesRegulaFacil'), {
-      status: 'Pendente',
-      criadaEm: new Date().toISOString(),
-      historicoEventos: [],
-      pacienteId: dados.pacienteId,
-      leitoDestinoId: dados.leitoDestinoId,
-      observacoes: dados.observacoes || '',
-      motivoAlteracao: dados.motivoAlteracao || null,
-      justificativaHomonimo: dados.justificativaHomonimo || null,
-    });
-  };
-
-  return { regulacoes, loading, criarRegulacao };
+  return { regulacoes, loading };
 };

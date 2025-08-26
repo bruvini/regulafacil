@@ -74,17 +74,6 @@ export interface InfoRegulacao {
   tipoReserva?: 'regulacao' | 'externo'; // Novo campo para tipo de reserva
 }
 
-export interface Regulacao {
-  id?: string;
-  pacienteId: string;
-  leitoDestinoId: string;
-  observacoes?: string;
-  motivoAlteracao?: string;
-  justificativaHomonimo?: string; // Novo campo para justificativa de homônimo
-  dataRegulacao: Date;
-  status: 'ativa' | 'cancelada' | 'efetivada';
-}
-
 export interface Setor {
   id: string;
   nomeSetor: string;
