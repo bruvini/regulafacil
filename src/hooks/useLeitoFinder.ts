@@ -1,8 +1,16 @@
 
 import { useMemo, useCallback } from 'react';
 import { useSetores } from './useSetores';
-import { Leito, DadosPaciente } from '@/types/hospital';
+import { Leito, DadosPaciente, HistoricoLeito } from '@/types/hospital';
 import { parse, differenceInHours, isValid } from 'date-fns';
+
+export interface LeitoCompativel extends Leito {
+  setorNome: string;
+  setorId: string;
+  statusLeito: HistoricoLeito['statusLeito'];
+  dadosPaciente?: DadosPaciente | null;
+  temHomonimo: boolean;
+}
 
 // Função para calcular idade, já que a usaremos aqui
 const calcularIdade = (dataNascimento: string): number => {
@@ -118,76 +126,118 @@ const verificarCompatibilidadeIsolamento = (
 export const useLeitoFinder = () => {
     const { setores } = useSetores();
 
-    const findAvailableLeitos = useCallback((paciente: DadosPaciente, modo: 'normal' | 'uti' = 'normal') => {
-        if (!paciente || !setores) return [];
+    const findAvailableLeitos = useCallback(
+        (paciente: DadosPaciente, modo: 'normal' | 'uti' = 'normal'): LeitoCompativel[] => {
+            if (!paciente || !setores) return [];
 
-        const todosLeitosComSetor = setores.flatMap(setor => 
-            setor.leitos.map(leito => ({ ...leito, setorNome: setor.nomeSetor, setorId: setor.id! }))
-        );
+            const primeiroNomePaciente = paciente.nomeCompleto
+                .split(' ')[0]
+                .toUpperCase();
 
-        // Se o modo for 'uti', filtre apenas leitos da UTI
-        if (modo === 'uti') {
-            return todosLeitosComSetor.filter(leito => {
-                return leito.setorNome === 'UTI' && ['Vago', 'Higienizacao'].includes(leito.statusLeito);
-            });
-        }
-
-        const setoresExcluidos = [
-            "UTI", "CC - PRE OPERATORIO", "CC - RECUPERAÇÃO", "CC - SALAS CIRURGICAS",
-            "PS DECISÃO CIRURGICA", "PS DECISÃO CLINICA", "SALA LARANJA", 
-            "UNID. AVC AGUDO", "UNID. DE AVC - INTEGRAL"
-        ];
-
-        const setoresEnfermariaPermitidos = [
-            "UNID. CLINICA MEDICA", "UNID. CIRURGICA", "UNID. NEFROLOGIA TRANSPLANTE", 
-            "UNID. JS ORTOPEDIA", "UNID. ONCOLOGIA", "UNID. INT. GERAL - UIG"
-        ];
-
-        const isolamentosPacienteStr = paciente.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
-
-        const leitosDisponiveis = todosLeitosComSetor.filter(leito => {
-            // Filtro de enfermaria permitida para modo normal
-            if (modo === 'normal' && !setoresEnfermariaPermitidos.includes(leito.setorNome)) {
-                return false;
-            }
-            
-            // 1. Filtro Básico: Apenas leitos vagos ou em higienização
-            if (!['Vago', 'Higienizacao'].includes(leito.statusLeito)) return false;
-            
-            // 2. Filtro de Setor Excluído
-            if (setoresExcluidos.includes(leito.setorNome)) return false;
-
-            const quartoId = getQuartoId(leito.codigoLeito);
-            const companheirosDeQuarto = todosLeitosComSetor.filter(
-                l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado'
+            const todosLeitosComSetor = setores.flatMap(setor =>
+                setor.leitos.map(leito => ({ ...leito, setorNome: setor.nomeSetor, setorId: setor.id! }))
             );
 
-            // 3. Lógicas de isolamento e sexo com regra de exceção para o quarto 504
-            const isolamentosCompanheirosStr = companheirosDeQuarto.length > 0
-                ? companheirosDeQuarto[0].dadosPaciente?.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || ''
-                : '';
-
-            if (!verificarCompatibilidadeIsolamento(leito, isolamentosPacienteStr, isolamentosCompanheirosStr, companheirosDeQuarto)) {
-                return false;
+            // Se o modo for 'uti', filtre apenas leitos da UTI
+            if (modo === 'uti') {
+                return todosLeitosComSetor
+                    .filter(leito => leito.setorNome === 'UTI' && ['Vago', 'Higienizacao'].includes(leito.statusLeito))
+                    .map(leito => ({ ...leito, temHomonimo: false }));
             }
 
-            if (!verificarCompatibilidadeSexo(leito, paciente, companheirosDeQuarto)) {
-                return false;
-            }
+            const setoresExcluidos = [
+                'UTI',
+                'CC - PRE OPERATORIO',
+                'CC - RECUPERAÇÃO',
+                'CC - SALAS CIRURGICAS',
+                'PS DECISÃO CIRURGICA',
+                'PS DECISÃO CLINICA',
+                'SALA LARANJA',
+                'UNID. AVC AGUDO',
+                'UNID. DE AVC - INTEGRAL'
+            ];
 
-            // 5. Filtro de Leito PCP
-            if (leito.leitoPCP) {
-                const idade = calcularIdade(paciente.dataNascimento);
-                if (idade < 18 || idade > 60 || isolamentosPacienteStr) {
-                    return false;
+            const setoresEnfermariaPermitidos = [
+                'UNID. CLINICA MEDICA',
+                'UNID. CIRURGICA',
+                'UNID. NEFROLOGIA TRANSPLANTE',
+                'UNID. JS ORTOPEDIA',
+                'UNID. ONCOLOGIA',
+                'UNID. INT. GERAL - UIG'
+            ];
+
+            const isolamentosPacienteStr =
+                paciente.isolamentosVigentes?.map(i => i.sigla).sort().join(',') || '';
+
+            const leitosDisponiveis: LeitoCompativel[] = [];
+
+            todosLeitosComSetor.forEach(leito => {
+                // Filtro de enfermaria permitida para modo normal
+                if (modo === 'normal' && !setoresEnfermariaPermitidos.includes(leito.setorNome)) {
+                    return;
                 }
-            }
 
-            return true; // Se passou por todas as regras, o leito está disponível
-        });
+                // 1. Filtro Básico: Apenas leitos vagos ou em higienização
+                if (!['Vago', 'Higienizacao'].includes(leito.statusLeito)) return;
 
-        return leitosDisponiveis;
-    }, [setores]);
+                // 2. Filtro de Setor Excluído
+                if (setoresExcluidos.includes(leito.setorNome)) return;
+
+                const quartoId = getQuartoId(leito.codigoLeito);
+                const companheirosDeQuarto = todosLeitosComSetor.filter(
+                    l =>
+                        getQuartoId(l.codigoLeito) === quartoId &&
+                        l.statusLeito === 'Ocupado' &&
+                        l.dadosPaciente
+                );
+
+                // 3. Lógicas de isolamento e sexo com regra de exceção para o quarto 504
+                const isolamentosCompanheirosStr =
+                    companheirosDeQuarto.length > 0
+                        ?
+                              companheirosDeQuarto[0].dadosPaciente?.isolamentosVigentes
+                                  ?.map(i => i.sigla)
+                                  .sort()
+                                  .join(',') || ''
+                        : '';
+
+                if (
+                    !verificarCompatibilidadeIsolamento(
+                        leito,
+                        isolamentosPacienteStr,
+                        isolamentosCompanheirosStr,
+                        companheirosDeQuarto
+                    )
+                ) {
+                    return;
+                }
+
+                if (!verificarCompatibilidadeSexo(leito, paciente, companheirosDeQuarto)) {
+                    return;
+                }
+
+                // 5. Filtro de Leito PCP
+                if (leito.leitoPCP) {
+                    const idade = calcularIdade(paciente.dataNascimento);
+                    if (idade < 18 || idade > 60 || isolamentosPacienteStr) {
+                        return;
+                    }
+                }
+
+                const temHomonimo = companheirosDeQuarto.some(c => {
+                    const nome = c.dadosPaciente?.nomeCompleto
+                        ?.split(' ')[0]
+                        ?.toUpperCase();
+                    return nome === primeiroNomePaciente;
+                });
+
+                leitosDisponiveis.push({ ...leito, temHomonimo });
+            });
+
+            return leitosDisponiveis;
+        },
+        [setores]
+    );
 
     // Nova função para gerar sugestões inteligentes
     const generateSugestoes = useCallback((pacientesPendentes: any[]) => {

@@ -131,6 +131,18 @@ export interface SolicitacaoCirurgicaFormData {
   dataPrevisaCirurgia: Date;
 }
 
+// Informações básicas das regulações para listagens e auditoria
+export interface Regulacao {
+  id: string;
+  status: 'Pendente' | 'Concluída' | 'Cancelada';
+  criadaEm: string; // ISO string
+  concluidaEm?: string; // ISO string
+  setorOrigemNome: string;
+  setorDestinoNome: string;
+  historicoEventos: Array<{ evento: string; timestamp: string }>;
+  justificativaHomonimo?: string;
+}
+
 // Alias for backward compatibility
 export interface DadosPaciente extends Paciente {}
 export interface HistoricoMovimentacao extends HistoricoLeito {}
