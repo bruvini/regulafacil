@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from '@/components/ui/table';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+
 import { Plus, Calendar } from 'lucide-react';
 import { useKanban } from '@/hooks/useKanban';
 import { usePacientes } from '@/hooks/usePacientes';
