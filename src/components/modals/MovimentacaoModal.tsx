@@ -10,26 +10,35 @@ import { BedDouble } from 'lucide-react';
 import { useSetores } from '@/hooks/useSetores';
 import { Leito } from '@/types/hospital';
 
+type LeitoDestino = Leito & { setorId: string; setorNome: string };
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pacienteNome: string;
-  onConfirm: (leitoDestino: any) => void;
+  onConfirm: (leitoDestino: LeitoDestino) => void;
 }
 
 export const MovimentacaoModal = ({ open, onOpenChange, pacienteNome, onConfirm }: Props) => {
   const { setores } = useSetores();
   const [busca, setBusca] = useState('');
-  const [leitoSelecionado, setLeitoSelecionado] = useState<any | null>(null);
+  const [leitoSelecionado, setLeitoSelecionado] = useState<LeitoDestino | null>(null);
 
   const leitosVagosAgrupados = useMemo(() => {
-    const agrupados: Record<string, any[]> = {};
+    const agrupados: Record<string, LeitoDestino[]> = {};
     setores.forEach(setor => {
-      const leitosFiltrados = setor.leitos.filter(leito => 
-        leito.statusLeito === 'Vago' && leito.codigoLeito.toLowerCase().includes(busca.toLowerCase())
-      );
+      const leitosFiltrados = setor.leitos
+        .filter(leito =>
+          ['Vago', 'Higienizacao'].includes(leito.statusLeito) &&
+          leito.codigoLeito.toLowerCase().includes(busca.toLowerCase())
+        )
+        .map(l => ({
+          ...l,
+          setorId: setor.id,
+          setorNome: setor.nomeSetor
+        }));
       if (leitosFiltrados.length > 0) {
-        agrupados[setor.nomeSetor] = leitosFiltrados.map(l => ({...l, setorId: setor.id, setorNome: setor.nomeSetor}));
+        agrupados[setor.nomeSetor] = leitosFiltrados;
       }
     });
     return agrupados;

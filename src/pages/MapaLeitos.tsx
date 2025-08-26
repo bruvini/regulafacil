@@ -46,8 +46,14 @@ const MapaLeitos = () => {
   const [reservaModalOpen, setReservaModalOpen] = useState(false);
   const [relatorioEspecialidadeOpen, setRelatorioEspecialidadeOpen] = useState(false);
   const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
-  const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
-  const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
+  interface PacienteMoverInfo {
+    dados: Paciente;
+    leitoOrigemId: string;
+    setorOrigemId: string;
+  }
+
+  const [pacienteParaMover, setPacienteParaMover] = useState<PacienteMoverInfo | null>(null);
+  const [pacienteParaObs, setPacienteParaObs] = useState<LeitoEnriquecido | null>(null);
   const [pacienteParaAltaNoLeito, setPacienteParaAltaNoLeito] = useState<LeitoEnriquecido | null>(null);
   const [leitoParaAcao, setLeitoParaAcao] = useState<LeitoEnriquecido | null>(null);
   const [altaPendenteModalOpen, setAltaPendenteModalOpen] = useState(false);
@@ -120,7 +126,15 @@ const MapaLeitos = () => {
   }, [todosLeitosEnriquecidos]);
 
   // Funções de confirmação para internação e reserva
-  const handleConfirmarInternacao = async (dadosForm: any) => {
+  interface InternacaoFormData {
+    nomeCompleto: string;
+    dataNascimento: string;
+    sexoPaciente: 'Masculino' | 'Feminino';
+    dataInternacao: string;
+    especialidadePaciente: string;
+  }
+
+  const handleConfirmarInternacao = async (dadosForm: InternacaoFormData) => {
     if (!leitoParaAcao) return;
 
     try {
@@ -151,7 +165,14 @@ const MapaLeitos = () => {
     }
   };
 
-  const handleConfirmarReserva = async (dadosForm: any) => {
+  interface ReservaExternaFormData {
+    nomeCompleto: string;
+    dataNascimento: string;
+    sexoPaciente: 'Masculino' | 'Feminino';
+    origem: string;
+  }
+
+  const handleConfirmarReserva = async (dadosForm: ReservaExternaFormData) => {
     if (!leitoParaAcao) return;
 
     try {
@@ -351,13 +372,17 @@ const MapaLeitos = () => {
       });
 
       const leitoDestinoRef = doc(db, 'leitosRegulaFacil', leitoDestino.id);
-      batch.update(leitoDestinoRef, {
+      const updateDestino: Record<string, unknown> = {
         historicoMovimentacao: arrayUnion({
           statusLeito: 'Ocupado',
           dataAtualizacaoStatus: agora,
           pacienteId: pacienteParaMover.dados.id,
         }),
-      });
+      };
+      if (leitoDestino.prioridadeHigienizacao) {
+        updateDestino.prioridadeHigienizacao = false;
+      }
+      batch.update(leitoDestinoRef, updateDestino);
 
       const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteParaMover.dados.id);
       batch.update(pacienteRef, { leitoId: leitoDestino.id, setorId: leitoDestino.setorId });

@@ -3,6 +3,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import InputMask from 'react-input-mask';
 import {
   Dialog,
   DialogContent,
@@ -93,6 +94,14 @@ export function InternacaoManualModal({ open, onOpenChange, onConfirm, leito }: 
     onOpenChange(false);
   };
 
+  const sanitizeNome = (valor: string) =>
+    valor
+      .normalize('NFD')
+      .replace(/[^\p{Letter}\s]/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase();
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -111,7 +120,11 @@ export function InternacaoManualModal({ open, onOpenChange, onConfirm, leito }: 
                 <FormItem>
                   <FormLabel>Nome Completo *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Digite o nome completo" {...field} />
+                    <Input
+                      placeholder="Digite o nome completo"
+                      {...field}
+                      onChange={e => field.onChange(sanitizeNome(e.target.value))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -125,10 +138,15 @@ export function InternacaoManualModal({ open, onOpenChange, onConfirm, leito }: 
                 <FormItem>
                   <FormLabel>Data de Nascimento *</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="DD/MM/AAAA"
-                      {...field}
-                    />
+                    <InputMask
+                      mask="99/99/9999"
+                      value={field.value}
+                      onChange={field.onChange}
+                    >
+                      {(inputProps: React.InputHTMLAttributes<HTMLInputElement>) => (
+                        <Input {...inputProps} placeholder="DD/MM/AAAA" />
+                      )}
+                    </InputMask>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
