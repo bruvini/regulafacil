@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { usePacientes } from './usePacientes';
 import { useRegulacoes } from './useRegulacoes';
 import { useFiltrosRegulacao } from './useFiltrosRegulacao';
-import { useSolicitacoesCirurgicas } from './useCirurgias';
+import { useCirurgias } from './useCirurgias';
 import { useAuditoria } from './useAuditoria';
 import { useToast } from '@/hooks/use-toast';
 import { Paciente } from '@/types/hospital';
@@ -11,7 +11,7 @@ import { Paciente } from '@/types/hospital';
 export const useRegulacaoLogic = () => {
   const { pacientes, loading: loadingPacientes } = usePacientes();
   const { regulacoes, criarRegulacao, loading: loadingRegulacoes } = useRegulacoes();
-  const { solicitacoesCirurgicas } = useSolicitacoesCirurgicas();
+  const { cirurgias } = useCirurgias();
   const { registrarLog } = useAuditoria();
   const { toast } = useToast();
   const { filtros } = useFiltrosRegulacao();
@@ -90,7 +90,7 @@ export const useRegulacaoLogic = () => {
     if (!pacienteParaRegular) return;
 
     try {
-      await criarRegulacao({
+      await criarRegulacao?.({
         pacienteId: pacienteParaRegular.id,
         leitoDestinoId: leitoDestino.id,
         observacoes,
@@ -173,7 +173,7 @@ export const useRegulacaoLogic = () => {
     // Dados
     listas,
     regulacoes,
-    solicitacoesCirurgicas,
+    solicitacoesCirurgicas: cirurgias,
     pacientesRegulados,
     sugestoes,
     totalPendentes,

@@ -53,7 +53,7 @@ interface RegulacaoModalsProps {
   setTransferenciaModalOpen: (open: boolean) => void;
   setAlocacaoCirurgiaModalOpen: (open: boolean) => void;
   setGerenciarTransferenciaOpen: (open: boolean) => void;
-  setResumoMLongidalOpen: (open: boolean) => void;
+  setResumoModalOpen: (open: boolean) => void;
   setSugestoesModalOpen: (open: boolean) => void;
   setJustificativaHomonimoOpen: (open: boolean) => void;
 }
