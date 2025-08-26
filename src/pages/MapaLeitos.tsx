@@ -13,6 +13,7 @@ import { LimpezaPacientesModal } from '@/components/modals/LimpezaPacientesModal
 import { AltaNoLeitoModal } from '@/components/modals/AltaNoLeitoModal';
 import { InternacaoManualModal } from '@/components/modals/InternacaoManualModal';
 import { ReservaExternaModal } from '@/components/modals/ReservaExternaModal';
+import AltaPendenteModal from '@/components/modals/AltaPendenteModal';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -26,7 +27,7 @@ import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamen
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { RelatorioEspecialidadeModal } from '@/components/modals/RelatorioEspecialidadeModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
-import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido } from '@/types/hospital';
+import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido, InfoAltaPendente } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +50,8 @@ const MapaLeitos = () => {
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
   const [pacienteParaAltaNoLeito, setPacienteParaAltaNoLeito] = useState<LeitoEnriquecido | null>(null);
   const [leitoParaAcao, setLeitoParaAcao] = useState<LeitoEnriquecido | null>(null);
+  const [altaPendenteModalOpen, setAltaPendenteModalOpen] = useState(false);
+  const [pacienteParaAltaPendente, setPacienteParaAltaPendente] = useState<Paciente | null>(null);
 
   const { toast } = useToast();
   const { userData } = useAuth();
@@ -56,8 +59,8 @@ const MapaLeitos = () => {
 
   // --- Hooks de Dados (Nova Arquitetura) ---
   const { setores, loading: setoresLoading } = useSetores();
-  const { leitos, loading: leitosLoading, atualizarStatusLeito, vincularPacienteLeito } = useLeitos();
-  const { pacientes, loading: pacientesLoading, criarPacienteManual } = usePacientes();
+  const { leitos, loading: leitosLoading, atualizarStatusLeito, vincularPacienteLeito, togglePrioridadeHigienizacao } = useLeitos();
+  const { pacientes, loading: pacientesLoading, criarPacienteManual, atualizarStatusAltaPendente } = usePacientes();
   const loading = setoresLoading || leitosLoading || pacientesLoading;
 
   // Scroll to top on component mount
@@ -245,8 +248,8 @@ const MapaLeitos = () => {
 
     onSolicitarUTI: async (pacienteId: string) => {
       const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      await updateDoc(pacienteRef, { 
-        aguardaUTI: true, 
+      await updateDoc(pacienteRef, {
+        aguardaUTI: true,
         dataPedidoUTI: new Date().toISOString()
       });
       toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
@@ -299,6 +302,7 @@ const MapaLeitos = () => {
 
     onFinalizarHigienizacao: async (leitoId: string) => {
       await atualizarStatusLeito(leitoId, 'Vago');
+      await updateDoc(doc(db, 'leitosRegulaFacil', leitoId), { prioridadeHigienizacao: false });
       toast({ title: "Sucesso!", description: "Leito liberado e pronto para uso." });
     },
 
@@ -320,6 +324,15 @@ const MapaLeitos = () => {
         console.error('Erro ao enviar para higienização:', error);
         toast({ title: "Erro", description: "Erro ao enviar para higienização.", variant: "destructive" });
       }
+    },
+
+    onPriorizarHigienizacao: async (leitoId: string, prioridadeAtual: boolean) => {
+      await togglePrioridadeHigienizacao(leitoId, prioridadeAtual);
+    },
+
+    onAltaPendente: (paciente: Paciente) => {
+      setPacienteParaAltaPendente(paciente);
+      setAltaPendenteModalOpen(true);
     }
   };
 
@@ -355,7 +368,7 @@ const MapaLeitos = () => {
     setMovimentacaoModalOpen(false);
     setPacienteParaMover(null);
   };
-  
+
   const handleConfirmObs = async (obs: string) => {
     if (pacienteParaObs?.dadosPaciente && userData) {
       try {
@@ -381,6 +394,15 @@ const MapaLeitos = () => {
       }
     }
     setObsModalOpen(false);
+  };
+
+  const handleConfirmarAltaPendente = async (dados: InfoAltaPendente) => {
+    if (pacienteParaAltaPendente) {
+      await atualizarStatusAltaPendente(pacienteParaAltaPendente.id, dados);
+      toast({ title: 'Sucesso!', description: 'Pendência de alta registrada.' });
+    }
+    setAltaPendenteModalOpen(false);
+    setPacienteParaAltaPendente(null);
   };
 
   const handleDeleteObs = async (observacaoId: string) => {
@@ -593,6 +615,12 @@ const MapaLeitos = () => {
         observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []}
         onConfirm={handleConfirmObs}
         onDelete={handleDeleteObs}
+      />
+      <AltaPendenteModal
+        open={altaPendenteModalOpen}
+        onOpenChange={setAltaPendenteModalOpen}
+        pacienteNome={pacienteParaAltaPendente?.nomeCompleto || ''}
+        onConfirm={handleConfirmarAltaPendente}
       />
       <AltaNoLeitoModal
         open={altaNoLeitoModalOpen}

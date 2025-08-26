@@ -9,7 +9,7 @@ interface LeitoHigienizacao {
   codigoLeito: string;
   tempoEsperaFormatado: string;
   tempoEsperaMinutos: number;
-  higienizacaoPrioritaria?: boolean;
+  prioridadeHigienizacao?: boolean;
   setor: string;
 }
 
@@ -48,13 +48,13 @@ const ListaHigienizacao = ({ leitosAgrupados, onConcluir }: ListaHigienizacaoPro
                 <div
                   key={leito.id}
                   className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
-                    leito.higienizacaoPrioritaria
+                    leito.prioridadeHigienizacao
                       ? 'border-yellow-400 bg-yellow-50 shadow-md border-2'
                       : 'border-border bg-card hover:bg-muted/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    {leito.higienizacaoPrioritaria && (
+                    {leito.prioridadeHigienizacao && (
                       <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
                     )}
                     <div>
@@ -64,7 +64,7 @@ const ListaHigienizacao = ({ leitosAgrupados, onConcluir }: ListaHigienizacaoPro
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         <span>Aguardando há {leito.tempoEsperaFormatado}</span>
-                        {leito.higienizacaoPrioritaria && (
+                        {leito.prioridadeHigienizacao && (
                           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                             PRIORITÁRIO
                           </Badge>
