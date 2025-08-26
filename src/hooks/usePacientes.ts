@@ -9,17 +9,20 @@ import {
   getDocs,
   doc,
   getDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Leito, Paciente } from '@/types/hospital';
+import { Leito, Paciente, InfoAltaPendente } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
 import { reconciliarPacientesComPlanilha, PacientePlanilha, ImportacaoResumo } from '@/services/importacaoPacientes';
 import { useLeitos } from './useLeitos';
+import { useAuditoria } from './useAuditoria';
 
 export const usePacientes = () => {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [loading, setLoading] = useState(true);
   const { vincularPacienteLeito } = useLeitos();
+  const { registrarLog } = useAuditoria();
 
   useEffect(() => {
     // A consulta é na nova coleção 'pacientesRegulaFacil'
@@ -120,10 +123,29 @@ export const usePacientes = () => {
     }
   };
 
+  const atualizarStatusAltaPendente = async (pacienteId: string, dadosAlta: InfoAltaPendente | null) => {
+    try {
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+      await updateDoc(pacienteRef, { altaPendente: dadosAlta });
+
+      if (dadosAlta) {
+        registrarLog(
+          `Registrou pendência de alta para o paciente ${pacienteId}: ${dadosAlta.tipo}${dadosAlta.detalhe ? ' - ' + dadosAlta.detalhe : ''}.`,
+          'Mapa de Leitos'
+        );
+      } else {
+        registrarLog(`Removeu pendência de alta do paciente ${pacienteId}.`, 'Mapa de Leitos');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar pendência de alta:', error);
+    }
+  };
+
   return {
     pacientes,
     loading,
     criarPacienteManual,
     importarPacientesDaPlanilha, // exposto para uso na UI
+    atualizarStatusAltaPendente,
   };
 };

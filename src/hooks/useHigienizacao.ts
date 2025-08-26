@@ -96,11 +96,11 @@ export const useHigienizacao = () => {
   // Separar leitos prioritários dos normais
   const { leitosPrioritarios, leitosNormais } = useMemo(() => {
     const prioritarios = leitosProcessados
-      .filter(leito => leito.higienizacaoPrioritaria)
+      .filter(leito => leito.prioridadeHigienizacao)
       .sort((a, b) => b.tempoEsperaMinutos - a.tempoEsperaMinutos);
 
     const normais = leitosProcessados
-      .filter(leito => !leito.higienizacaoPrioritaria)
+      .filter(leito => !leito.prioridadeHigienizacao)
       .sort((a, b) => b.tempoEsperaMinutos - a.tempoEsperaMinutos);
 
     return { leitosPrioritarios: prioritarios, leitosNormais: normais };
@@ -120,8 +120,8 @@ export const useHigienizacao = () => {
     Object.keys(grupos).forEach(setor => {
       grupos[setor].sort((a, b) => {
         // Primeiro prioridade, depois tempo
-        if (a.higienizacaoPrioritaria && !b.higienizacaoPrioritaria) return -1;
-        if (!a.higienizacaoPrioritaria && b.higienizacaoPrioritaria) return 1;
+        if (a.prioridadeHigienizacao && !b.prioridadeHigienizacao) return -1;
+        if (!a.prioridadeHigienizacao && b.prioridadeHigienizacao) return 1;
         return b.tempoEsperaMinutos - a.tempoEsperaMinutos;
       });
     });
@@ -188,16 +188,16 @@ export const useHigienizacao = () => {
         duracaoMinutos,
         usuarioIdConclusao: userData.uid,
         usuarioNomeConclusao: userData.nomeCompleto,
-        prioritaria: leito.higienizacaoPrioritaria || false
+        prioritaria: leito.prioridadeHigienizacao || false
       });
 
       // 2. Atualizar status do leito para Vago
       await atualizarStatusLeito(leito.id, 'Vago');
 
       // 3. Limpar flag de prioridade se existir
-      if (leito.higienizacaoPrioritaria) {
+      if (leito.prioridadeHigienizacao) {
         await updateDoc(doc(db, 'leitosRegulaFacil', leito.id), {
-          higienizacaoPrioritaria: false
+          prioridadeHigienizacao: false
         });
       }
 

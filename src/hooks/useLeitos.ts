@@ -198,6 +198,22 @@ export const useLeitos = () => {
     }
   };
 
+  const togglePrioridadeHigienizacao = async (leitoId: string, prioridadeAtual: boolean) => {
+    try {
+      const leitoRef = doc(db, 'leitosRegulaFacil', leitoId);
+      await updateDoc(leitoRef, { prioridadeHigienizacao: !prioridadeAtual });
+      const leito = leitos.find(l => l.id === leitoId);
+      if (leito) {
+        registrarLog(
+          `Prioridade de higienização do leito ${leito.codigoLeito} ${!prioridadeAtual ? 'ativada' : 'desativada'}.`,
+          'Mapa de Leitos'
+        );
+      }
+    } catch (error) {
+      console.error('Erro ao alternar prioridade de higienização:', error);
+    }
+  };
+
   /**
    * Exclui um leito do sistema.
    */
@@ -270,5 +286,6 @@ export const useLeitos = () => {
     excluirLeito,
     atualizarStatusLeito,
     vincularPacienteLeito,
+    togglePrioridadeHigienizacao,
   };
 };

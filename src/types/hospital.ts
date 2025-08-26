@@ -8,6 +8,13 @@ export interface AltaLeitoInfo {
   usuario: string; // Nome do usuário que registrou
 }
 
+export interface InfoAltaPendente {
+  tipo: 'medicacao' | 'transporte' | 'familiar' | 'emad' | 'outros';
+  detalhe?: string;
+  usuario: string;
+  timestamp: string;
+}
+
 export interface Paciente {
   id: string;
   leitoId: string;
@@ -29,6 +36,7 @@ export interface Paciente {
   dataPedidoRemanejamento?: string;
   provavelAlta?: boolean;
   altaNoLeito?: AltaLeitoInfo;
+  altaPendente?: InfoAltaPendente | null;
   origem?: {
     deSetor: string;
     deLeito: string;
@@ -53,7 +61,7 @@ export interface Leito {
   tipoLeito: string;
   leitoIsolamento: boolean;
   leitoPCP: boolean;
-  higienizacaoPrioritaria?: boolean; // Nova propriedade adicionada
+  prioridadeHigienizacao?: boolean;
   historicoMovimentacao: HistoricoLeito[];
 }
 

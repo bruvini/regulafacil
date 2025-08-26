@@ -1,7 +1,7 @@
 // src/components/LeitoCard.tsx
 
 import { useState, useMemo } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, MessageSquarePlus, UserPlus, BookMarked } from 'lucide-react';
+import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, MessageSquarePlus, UserPlus, BookMarked, Siren, PlaneTakeoff } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import { RemanejamentoModal } from './modals/RemanejamentoModal';
 import { TransferenciaModal } from './modals/TransferenciaModal';
 import { cn } from '@/lib/utils';
 import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
-import { LeitoEnriquecido } from '@/types/hospital';
+import { LeitoEnriquecido, InfoAltaPendente } from '@/types/hospital';
 
 interface LeitoCardProps {
   leito: LeitoEnriquecido;
@@ -31,6 +31,24 @@ const calcularIdade = (dataNascimento: string): string => {
     const m = hoje.getMonth() - nascimento.getMonth();
     if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
     return idade.toString();
+};
+
+const descreverAltaPendente = (info: InfoAltaPendente | null | undefined): string => {
+    if (!info) return '';
+    switch (info.tipo) {
+        case 'medicacao':
+            return `Finalizando medicação${info.detalhe ? ` às ${info.detalhe}` : ''}`;
+        case 'transporte':
+            return `Aguardando transporte${info.detalhe ? ` de ${info.detalhe}` : ''}`;
+        case 'familiar':
+            return 'Aguardando familiar';
+        case 'emad':
+            return 'Aguardando EMAD';
+        case 'outros':
+            return info.detalhe || 'Outros';
+        default:
+            return '';
+    }
 };
 
 const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
@@ -251,7 +269,27 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
             )}
             
             {leito.statusLeito === 'Higienizacao' && (
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => actions.onPriorizarHigienizacao(leito.id, leito.prioridadeHigienizacao || false)}
+                      >
+                        <Siren
+                          className={`h-4 w-4 ${
+                            leito.prioridadeHigienizacao ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'
+                          }`}
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Prioridade de Higienização</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
                 <AlertDialog>
                   <TooltipProvider>
                     <Tooltip>
@@ -276,7 +314,7 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              </div> 
+              </div>
             )}
             
             {leito.statusLeito === 'Reservado' && (
@@ -437,6 +475,28 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent><p>Sinalizar Provável Alta</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => actions.onAltaPendente(paciente!)}
+                      >
+                        <PlaneTakeoff className={`h-4 w-4 ${paciente?.altaPendente ? 'text-blue-500' : ''}`} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        {paciente?.altaPendente
+                          ? descreverAltaPendente(paciente.altaPendente)
+                          : 'Registrar pendência de alta'}
+                      </p>
+                    </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
