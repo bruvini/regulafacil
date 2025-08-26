@@ -20,10 +20,11 @@ import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
-import { Settings, ShieldQuestion, ClipboardList, Trash2 } from 'lucide-react';
+import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
+import { RelatorioEspecialidadeModal } from '@/components/modals/RelatorioEspecialidadeModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
 import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, writeBatch } from 'firebase/firestore';
@@ -42,6 +43,7 @@ const MapaLeitos = () => {
   const [altaNoLeitoModalOpen, setAltaNoLeitoModalOpen] = useState(false);
   const [internacaoModalOpen, setInternacaoModalOpen] = useState(false);
   const [reservaModalOpen, setReservaModalOpen] = useState(false);
+  const [relatorioEspecialidadeOpen, setRelatorioEspecialidadeOpen] = useState(false);
   const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
   const [pacienteParaMover, setPacienteParaMover] = useState<any | null>(null);
   const [pacienteParaObs, setPacienteParaObs] = useState<any | null>(null);
@@ -96,12 +98,23 @@ const MapaLeitos = () => {
     return { setoresEnriquecidos, todosLeitosEnriquecidos };
   }, [setores, leitos, pacientes, loading]);
 
-  const { setoresEnriquecidos } = dadosCombinados;
+  const { setoresEnriquecidos, todosLeitosEnriquecidos } = dadosCombinados;
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
   const { filteredSetores, filtrosAvancados, setFiltrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
 
   // Verificar se o usuário é administrador
   const isAdmin = userData?.tipoAcesso === 'Administrador';
+
+  const dadosOcupacaoEspecialidade = useMemo(() => {
+    const ocupacao: Record<string, number> = {};
+    todosLeitosEnriquecidos
+      .filter(l => l.statusLeito === 'Ocupado' && l.dadosPaciente?.especialidadePaciente)
+      .forEach(l => {
+        const esp = l.dadosPaciente!.especialidadePaciente;
+        ocupacao[esp] = (ocupacao[esp] || 0) + 1;
+      });
+    return ocupacao;
+  }, [todosLeitosEnriquecidos]);
 
   // Funções de confirmação para internação e reserva
   const handleConfirmarInternacao = async (dadosForm: any) => {
@@ -478,10 +491,18 @@ const MapaLeitos = () => {
                         <TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => setRelatorioVagosOpen(true)}><ClipboardList className="h-4 w-4" /></Button></TooltipTrigger>
                         <TooltipContent><p>Relatório de Leitos Vagos</p></TooltipContent>
                       </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => setRelatorioEspecialidadeOpen(true)}>
+                            <Stethoscope className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Ocupação por Especialidade</p></TooltipContent>
+                      </Tooltip>
                       {isAdmin && (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button 
+                            <Button
                               variant="outline" 
                               size="icon" 
                               onClick={() => setLimpezaModalOpen(true)}
@@ -560,11 +581,16 @@ const MapaLeitos = () => {
       <MovimentacaoModal open={movimentacaoModalOpen} onOpenChange={setMovimentacaoModalOpen} pacienteNome={pacienteParaMover?.dados?.nomeCompleto || ''} onConfirm={handleConfirmarMovimentacao}/>
       <RelatorioIsolamentosModal open={relatorioIsolamentoOpen} onOpenChange={setRelatorioIsolamentoOpen}/>
       <RelatorioVagosModal open={relatorioVagosOpen} onOpenChange={setRelatorioVagosOpen}/>
-      <ObservacoesModal 
-        open={obsModalOpen} 
-        onOpenChange={setObsModalOpen} 
-        pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''} 
-        observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []} 
+      <RelatorioEspecialidadeModal
+        open={relatorioEspecialidadeOpen}
+        onOpenChange={setRelatorioEspecialidadeOpen}
+        dadosOcupacao={dadosOcupacaoEspecialidade}
+      />
+      <ObservacoesModal
+        open={obsModalOpen}
+        onOpenChange={setObsModalOpen}
+        pacienteNome={pacienteParaObs?.dadosPaciente?.nomeCompleto || ''}
+        observacoes={pacienteParaObs?.dadosPaciente?.obsPaciente || []}
         onConfirm={handleConfirmObs}
         onDelete={handleDeleteObs}
       />
