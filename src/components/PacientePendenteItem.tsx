@@ -27,11 +27,12 @@ import {
   Clock,
   CheckCheck,
   Pencil,
-  XCircle
+  XCircle,
+  Biohazard
 } from 'lucide-react';
 
 import { formatarDuracao } from '@/lib/utils';
-import { Paciente } from '@/types/hospital';
+import { Paciente, InfoRegulacao, IsolamentoVigente } from '@/types/hospital';
 
 // Função auxiliar
 const calcularIdade = (dataNascimento: string): string => {
@@ -52,14 +53,14 @@ interface PacientePendenteItemProps {
     leitoCodigo: string;
     leitoId: string;
     statusLeito: string;
-    regulacao?: any;
+    regulacao?: InfoRegulacao;
   };
   onRegularClick?: () => void;
   onAlta?: () => void;
   onConcluir?: (paciente: Paciente) => void;
   onAlterar?: (paciente: Paciente) => void;
   onCancelar?: (paciente: Paciente) => void;
-  onAltaDireta?: (paciente: any) => void; // Nova prop adicionada
+  onAltaDireta?: (paciente: Paciente) => void; // Nova prop adicionada
 }
 
 export const PacientePendenteItem = ({
@@ -86,6 +87,24 @@ export const PacientePendenteItem = ({
           <Badge variant="outline" className="text-xs">
             {paciente.sexoPaciente?.charAt(0) || '?'} - {idade}a
           </Badge>
+          {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="destructive" className="p-1">
+                    <Biohazard className="h-4 w-4" />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <ul className="text-xs">
+                    {paciente.isolamentosVigentes.map((iso: IsolamentoVigente, idx: number) => (
+                      <li key={idx}>{iso.sigla}</li>
+                    ))}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
 
         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
