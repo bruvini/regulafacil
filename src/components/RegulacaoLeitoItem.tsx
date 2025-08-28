@@ -56,8 +56,8 @@ export const RegulacaoLeitoItem = ({ paciente, onRegular, isActing }: RegulacaoL
                 <TooltipContent>
                   <p className="font-bold">Isolamentos Ativos:</p>
                   <ul>
-                    {paciente.isolamentosVigentes.map(iso => (
-                      <li key={iso.id}>- {iso.nome} ({iso.sigla})</li>
+                    {paciente.isolamentosVigentes.map((iso, index) => (
+                      <li key={index}>- {iso.sigla}</li>
                     ))}
                   </ul>
                 </TooltipContent>

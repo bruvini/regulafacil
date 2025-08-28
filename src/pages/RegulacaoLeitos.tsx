@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -78,7 +77,7 @@ const formSchema = z.object({
     message: "Nome must be at least 2 characters.",
   }),
   dataNascimento: z.date(),
-  sexo: z.enum(['M', 'F']),
+  sexo: z.enum(['Masculino', 'Feminino']),
   diagnostico: z.string().min(10, {
     message: "Diagnóstico must be at least 10 characters.",
   }),
@@ -104,7 +103,7 @@ export default function RegulacaoLeitos() {
     defaultValues: {
       nome: "",
       dataNascimento: new Date(),
-      sexo: 'M',
+      sexo: 'Masculino',
       diagnostico: "",
       crmMedico: "",
       nomeMedico: "",
@@ -125,8 +124,10 @@ export default function RegulacaoLeitos() {
       const mockPacientes: Paciente[] = [
         {
           id: '1',
+          leitoId: 'L001',
+          setorId: 'S001',
           nomeCompleto: 'João da Silva Santos',
-          sexoPaciente: 'M',
+          sexoPaciente: 'Masculino',
           dataNascimento: '1980-05-15',
           especialidadePaciente: 'Cardiologia',
           dataInternacao: '2024-01-15T10:30:00Z',
@@ -134,13 +135,15 @@ export default function RegulacaoLeitos() {
         },
         {
           id: '2',
+          leitoId: 'L002',
+          setorId: 'S001',
           nomeCompleto: 'Maria Oliveira Costa',
-          sexoPaciente: 'F',
+          sexoPaciente: 'Feminino',
           dataNascimento: '1975-08-22',
           especialidadePaciente: 'Neurologia',
           dataInternacao: '2024-01-14T14:20:00Z',
           isolamentosVigentes: [
-            { id: '1', nome: 'Precaução de Contato', sigla: 'PC' }
+            { sigla: 'PC', dataInicioVigilancia: '2024-01-14T14:20:00Z' }
           ]
         }
       ];
@@ -226,7 +229,7 @@ export default function RegulacaoLeitos() {
   const handleAlterarRegulacao = (paciente: Paciente) => {
     setActingOnPatientId(paciente.id);
     setTimeout(() => {
-      toast.info(`Regulação do paciente ${paciente.nomeCompleto} alterada.`);
+      toast(`Regulação do paciente ${paciente.nomeCompleto} alterada.`);
       setActingOnPatientId(null);
     }, 1000);
   };
@@ -236,7 +239,7 @@ export default function RegulacaoLeitos() {
     setTimeout(() => {
       setPacientesRegulados(prev => prev.filter(p => p.id !== paciente.id));
       setPacientes(prev => [...prev, paciente]);
-      toast.warning(`Regulação do paciente ${paciente.nomeCompleto} cancelada.`);
+      toast(`Regulação do paciente ${paciente.nomeCompleto} cancelada.`);
       setActingOnPatientId(null);
     }, 1000);
   };
@@ -257,7 +260,7 @@ export default function RegulacaoLeitos() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setPacientesAguardandoRemanejamento(prev => prev.filter(p => p.id !== paciente.id));
       setPacientesRegulados(prev => [...prev, paciente]);
-      toast.warning(`Remanejamento do paciente ${paciente.nomeCompleto} cancelado.`);
+      toast(`Remanejamento do paciente ${paciente.nomeCompleto} cancelado.`);
     } catch (error) {
       console.error('Erro ao cancelar remanejamento:', error);
       toast.error('Erro ao cancelar remanejamento');
@@ -269,13 +272,13 @@ export default function RegulacaoLeitos() {
   const handleObservacoesRemanejamento = (paciente: Paciente) => {
     setActingOnPatientId(paciente.id);
     setTimeout(() => {
-      toast.info(`Observações sobre o remanejamento do paciente ${paciente.nomeCompleto}.`);
+      toast(`Observações sobre o remanejamento do paciente ${paciente.nomeCompleto}.`);
       setActingOnPatientId(null);
     }, 1000);
   };
 
   const handleVerResumoRegulacao = () => {
-    toast.info('Exibindo resumo da regulação de leitos.');
+    toast('Exibindo resumo da regulação de leitos.');
   };
 
   return (
@@ -376,8 +379,8 @@ export default function RegulacaoLeitos() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="M">Masculino</SelectItem>
-                          <SelectItem value="F">Feminino</SelectItem>
+                          <SelectItem value="Masculino">Masculino</SelectItem>
+                          <SelectItem value="Feminino">Feminino</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
