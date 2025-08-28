@@ -224,23 +224,8 @@ export const reconciliarPacientesComPlanilha = async (
 
         mapaReservasPorPacienteId.delete(pacienteAtual.id);
       }
-
-      if (pacienteAtual.leitoId === leitoDestino.id) {
-        const statusAtualDoLeito = getStatusAtualDoLeito(leitoDestino);
-        if (statusAtualDoLeito === 'Reservado') {
-          pushHistorico(leitoDestino.id, 'Ocupado', pacienteAtual.id);
-          const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteAtual.id);
-          const { id: _omit, ...dadosEnriquecidos } = mapPlanilhaToPacienteDoc(
-            pacientePlanilha,
-            leitoDestino
-          );
-          batch.update(pacienteRef, dadosEnriquecidos);
-          resumo.observacoes.push(
-            `Reserva para ${pacienteAtual.nomeCompleto} no leito ${leitoDestino.codigoLeito} foi efetivada como internação.`
-          );
-        }
-      } else {
-        // CASO 1: PACIENTE EXISTE -> verificar se houve transferência
+      // CASO 1: PACIENTE EXISTE -> verificar se houve transferência
+      if (pacienteAtual.leitoId !== leitoDestino.id) {
         // Libera o leito antigo (se houver)
         if (pacienteAtual.leitoId) {
           pushHistorico(pacienteAtual.leitoId, 'Vago', pacienteAtual.id);
