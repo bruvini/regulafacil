@@ -602,22 +602,23 @@ const registrarHistoricoRegulacao = async (
           setorId: leitoDestino.setorId,
       };
 
+      const finalizouUTI =
+        pacienteCompleto.aguardaUTI &&
+        leitoDestino.tipoLeito?.toUpperCase() === 'UTI';
+
+      if (finalizouUTI) {
+        dadosUpdate.aguardaUTI = false;
+        dadosUpdate.dataPedidoUTI = null;
+      }
+
       batch.update(pacienteRef, dadosUpdate);
 
       // --- EXECUÇÃO DO BATCH ---
       // Envia todas as atualizações para o banco de dados de uma só vez
       await batch.commit();
 
-      // 4. VERIFICA E FINALIZA O PEDIDO DE UTI (se aplicável)
-      if (
-        pacienteCompleto.aguardaUTI &&
-        leitoDestino.tipoLeito?.toUpperCase() === 'UTI'
-      ) {
-        await updateDoc(pacienteRef, {
-          aguardaUTI: false,
-          dataPedidoUTI: null,
-        });
-
+      // 4. LOG DE FINALIZAÇÃO DO PEDIDO DE UTI (se aplicável)
+      if (finalizouUTI) {
         const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
         const dataConclusao = new Date();
         const duracao = intervalToDuration({
