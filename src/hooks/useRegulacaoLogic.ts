@@ -593,12 +593,12 @@ const registrarHistoricoRegulacao = async (
       };
 
       // 4. VERIFICA E FINALIZA O PEDIDO DE UTI (se aplicável)
-      if (pacienteCompleto.aguardaUTI && setorDestino.tipoUnidade?.toUpperCase() === 'UTI') {
+      if (pacienteCompleto.aguardaUTI && leitoDestino.tipoLeito?.toUpperCase() === 'UTI') {
           const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
           const dataConclusao = new Date();
           const duracao = intervalToDuration({ start: dataPedido, end: dataConclusao });
           const tempoDeEspera = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
-          
+
           const logUTI = `Pedido de UTI para ${pacienteCompleto.nomeCompleto} finalizado após ${tempoDeEspera}. Paciente alocado no leito ${leitoDestino.codigoLeito}. Conclusão em: ${dataConclusao.toLocaleString('pt-BR')}.`;
           registrarLog(logUTI, "Fila de UTI");
 
