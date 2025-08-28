@@ -21,6 +21,7 @@ import MaintenancePage from '@/pages/MaintenancePage';
 import NotFound from '@/pages/NotFound';
 import ProtectedLayout from '@/components/ProtectedLayout';
 import { AuthProvider } from '@/hooks/useAuth';
+import { SessionTimeoutProvider } from '@/hooks/useSessionTimeout';
 import { useSistemaConfig } from '@/hooks/useSistemaConfig';
 
 const queryClient = new QueryClient();
@@ -73,9 +74,11 @@ function App() {
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <TooltipProvider>
-            <AppContent />
-          </TooltipProvider>
+          <SessionTimeoutProvider>
+            <TooltipProvider>
+              <AppContent />
+            </TooltipProvider>
+          </SessionTimeoutProvider>
         </AuthProvider>
       </QueryClientProvider>
     </BrowserRouter>
