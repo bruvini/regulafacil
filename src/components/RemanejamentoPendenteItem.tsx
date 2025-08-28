@@ -34,8 +34,8 @@ export const RemanejamentoPendenteItem = ({ paciente, onRemanejar, onCancelar }:
   const tempoAguardando = formatarDuracao(paciente.dataPedidoRemanejamento);
 
   return (
-    <Card className="flex flex-col justify-between">
-      <CardContent className="p-4 pb-2">
+    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50">
+      <div>
         <p className="font-bold text-sm">
           {paciente.nomeCompleto}{' '}
           <Badge variant="outline">{paciente.sexoPaciente.charAt(0)}</Badge>
@@ -46,64 +46,45 @@ export const RemanejamentoPendenteItem = ({ paciente, onRemanejar, onCancelar }:
         <p className="text-xs text-amber-600 mt-1">
           {descreverMotivoRemanejamento(paciente.motivoRemanejamento)}
         </p>
-      </CardContent>
-      <CardFooter className="p-2 pt-0 flex justify-between items-center">
+      </div>
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-1 text-xs font-mono text-amber-600">
           <Clock className="h-3 w-3" />
           {tempoAguardando}
         </div>
         <TooltipProvider>
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onRemanejar(paciente)}
-                >
-                  <ArrowRightLeft className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Remanejar Paciente</p>
-              </TooltipContent>
-            </Tooltip>
-            <AlertDialog>
-              <Tooltip>
-                <AlertDialogTrigger asChild>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                </AlertDialogTrigger>
-                <TooltipContent>
-                  <p>Cancelar Solicitação</p>
-                </TooltipContent>
-              </Tooltip>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Cancelar Solicitação</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tem certeza que deseja cancelar esta solicitação de remanejamento?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Voltar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onCancelar(paciente)}>
-                    Confirmar Cancelamento
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => onRemanejar(paciente)}
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Remanejar Paciente</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive"
+                onClick={() => onCancelar(paciente)}
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Cancelar Solicitação</p>
+            </TooltipContent>
+          </Tooltip>
         </TooltipProvider>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 };

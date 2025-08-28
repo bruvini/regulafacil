@@ -136,11 +136,7 @@ export const RemanejamentoModal = ({ open, onOpenChange, onConfirm }: Remanejame
                       : 'Selecione o(s) setor(es)'}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent
-                  onOpenAutoFocus={(e) => e.preventDefault()}
-                  className="w-[--radix-popover-trigger-width] p-0"
-                  align="start"
-                >
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Buscar setor..." />
                     <CommandList>
