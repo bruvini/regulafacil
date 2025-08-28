@@ -6,6 +6,7 @@ import {
   getDocs,
   doc,
   arrayUnion,
+  addDoc,
   DocumentData,
   QueryDocumentSnapshot,
 } from 'firebase/firestore';
@@ -32,6 +33,7 @@ export interface ImportacaoResumo {
   transferencias: Array<{ atendimentoKey: string; deLeito: string; paraLeito: string }>;
   altas: Array<{ atendimentoKey: string; deLeito: string }>;
   avisos: string[];
+  observacoes: string[];
 }
 
 /**
@@ -129,6 +131,7 @@ export const reconciliarPacientesComPlanilha = async (
     transferencias: [],
     altas: [],
     avisos: [],
+    observacoes: [],
   };
 
   // Auxiliar para registrar novo evento de histórico
@@ -140,6 +143,48 @@ export const reconciliarPacientesComPlanilha = async (
       ...(pacienteId ? { pacienteId } : {}),
     };
     batch.update(leitoRef, { historicoMovimentacao: arrayUnion(novoEvento) });
+  };
+
+  // --- MAPEAR RESERVAS EXISTENTES ---
+  const todosLeitosDoFirestore = leitosSnapshot.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as Leito),
+  }));
+
+  const leitosReservados = todosLeitosDoFirestore.filter((l) => {
+    const statusAtual = getStatusAtualDoLeito(l);
+    const historico = l.historicoMovimentacao || [];
+    const ultimo = historico[historico.length - 1];
+    return statusAtual === 'Reservado' && !!ultimo?.pacienteId;
+  });
+
+  const mapaReservasPorPacienteId = new Map<string, { id: string } & Leito>(
+    leitosReservados.map((l) => {
+      const historico = l.historicoMovimentacao || [];
+      const ultimo = historico[historico.length - 1];
+      return [ultimo!.pacienteId!, l];
+    })
+  );
+
+  const pacientesPorId = new Map<string, { id: string } & DocumentData>(
+    pacientesSnapshot.docs.map((d: QueryDocumentSnapshot<DocumentData>) => [
+      d.id,
+      { id: d.id, ...d.data() },
+    ])
+  );
+
+  // Função simples para registrar logs de auditoria
+  const registrarLog = async (acao: string, origem: string) => {
+    try {
+      await addDoc(collection(db, 'logsAuditoria'), {
+        acao,
+        origem,
+        data: new Date(),
+        usuario: { nome: 'Sistema', uid: 'sistema' },
+      });
+    } catch (error) {
+      console.error('Erro ao registrar log de auditoria:', error);
+    }
   };
 
   // === PASSO 3: PROCESSAR CADA PACIENTE DA PLANILHA (TRANSFERÊNCIAS E NOVAS INTERNAÇÕES) ===
@@ -157,6 +202,28 @@ export const reconciliarPacientesComPlanilha = async (
     const pacienteAtual = pacientesAtuaisMap.get(atendimentoKey);
 
     if (pacienteAtual) {
+      // --- LÓGICA DE RESERVA ---
+      const reservaExistente = mapaReservasPorPacienteId.get(pacienteAtual.id);
+      if (reservaExistente) {
+        const leitoPlanilha = leitoDestino;
+        if (leitoPlanilha && reservaExistente.id !== leitoPlanilha.id) {
+          const leitoReservadoRef = doc(db, 'leitosRegulaFacil', reservaExistente.id);
+          batch.update(leitoReservadoRef, {
+            historicoMovimentacao: arrayUnion({
+              statusLeito: 'Vago',
+              dataAtualizacaoStatus: nowISO,
+              pacienteId: null,
+              infoRegulacao: null,
+            }),
+          });
+
+          const logMessage = `Reserva externa para ${pacienteAtual.nomeCompleto} no leito ${reservaExistente.codigoLeito} foi cancelada. Paciente internado no leito ${leitoDestino.codigoLeito}.`;
+          registrarLog(logMessage, 'Importação MV - Reconciliação de Reservas');
+          resumo.observacoes.push(logMessage);
+        }
+
+        mapaReservasPorPacienteId.delete(pacienteAtual.id);
+      }
       // CASO 1: PACIENTE EXISTE -> verificar se houve transferência
       if (pacienteAtual.leitoId !== leitoDestino.id) {
         // Libera o leito antigo (se houver)
@@ -204,8 +271,38 @@ export const reconciliarPacientesComPlanilha = async (
     }
   }
 
+  // --- PÓS-PROCESSAMENTO DAS RESERVAS ---
+  const leitosOcupadosPelaPlanilha = new Set(
+    pacientesDaPlanilha.map((p) => p.leitoCodigo)
+  );
+
+  mapaReservasPorPacienteId.forEach((leitoReservado, pacienteId) => {
+    if (leitosOcupadosPelaPlanilha.has(leitoReservado.codigoLeito)) {
+      const leitoReservadoRef = doc(db, 'leitosRegulaFacil', leitoReservado.id);
+      batch.update(leitoReservadoRef, {
+        historicoMovimentacao: arrayUnion({
+          statusLeito: 'Vago',
+          dataAtualizacaoStatus: nowISO,
+          pacienteId: null,
+          infoRegulacao: null,
+        }),
+      });
+
+      const nomePaciente =
+        pacientesPorId.get(pacienteId)?.nomeCompleto || 'Paciente desconhecido';
+      const logMessage = `Reserva para ${nomePaciente} no leito ${leitoReservado.codigoLeito} foi cancelada, pois o leito foi ocupado por outro paciente na importação.`;
+      registrarLog(logMessage, 'Importação MV - Conflito de Reserva');
+      resumo.observacoes.push(logMessage);
+
+      mapaReservasPorPacienteId.delete(pacienteId);
+    }
+  });
+
   // === PASSO 4: PROCESSAR ALTAS (PACIENTES QUE SUMIRAM DA PLANILHA) ===
   for (const [atendimentoKey, pacienteAtual] of pacientesAtuaisMap.entries()) {
+    if (mapaReservasPorPacienteId.has(pacienteAtual.id)) {
+      continue; // Mantém reservas não impactadas
+    }
     if (!pacientesPlanilhaMap.has(atendimentoKey)) {
       // Alta: liberar leito e remover paciente
       if (pacienteAtual.leitoId) {
