@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/form';
 
 const paginasSistema = [
-  { id: 'regulacao-leitos', label: 'Regulação de Leitos' },
+  { id: 'regulacao', label: 'Regulação de Leitos' },
   { id: 'mapa-leitos', label: 'Mapa de Leitos' },
   { id: 'central-higienizacao', label: 'Central de Higienização' },
   { id: 'gestao-isolamentos', label: 'Gestão de Isolamentos' },
