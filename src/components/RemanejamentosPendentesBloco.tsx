@@ -2,9 +2,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { RemanejamentoPendenteItem } from "@/components/RemanejamentoPendenteItem";
+import type { TipoRemanejamento } from "@/types/hospital";
 
 interface RemanejamentosPendentesBlocoProps {
   pacientesAguardandoRemanejamento: any[];
@@ -12,16 +14,40 @@ interface RemanejamentosPendentesBlocoProps {
   onCancelar: (paciente: any) => void;
 }
 
-export const RemanejamentosPendentesBloco = ({ 
-  pacientesAguardandoRemanejamento, 
-  onRemanejar, 
-  onCancelar 
+export const RemanejamentosPendentesBloco = ({
+  pacientesAguardandoRemanejamento,
+  onRemanejar,
+  onCancelar,
 }: RemanejamentosPendentesBlocoProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (pacientesAguardandoRemanejamento.length === 0) {
+  const pacientesFiltrados = pacientesAguardandoRemanejamento.filter(
+    (p) => p.remanejarPaciente
+  );
+
+  if (pacientesFiltrados.length === 0) {
     return null;
   }
+
+  const grupos = pacientesFiltrados.reduce(
+    (acc: Record<TipoRemanejamento, any[]>, paciente) => {
+      let tipo: TipoRemanejamento = 'incompatibilidade_biologica';
+      if (typeof paciente.motivoRemanejamento === 'object' && paciente.motivoRemanejamento)
+        tipo = paciente.motivoRemanejamento.tipo;
+      acc[tipo] = acc[tipo] || [];
+      acc[tipo].push(paciente);
+      return acc;
+    },
+    {} as Record<TipoRemanejamento, any[]>
+  );
+
+  const labels: Record<TipoRemanejamento, string> = {
+    priorizacao: 'Pedido de Priorização',
+    adequacao_perfil: 'Adequação de Perfil Clínico',
+    melhoria_assistencia: 'Melhoria na Assistência',
+    liberado_isolamento: 'Liberado de Isolamento',
+    incompatibilidade_biologica: 'Incompatibilidade Biológica',
+  };
 
   return (
     <Card className="shadow-card border border-border/50">
@@ -31,24 +57,42 @@ export const RemanejamentosPendentesBloco = ({
             <CardTitle className="text-xl font-semibold text-medical-primary flex items-center justify-between">
               <div className="flex items-center gap-2">
                 Remanejamentos Pendentes
-                <Badge variant="destructive">{pacientesAguardandoRemanejamento.length}</Badge>
+                <Badge variant="destructive">{pacientesFiltrados.length}</Badge>
               </div>
-              <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+                  isOpen ? 'rotate-180' : ''
+                }`}
+              />
             </CardTitle>
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent>
-            <div className="space-y-2">
-              {pacientesAguardandoRemanejamento.map((paciente) => (
-                <RemanejamentoPendenteItem
-                  key={paciente.id}
-                  paciente={paciente}
-                  onRemanejar={() => onRemanejar(paciente)}
-                  onCancelar={() => onCancelar(paciente)}
-                />
+            <Accordion type="multiple" className="w-full">
+              {Object.entries(grupos).map(([tipo, pacientes]) => (
+                <AccordionItem key={tipo} value={tipo} className="border rounded-lg">
+                  <AccordionTrigger className="px-4 hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      {labels[tipo as TipoRemanejamento]}
+                      <Badge variant="destructive">{pacientes.length}</Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2">
+                      {pacientes.map((paciente: any) => (
+                        <RemanejamentoPendenteItem
+                          key={paciente.id}
+                          paciente={paciente}
+                          onRemanejar={() => onRemanejar(paciente)}
+                          onCancelar={() => onCancelar(paciente)}
+                        />
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

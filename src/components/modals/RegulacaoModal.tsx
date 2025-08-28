@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { descreverMotivoRemanejamento } from '@/lib/utils';
 
 interface RegulacaoModalProps {
   open: boolean;
@@ -115,7 +116,7 @@ const getMensagemConfirmacao = () => {
 Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
 Origem: ${origem.setor} - ${origem.leito}
 Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
-Motivo do Remanejamento: ${paciente.motivoRemanejamento}
+Motivo do Remanejamento: ${descreverMotivoRemanejamento(paciente.motivoRemanejamento)}
 Isolamento: ${isolamentos}${obs}`;
 
         // Define as orientações com base na comparação dos setores.
