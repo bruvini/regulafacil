@@ -1,18 +1,35 @@
+
 import React from 'react';
-import { Paciente } from '@/types/paciente';
+import { Paciente } from '@/types/hospital';
 import { Button } from '@/components/ui/button';
 import { CalendarClock, MessageSquare } from 'lucide-react';
 
 interface PacientePendenteItemProps {
-  paciente: Paciente;
-  onRegular: (pacienteId: string) => void;
-  onObservacoes: (pacienteId: string) => void;
+  paciente: Paciente & {
+    setorOrigem: string;
+    siglaSetorOrigem: string;
+    leitoCodigo: string;
+    leitoId: string;
+    statusLeito: string;
+    regulacao?: any;
+  };
+  onRegularClick: () => void;
+  onAlta?: () => void;
+  onConcluir: (paciente: Paciente) => void;
+  onAlterar: (paciente: Paciente) => void;
+  onCancelar: (paciente: Paciente) => void;
+  onAltaDireta?: (paciente: any) => void;
 }
 
-// Corrigindo as propriedades que estão causando erro de build
-// Alterando 'paraSetorSigla' para 'paraSetor' e 'data' para 'timestamp'
-const PacientePendenteItem = ({ paciente, onRegular, onObservacoes }: PacientePendenteItemProps) => {
-
+export const PacientePendenteItem = ({ 
+  paciente, 
+  onRegularClick,
+  onAlta,
+  onConcluir,
+  onAlterar,
+  onCancelar,
+  onAltaDireta
+}: PacientePendenteItemProps) => {
   const prioridadeCores = {
     'Muito Urgente': 'bg-red-500 text-white',
     'Urgente': 'bg-orange-500 text-white',
@@ -22,14 +39,14 @@ const PacientePendenteItem = ({ paciente, onRegular, onObservacoes }: PacientePe
 
   const getPrioridadeClassName = (prioridade: string | undefined) => {
     if (!prioridade) return 'bg-gray-200 text-gray-700';
-    return prioridadeCores[prioridade] || 'bg-gray-200 text-gray-700';
+    return prioridadeCores[prioridade as keyof typeof prioridadeCores] || 'bg-gray-200 text-gray-700';
   };
 
   return (
     <div className="bg-white p-4 rounded-lg border-l-4 border-orange-400 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="font-semibold text-lg text-gray-800">{paciente.nome}</h3>
+          <h3 className="font-semibold text-lg text-gray-800">{paciente.nomeCompleto}</h3>
           <p className="text-sm text-gray-600">{paciente.idade} anos</p>
         </div>
         <span className={`text-xs font-bold uppercase py-1 px-2 rounded-full ${getPrioridadeClassName(paciente.prioridade)}`}>
@@ -55,11 +72,11 @@ const PacientePendenteItem = ({ paciente, onRegular, onObservacoes }: PacientePe
       </div>
 
       <div className="mt-4 flex justify-end gap-2">
-        <Button size="sm" variant="secondary" onClick={() => onObservacoes(paciente.id)}>
+        <Button size="sm" variant="secondary" onClick={() => onAlterar(paciente)}>
           <MessageSquare className="h-4 w-4 mr-2" />
           Observações
         </Button>
-        <Button size="sm" onClick={() => onRegular(paciente.id)}>Regular Paciente</Button>
+        <Button size="sm" onClick={onRegularClick}>Regular Paciente</Button>
       </div>
       
       {paciente.regulacao && (
@@ -72,7 +89,6 @@ const PacientePendenteItem = ({ paciente, onRegular, onObservacoes }: PacientePe
           )}
         </div>
       )}
-      
     </div>
   );
 };

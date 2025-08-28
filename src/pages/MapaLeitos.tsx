@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -184,6 +183,10 @@ const MapaLeitos = () => {
         setorId: leitoParaAcao.setorId,
         dataInternacao: new Date().toISOString(),
         especialidadePaciente: 'Não Informada',
+        origem: {
+          deSetor: dadosForm.origem,
+          deLeito: 'Externo'
+        }
       });
 
       if (pacienteId) {
