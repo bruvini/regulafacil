@@ -10,10 +10,10 @@ const ProtectedLayout = () => {
   const { currentUser, loading, isFirstLogin } = useAuth();
   const navigate = useNavigate();
 
-  // Redireciona para login se não houver usuário autenticado
+  // Redireciona para página de manutenção se não houver usuário autenticado
   useEffect(() => {
     if (!loading && !currentUser) {
-      navigate('/login');
+      navigate('/manutencao');
     }
   }, [currentUser, loading, navigate]);
 
@@ -30,7 +30,7 @@ const ProtectedLayout = () => {
   }
 
   if (!currentUser) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/manutencao" />;
   }
 
   return (

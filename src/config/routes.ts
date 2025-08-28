@@ -13,6 +13,7 @@ export const APP_ROUTES = {
     gestaoUsuarios: '/gestao-usuarios'
   },
   public: {
-    login: '/login'
+    login: '/login',
+    manutencao: '/manutencao'
   }
 };

@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { APP_ROUTES } from '@/config/routes';
 
 import LoginPage from '@/pages/LoginPage';
+import MaintenancePage from '@/pages/MaintenancePage';
 import HomePage from '@/pages/HomePage';
 import MapaLeitos from '@/pages/MapaLeitos';
 import RegulacaoLeitos from '@/pages/RegulacaoLeitos';
@@ -33,6 +34,7 @@ function App() {
               <Toaster />
               <Routes>
                 <Route path={APP_ROUTES.public.login} element={<LoginPage />} />
+                <Route path={APP_ROUTES.public.manutencao} element={<MaintenancePage />} />
                 <Route path="/" element={<ProtectedLayout />}>
                   <Route index element={<HomePage />} />
                   <Route path={APP_ROUTES.private.mapaLeitos.substring(1)} element={<MapaLeitos />} />
