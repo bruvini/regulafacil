@@ -3,23 +3,32 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { UserPlus, Edit, Trash2, Settings } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { UserPlus, Edit, Trash2, Settings, Shield, Wrench } from 'lucide-react';
 import { useUsuarios, Usuario } from '@/hooks/useUsuarios';
+import { useSistemaConfig } from '@/hooks/useSistemaConfig';
+import { useAuth } from '@/hooks/useAuth';
 import { UsuarioForm } from '@/components/forms/UsuarioForm';
 
 const GestaoUsuarios = () => {
   const { usuarios, loading, criarUsuario, atualizarUsuario, excluirUsuario } = useUsuarios();
+  const { modoManutencaoAtivo, toggleModoManutencao } = useSistemaConfig();
+  const { userData } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<Usuario | null>(null);
+  const [isMaintenanceDialogOpen, setIsMaintenanceDialogOpen] = useState(false);
+  const [senhaManutencao, setSenhaManutencao] = useState('');
 
   const handleOpenModal = (user: Usuario | null = null) => {
     setEditingUser(user);
     setIsModalOpen(true);
   };
 
-  // FASE 1: CORRIGIR FLUXO DE VALIDAÇÃO - SÓ FECHA O MODAL SE A OPERAÇÃO FOR BEM-SUCEDIDA
   const handleFormSubmit = async (data: any) => {
     let success = false;
     if (editingUser) {
@@ -28,17 +37,23 @@ const GestaoUsuarios = () => {
       success = await criarUsuario(data);
     }
 
-    // SÓ FECHA O MODAL SE A OPERAÇÃO RETORNAR SUCESSO
     if (success) {
       setIsModalOpen(false);
       setEditingUser(null);
     }
   };
 
-  // FASE 4: AJUSTAR FUNÇÃO DE EXCLUSÃO PARA PASSAR UID
   const handleDeleteUser = async (id: string, uid?: string) => {
     if (window.confirm('Tem certeza que deseja excluir este usuário?')) {
       await excluirUsuario(id, uid);
+    }
+  };
+
+  const handleMaintenanceToggle = async () => {
+    const success = await toggleModoManutencao(senhaManutencao);
+    if (success) {
+      setIsMaintenanceDialogOpen(false);
+      setSenhaManutencao('');
     }
   };
 
@@ -49,6 +64,8 @@ const GestaoUsuarios = () => {
       <Badge variant="secondary">Comum</Badge>
     );
   };
+
+  const isAdmin = userData?.tipoAcesso === 'Administrador';
 
   return (
     <>
@@ -68,6 +85,46 @@ const GestaoUsuarios = () => {
                 Adicione, edite e gerencie os usuários do sistema RegulaFacil
               </p>
             </div>
+
+            {/* Painel de Controle de Manutenção - Visível apenas para Administradores */}
+            {isAdmin && (
+              <Card className="mb-6 border-amber-200 bg-amber-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-amber-800">
+                    <Shield className="h-5 w-5" />
+                    Controle de Sistema
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Wrench className="h-4 w-4 text-amber-600" />
+                        <span className="font-medium text-amber-800">Modo de Manutenção</span>
+                      </div>
+                      <Switch 
+                        checked={modoManutencaoAtivo} 
+                        disabled 
+                        className="data-[state=checked]:bg-amber-600"
+                      />
+                      <Badge variant={modoManutencaoAtivo ? "destructive" : "secondary"}>
+                        {modoManutencaoAtivo ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
+                    <Button 
+                      onClick={() => setIsMaintenanceDialogOpen(true)}
+                      variant="outline"
+                      className="border-amber-600 text-amber-800 hover:bg-amber-100"
+                    >
+                      Alterar Status
+                    </Button>
+                  </div>
+                  <p className="text-sm text-amber-700 mt-2">
+                    Quando ativo, todos os usuários serão redirecionados para a página de manutenção.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="flex justify-between items-center mb-6">
               <div>
@@ -110,14 +167,13 @@ const GestaoUsuarios = () => {
                         <TableHead>Matrícula</TableHead>
                         <TableHead>E-mail</TableHead>
                         <TableHead>Tipo de Acesso</TableHead>
-                        <TableHead>Acessos</TableHead> {/* FASE 3: NOVA COLUNA */}
-                        <TableHead>Último Acesso</TableHead> {/* FASE 3: NOVA COLUNA */}
+                        <TableHead>Acessos</TableHead>
+                        <TableHead>Último Acesso</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {usuarios.map((user) => {
-                        // FASE 3: LÓGICA PARA HISTÓRICO DE ACESSO
                         const ultimoAcesso = user.historicoAcessos && user.historicoAcessos.length > 0
                           ? new Date(user.historicoAcessos[user.historicoAcessos.length - 1].toDate()).toLocaleString('pt-BR')
                           : 'Nunca';
@@ -132,8 +188,8 @@ const GestaoUsuarios = () => {
                             <TableCell>
                               {getTipoAcessoBadge(user.tipoAcesso)}
                             </TableCell>
-                            <TableCell>{user.historicoAcessos?.length || 0}</TableCell> {/* FASE 3: NOVA CÉLULA */}
-                            <TableCell>{ultimoAcesso}</TableCell> {/* FASE 3: NOVA CÉLULA */}
+                            <TableCell>{user.historicoAcessos?.length || 0}</TableCell>
+                            <TableCell>{ultimoAcesso}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button
@@ -179,6 +235,36 @@ const GestaoUsuarios = () => {
           />
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isMaintenanceDialogOpen} onOpenChange={setIsMaintenanceDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Alterar Modo de Manutenção</AlertDialogTitle>
+            <AlertDialogDescription>
+              Para {modoManutencaoAtivo ? 'desativar' : 'ativar'} o modo de manutenção, 
+              insira a senha de administração do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="senha">Senha de Manutenção</Label>
+            <Input
+              id="senha"
+              type="password"
+              value={senhaManutencao}
+              onChange={(e) => setSenhaManutencao(e.target.value)}
+              placeholder="Digite a senha de manutenção"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSenhaManutencao('')}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleMaintenanceToggle}>
+              {modoManutencaoAtivo ? 'Desativar' : 'Ativar'} Manutenção
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

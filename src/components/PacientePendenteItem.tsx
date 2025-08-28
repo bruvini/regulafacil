@@ -1,271 +1,80 @@
-
-// src/components/PacientePendenteItem.tsx
-
-import { Badge } from '@/components/ui/badge';
+import React from 'react';
+import { Paciente } from '@/types/paciente';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from '@/components/ui/tooltip';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger
-} from '@/components/ui/alert-dialog';
-
-import {
-  LogIn,
-  LogOut,
-  Clock,
-  CheckCheck,
-  Pencil,
-  XCircle,
-  Biohazard
-} from 'lucide-react';
-
-import { formatarDuracao } from '@/lib/utils';
-import { Paciente, InfoRegulacao, IsolamentoVigente } from '@/types/hospital';
-
-// Função auxiliar
-const calcularIdade = (dataNascimento: string): string => {
-  if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
-  const [dia, mes, ano] = dataNascimento.split('/').map(Number);
-  const hoje = new Date();
-  const nascimento = new Date(ano, mes - 1, dia);
-  let idade = hoje.getFullYear() - nascimento.getFullYear();
-  const m = hoje.getMonth() - nascimento.getMonth();
-  if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
-  return idade.toString();
-};
+import { CalendarClock, MessageSquare } from 'lucide-react';
 
 interface PacientePendenteItemProps {
-  paciente: Paciente & {
-    setorOrigem: string;
-    siglaSetorOrigem: string;
-    leitoCodigo: string;
-    leitoId: string;
-    statusLeito: string;
-    regulacao?: InfoRegulacao;
-  };
-  onRegularClick?: () => void;
-  onAlta?: () => void;
-  onConcluir?: (paciente: Paciente) => void;
-  onAlterar?: (paciente: Paciente) => void;
-  onCancelar?: (paciente: Paciente) => void;
-  onAltaDireta?: (paciente: Paciente) => void; // Nova prop adicionada
+  paciente: Paciente;
+  onRegular: (pacienteId: string) => void;
+  onObservacoes: (pacienteId: string) => void;
 }
 
-export const PacientePendenteItem = ({
-  paciente,
-  onRegularClick,
-  onAlta,
-  onConcluir,
-  onAlterar,
-  onCancelar,
-  onAltaDireta
-}: PacientePendenteItemProps) => {
-  const idade = calcularIdade(paciente.dataNascimento);
-  
-  console.log('PacientePendenteItem - paciente:', paciente);
-  console.log('PacientePendenteItem - nomeCompleto:', paciente.nomeCompleto);
+// Corrigindo as propriedades que estão causando erro de build
+// Alterando 'paraSetorSigla' para 'paraSetor' e 'data' para 'timestamp'
+const PacientePendenteItem = ({ paciente, onRegular, onObservacoes }: PacientePendenteItemProps) => {
+
+  const prioridadeCores = {
+    'Muito Urgente': 'bg-red-500 text-white',
+    'Urgente': 'bg-orange-500 text-white',
+    'Normal': 'bg-yellow-500 text-gray-800',
+    'Baixa': 'bg-green-500 text-white',
+  };
+
+  const getPrioridadeClassName = (prioridade: string | undefined) => {
+    if (!prioridade) return 'bg-gray-200 text-gray-700';
+    return prioridadeCores[prioridade] || 'bg-gray-200 text-gray-700';
+  };
 
   return (
-    <div className="flex items-start gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
-      <div className="flex-grow">
-        <div className="flex items-center gap-2">
-          <p className="font-bold text-sm text-foreground">
-            {paciente.nomeCompleto || 'Nome não disponível'}
-          </p>
-          <Badge variant="outline" className="text-xs">
-            {paciente.sexoPaciente?.charAt(0) || '?'} - {idade}a
-          </Badge>
-          {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="destructive" className="p-1">
-                    <Biohazard className="h-4 w-4" />
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <ul className="text-xs">
-                    {paciente.isolamentosVigentes.map((iso: IsolamentoVigente, idx: number) => (
-                      <li key={idx}>{iso.sigla}</li>
-                    ))}
-                  </ul>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+    <div className="bg-white p-4 rounded-lg border-l-4 border-orange-400 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="font-semibold text-lg text-gray-800">{paciente.nome}</h3>
+          <p className="text-sm text-gray-600">{paciente.idade} anos</p>
         </div>
-
-        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-          {paciente.statusLeito === 'Regulado' ? (
-            <>
-              <span className="font-semibold text-purple-600">Destino:</span>
-              <span>
-                {paciente.regulacao?.paraSetorSigla || 'Setor desconhecido'} -{' '}
-                {paciente.regulacao?.paraLeito || 'Leito não informado'}
-              </span>
-              <span className="text-gray-400">•</span>
-              <div className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {formatarDuracao(paciente.regulacao?.data)}
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {formatarDuracao(paciente.dataInternacao)}
-            </div>
-          )}
-        </div>
+        <span className={`text-xs font-bold uppercase py-1 px-2 rounded-full ${getPrioridadeClassName(paciente.prioridade)}`}>
+          {paciente.prioridade || 'Sem prioridade'}
+        </span>
       </div>
 
-      <div className="flex items-center gap-1">
-        {paciente.statusLeito === 'Regulado' ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onConcluir?.(paciente)}
-                  aria-label="Concluir regulação"
-                >
-                  <CheckCheck className="h-4 w-4 text-green-600" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Concluir Regulação</p></TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onAlterar?.(paciente)}
-                  aria-label="Alterar regulação"
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Alterar Regulação</p></TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => onCancelar?.(paciente)}
-                  aria-label="Cancelar regulação"
-                >
-                  <XCircle className="h-4 w-4 text-destructive" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Cancelar Regulação</p></TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={onRegularClick}
-                  aria-label="Regular leito"
-                >
-                  <LogIn className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Regular Leito</p></TooltipContent>
-            </Tooltip>
-
-            {/* Nova ação de Alta Direta */}
-            {onAltaDireta && (
-              <AlertDialog>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        aria-label="Dar Alta"
-                      >
-                        <LogOut className="h-4 w-4 text-green-600" />
-                      </Button>
-                    </AlertDialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent><p>Dar Alta</p></TooltipContent>
-                </Tooltip>
-
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar Alta do Paciente?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Esta ação removerá {paciente.nomeCompleto} do sistema e liberará o leito {paciente.leitoCodigo} para higienização. Deseja continuar?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onAltaDireta(paciente)}>Confirmar Alta</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </TooltipProvider>
-        )}
-
-        {onAlta && (
-          <AlertDialog>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-green-600"
-                      aria-label="Informar alta"
-                    >
-                      <LogOut className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                </TooltipTrigger>
-                <TooltipContent><p>Informar Alta</p></TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Confirmar Alta?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação irá liberar o leito do paciente. Deseja continuar?
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={onAlta}>Confirmar Alta</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+      <div className="mt-2">
+        <p className="text-gray-700 text-sm">
+          <strong>Solicitado por:</strong> {paciente.solicitadoPor}
+        </p>
+        <p className="text-gray-700 text-sm">
+          <strong>Leito Necessário:</strong> {paciente.leitoNecessario}
+        </p>
+        <p className="text-gray-700 text-sm">
+          <strong>Condição Clínica:</strong> {paciente.condicaoClinica}
+        </p>
       </div>
+
+      <div className="flex items-center text-gray-600 text-xs mt-3">
+        <CalendarClock className="mr-1 h-4 w-4" />
+        Solicitado em: {paciente.dataSolicitacao ? new Date(paciente.dataSolicitacao.toDate()).toLocaleDateString('pt-BR') : 'Data não informada'}
+      </div>
+
+      <div className="mt-4 flex justify-end gap-2">
+        <Button size="sm" variant="secondary" onClick={() => onObservacoes(paciente.id)}>
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Observações
+        </Button>
+        <Button size="sm" onClick={() => onRegular(paciente.id)}>Regular Paciente</Button>
+      </div>
+      
+      {paciente.regulacao && (
+        <div className="text-xs text-gray-500 mt-2">
+          Regulado para: {paciente.regulacao.paraSetor || 'Não especificado'}
+          {paciente.regulacao.timestamp && (
+            <span className="ml-2">
+              em {new Date(paciente.regulacao.timestamp.toDate()).toLocaleDateString('pt-BR')}
+            </span>
+          )}
+        </div>
+      )}
+      
     </div>
   );
 };
+
+export default PacientePendenteItem;
