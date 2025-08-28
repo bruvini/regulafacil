@@ -404,8 +404,17 @@ const registrarHistoricoRegulacao = async (
   const pacientesJaRegulados = filteredPacientes.filter(
     (p) => p.statusLeito === "Regulado"
   );
+
+  // Conjunto auxiliar para identificar pacientes com regulação pendente
+  const pacientesReguladosPendentesIds = new Set(
+    pacientesJaRegulados.map((p) => p.id)
+  );
+
   const pacientesAguardandoUTI = filteredPacientes.filter(
-    (p) => p.aguardaUTI && !p.transferirPaciente
+    (p) =>
+      p.aguardaUTI &&
+      !p.transferirPaciente &&
+      !pacientesReguladosPendentesIds.has(p.id)
   );
   const pacientesAguardandoTransferencia = filteredPacientes.filter(
     (p) => p.transferirPaciente
@@ -593,31 +602,41 @@ const registrarHistoricoRegulacao = async (
           setorId: leitoDestino.setorId,
       };
 
-      // 4. VERIFICA E FINALIZA O PEDIDO DE UTI (se aplicável)
-      if (pacienteCompleto.aguardaUTI && leitoDestino.tipoLeito?.toUpperCase() === 'UTI') {
-          const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
-          const dataConclusao = new Date();
-          const duracao = intervalToDuration({ start: dataPedido, end: dataConclusao });
-          const tempoDeEspera = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
-
-          const logUTI = `Pedido de UTI para ${pacienteCompleto.nomeCompleto} finalizado após ${tempoDeEspera}. Paciente alocado no leito ${leitoDestino.codigoLeito}. Conclusão em: ${dataConclusao.toLocaleString('pt-BR')}.`;
-          registrarLog(logUTI, "Fila de UTI");
-
-          dadosUpdate.aguardaUTI = false;
-          dadosUpdate.dataPedidoUTI = null;
-      }
-
       batch.update(pacienteRef, dadosUpdate);
 
       // --- EXECUÇÃO DO BATCH ---
       // Envia todas as atualizações para o banco de dados de uma só vez
       await batch.commit();
 
+      // 4. VERIFICA E FINALIZA O PEDIDO DE UTI (se aplicável)
+      if (
+        pacienteCompleto.aguardaUTI &&
+        leitoDestino.tipoLeito?.toUpperCase() === 'UTI'
+      ) {
+        await updateDoc(pacienteRef, {
+          aguardaUTI: false,
+          dataPedidoUTI: null,
+        });
+
+        const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
+        const dataConclusao = new Date();
+        const duracao = intervalToDuration({
+          start: dataPedido,
+          end: dataConclusao,
+        });
+        const tempoDeEspera = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
+
+        registrarLog(
+          `Pedido de UTI para ${pacienteCompleto.nomeCompleto} finalizado automaticamente após ${tempoDeEspera} de espera. Paciente alocado no leito ${leitoDestino.codigoLeito}.`,
+          "Fila de UTI"
+        );
+      }
+
       // --- LOGS E NOTIFICAÇÕES (APENAS APÓS SUCESSO DO BATCH) ---
       const logMessage = `Regulação de ${pacienteCompleto.nomeCompleto} concluída para o leito ${leitoDestino.codigoLeito}.`;
       await registrarHistoricoRegulacao(paciente.regulacao.regulacaoId, 'concluida', { detalhesLog: logMessage });
       registrarLog(logMessage, "Regulação de Leitos");
-      
+
       toast({ title: "Sucesso!", description: "Regulação concluída e leito de origem liberado para higienização." });
 
     } catch (error) {
