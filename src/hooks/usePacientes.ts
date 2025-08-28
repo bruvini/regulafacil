@@ -58,14 +58,17 @@ export const usePacientes = () => {
     return () => unsubscribe();
   }, []); // O array de dependências vazio garante que o listener seja configurado apenas uma vez.
 
-  const criarPacienteManual = async (dadosPaciente: Omit<Paciente, 'id'>): Promise<string | null> => {
-    const nomeEmMaiusculo = dadosPaciente.nomeCompleto.toUpperCase();
+  const criarPacienteManual = async (
+    dadosPaciente: Partial<Omit<Paciente, 'id'>>,
+    options?: { retornarExistente?: boolean }
+  ): Promise<string | null> => {
+    const nomeEmMaiusculo = dadosPaciente.nomeCompleto!.toUpperCase();
 
     try {
       const q = query(
         collection(db, 'pacientesRegulaFacil'),
         where('nomeCompleto', '==', nomeEmMaiusculo),
-        where('dataNascimento', '==', dadosPaciente.dataNascimento)
+        where('dataNascimento', '==', dadosPaciente.dataNascimento!)
       );
 
       const querySnapshot = await getDocs(q);
@@ -73,7 +76,10 @@ export const usePacientes = () => {
       if (!querySnapshot.empty) {
         const pacienteExistente = querySnapshot.docs[0];
 
-        // Verifica se há possibilidade de dessincronização
+        if (options?.retornarExistente) {
+          return pacienteExistente.id;
+        }
+
         if (dadosPaciente.leitoId) {
           const leitoSnap = await getDoc(doc(db, 'leitosRegulaFacil', dadosPaciente.leitoId));
           if (leitoSnap.exists()) {

@@ -247,8 +247,6 @@ export const reconciliarPacientesComPlanilha = async (
           deLeito: pacienteAtual.leitoId || 'N/A',
           paraLeito: leitoDestino.codigoLeito,
         });
-      } else {
-        // Nada a fazer: paciente e leito já condizem com a planilha
       }
     } else {
       // CASO 2: NOVO PACIENTE (NOVA INTERNAÇÃO)
