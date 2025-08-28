@@ -1,370 +1,432 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { AcoesRapidas } from "@/components/AcoesRapidas";
-import { RegulacaoModals } from "@/components/modals/regulacao/RegulacaoModals";
-import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
-import { useState } from "react";
-import { useRegulacoes } from "@/hooks/useRegulacoes";
-import { IndicadoresRegulacao } from "@/components/IndicadoresRegulacao";
-// Importações necessárias para o cálculo
-import { differenceInMinutes, isValid, parse } from 'date-fns'; 
-import { useMemo } from "react";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { toast } from 'react-hot-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-// Componentes atualizados
-import { FiltrosBlocoRegulacao } from "@/components/FiltrosBlocoRegulacao";
-import { PacientesAguardandoRegulacao } from "@/components/PacientesAguardandoRegulacao";
-import { PacientesReguladosBloco } from "@/components/PacientesReguladosBloco";
-import { EsperaUTITransferencias } from "@/components/EsperaUTITransferencias";
-import { CirurgiasEletivasBloco } from "@/components/CirurgiasEletivasBloco";
-import { RemanejamentosPendentesBloco } from "@/components/RemanejamentosPendentesBloco";
+import { api } from '@/lib/axios';
+import { useToast } from "@/components/ui/use-toast"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Switch } from "@/components/ui/switch"
+import { Separator } from "@/components/ui/separator"
+import { Slider } from "@/components/ui/slider"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
-// Novos modals
-import { PanoramaSelecaoPeriodoModal } from "@/components/modals/PanoramaSelecaoPeriodoModal";
-import { PanoramaVisualizacaoModal } from "@/components/modals/PanoramaVisualizacaoModal";
-import { JustificativaHomonimoModal } from "@/components/modals/JustificativaHomonimoModal";
+import { Paciente } from '@/types/hospital';
+import { Plus, Search, Trash } from 'lucide-react';
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { DatePicker } from '@/components/ui/date-picker';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { RegulacaoLeitoItem } from '@/components/RegulacaoLeitoItem';
+import { PacientesReguladosBloco } from '@/components/PacientesReguladosBloco';
+import { RemanejamentosPendentesBloco } from '@/components/RemanejamentosPendentesBloco';
 
-const RegulacaoLeitos = () => {
-  const { loading, listas, modals, handlers, filtrosProps } = useRegulacaoLogic();
-  const { regulacoes, loading: regulacoesLoading } = useRegulacoes();
+const formSchema = z.object({
+  nome: z.string().min(2, {
+    message: "Nome must be at least 2 characters.",
+  }),
+  dataNascimento: z.date(),
+  sexo: z.enum(['M', 'F']),
+  diagnostico: z.string().min(10, {
+    message: "Diagnóstico must be at least 10 characters.",
+  }),
+  crmMedico: z.string().min(5, {
+    message: "CRM do médico must be at least 5 characters.",
+  }),
+  nomeMedico: z.string().min(2, {
+    message: "Nome do médico must be at least 2 characters.",
+  }),
+})
 
-  // Estados para os novos modais de panorama
-  const [panoramaSelecaoOpen, setPanoramaSelecaoOpen] = useState(false);
-  const [panoramaVisualizacaoOpen, setPanoramaVisualizacaoOpen] =
-    useState(false);
-  const [periodoSelecionado, setPeriodoSelecionado] = useState({
-    inicio: "",
-    fim: "",
-  });
-  const [justificativaOpen, setJustificativaOpen] = useState(false);
-  const [regulacaoPendente, setRegulacaoPendente] = useState<{
-    leitoDestino: any;
-    observacoes: string;
-    motivoAlteracao?: string;
-  } | null>(null);
+export default function RegulacaoLeitos() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
+  const [search, setSearch] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [actingOnPatientId, setActingOnPatientId] = useState<string | null>(null);
+  const [pacientesRegulados, setPacientesRegulados] = useState<Paciente[]>([]);
+  const [pacientesAguardandoRemanejamento, setPacientesAguardandoRemanejamento] = useState<Paciente[]>([]);
 
-  const handleAbrirPanorama = () => {
-    setPanoramaSelecaoOpen(true);
-  };
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nome: "",
+      dataNascimento: new Date(),
+      sexo: 'M',
+      diagnostico: "",
+      crmMedico: "",
+      nomeMedico: "",
+    },
+  })
 
-  const handleGerarPanorama = (dataInicio: string, dataFim: string) => {
-    setPeriodoSelecionado({ inicio: dataInicio, fim: dataFim });
-    setPanoramaVisualizacaoOpen(true);
-  };
-
-  const handleConfirmarRegulacao = (
-    leitoDestino: any,
-    observacoes: string,
-    motivoAlteracao?: string
-  ) => {
-    if (leitoDestino.temHomonimo) {
-      setRegulacaoPendente({ leitoDestino, observacoes, motivoAlteracao });
-      setJustificativaOpen(true);
-    } else {
-      handlers.handleConfirmarRegulacao(leitoDestino, observacoes, motivoAlteracao);
-    }
-  };
-
-  const handleConfirmarJustificativa = (justificativa: string) => {
-    if (regulacaoPendente) {
-      handlers.handleConfirmarRegulacao(
-        regulacaoPendente.leitoDestino,
-        regulacaoPendente.observacoes,
-        regulacaoPendente.motivoAlteracao,
-        justificativa
-      );
-      setRegulacaoPendente(null);
-    }
-    setJustificativaOpen(false);
-  };
-
-  // Substitua todo este bloco 'useMemo' pelo novo código
-  // dentro do arquivo src/pages/RegulacaoLeitos.tsx
-
-// dentro do arquivo src/pages/RegulacaoLeitos.tsx
-
-  const indicadores = useMemo(() => {
-    const agora = new Date();
-
-    // --- LÓGICA CORRIGIDA: Tempo médio de espera (PS) ---
-    const pacientesNoPs = [
-      ...listas.decisaoCirurgica,
-      ...listas.decisaoClinica,
-    ];
-    let tempoMedioInternacao = "0d 0h 0m";
-    if (pacientesNoPs.length > 0) {
-      const totalMinutos = pacientesNoPs.reduce((acc, p) => {
-        const dataInicioEspera = parse(p.dataInternacao, 'dd/MM/yyyy HH:mm', new Date());
-        if (isValid(dataInicioEspera)) {
-          const diff = differenceInMinutes(agora, dataInicioEspera);
-          return acc + (diff > 0 ? diff : 0);
-        }
-        return acc;
-      }, 0);
-      const mediaMinutos = totalMinutos / pacientesNoPs.length;
-      if (!isNaN(mediaMinutos) && mediaMinutos > 0) {
-        const dias = Math.floor(mediaMinutos / 1440);
-        const horas = Math.floor((mediaMinutos % 1440) / 60);
-        const minutos = Math.floor(mediaMinutos % 60);
-        tempoMedioInternacao = `${dias}d ${horas}h ${minutos}m`;
-      }
-    }
-    
-    // --- INÍCIO DA LÓGICA ATUALIZADA PARA REGULAÇÕES PENDENTES ---
-
-    let tempoMedioRegulacaoPendente = "0d 0h 0m";
-
-    // 1. Criamos um conjunto com os IDs dos pacientes que estão visíveis na lista de "Já Regulados".
-    //    Esta é a nossa fonte da verdade sobre quem está com uma regulação ativa.
-    const idsPacientesAtualmenteRegulados = new Set(listas.pacientesJaRegulados.map(p => p.id));
-
-    // 2. Filtramos a lista geral de regulações para pegar apenas aquelas que:
-    //    a) Pertencem a um paciente que está na lista de ativos (`idsPacientesAtualmenteRegulados`).
-    //    b) Possuem o status 'Pendente'.
-    const regulacoesPendentesAtuais = regulacoes.filter(r => 
-      idsPacientesAtualmenteRegulados.has(r.pacienteId) && r.status === 'Pendente'
-    );
-
-    // 3. O cálculo da média agora é feito apenas sobre esta lista filtrada e correta.
-    if (regulacoesPendentesAtuais.length > 0) {
-      const totalMinutosPendentes = regulacoesPendentesAtuais.reduce((acc, r) => {
-          const dataInicioRegulacao = new Date(r.criadaEm);
-          if(isValid(dataInicioRegulacao)) {
-            const diff = differenceInMinutes(agora, dataInicioRegulacao);
-            return acc + (diff > 0 ? diff : 0);
-          }
-          return acc;
-      }, 0);
-
-      const mediaMinutosPendentes = totalMinutosPendentes / regulacoesPendentesAtuais.length;
-      
-      if (!isNaN(mediaMinutosPendentes) && mediaMinutosPendentes > 0) {
-        const dias = Math.floor(mediaMinutosPendentes / 1440);
-        const horas = Math.floor((mediaMinutosPendentes % 1440) / 60);
-        const minutos = Math.floor(mediaMinutosPendentes % 60);
-        tempoMedioRegulacaoPendente = `${dias}d ${horas}h ${minutos}m`;
-      }
-    }
-    
-    // --- FIM DA LÓGICA ATUALIZADA ---
-
-    const aguardandoLeito = listas.decisaoCirurgica.length + listas.decisaoClinica.length;
-
-    const contagemStatus = {
-      Pendentes: regulacoes.filter(r => r.status === 'Pendente').length,
-      Concluidas: regulacoes.filter(r => r.status === 'Concluída').length,
-      Canceladas: regulacoes.filter(r => r.status === 'Cancelada').length,
-      Alteradas: regulacoes.filter(r => r.historicoEventos.some(e => e.evento === 'alterada')).length,
-    };
-    
-    const getTopComContagem = (arr: string[]) => {
-      if (!arr.length) return { nome: 'N/A', contagem: 0 };
-      const contagens = arr.reduce((acc, val) => ({ ...acc, [val]: (acc[val] || 0) + 1 }), {} as Record<string, number>);
-      const [nome, contagem] = Object.entries(contagens).sort((a, b) => b[1] - a[1])[0];
-      return { nome, contagem };
-    };
-    
-    const topOrigem = getTopComContagem(regulacoes.map(r => r.setorOrigemNome));
-    const topDestino = getTopComContagem(regulacoes.map(r => r.setorDestinoNome));
-    
-    const turnos = regulacoes.map(r => {
-      const hora = new Date(r.criadaEm).getHours() + new Date(r.criadaEm).getMinutes() / 60;
-      if (hora >= 6.5 && hora < 12.5) return 'Manhã';
-      if (hora >= 12.5 && hora < 18.5) return 'Tarde';
-      return 'Noite';
-    });
-    const topTurno = getTopComContagem(turnos);
-
-    return { 
-      aguardandoLeito, 
-      tempoMedioInternacao, 
-      contagemStatus, 
-      tempoMedioRegulacaoPendente, 
-      topOrigem, 
-      topDestino, 
-      topTurno 
-    };
-  }, [listas, regulacoes]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-64 mb-4"></div>
-            <div className="h-4 bg-muted rounded w-96 mb-8"></div>
-            <div className="space-y-4">
-              <div className="h-32 bg-muted rounded"></div>
-              <div className="h-64 bg-muted rounded"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log(values)
   }
 
+  useEffect(() => {
+    fetchPacientes();
+  }, [search]);
+
+  const fetchPacientes = async () => {
+    try {
+      const response = await api.get('/pacientes', { params: { search } });
+      setPacientes(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar pacientes:', error);
+      toast.error('Erro ao buscar pacientes');
+    }
+  };
+
+  const { toast } = useToast()
+
+  const criarPacienteMutation = useMutation(
+    async (novoPaciente: Omit<Paciente, 'id'>) => {
+      const response = await api.post('/pacientes', novoPaciente);
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        toast({
+          title: "Sucesso!",
+          description: "Paciente criado com sucesso.",
+        })
+        queryClient.invalidateQueries(['pacientes']);
+        fetchPacientes();
+        setIsDialogOpen(false);
+        form.reset();
+      },
+      onError: (error: any) => {
+        toast({
+          variant: "destructive",
+          title: "Erro!",
+          description: error?.response?.data?.message || "Erro ao criar paciente.",
+        })
+      },
+    }
+  );
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  };
+
+  const handleRegularPaciente = async (paciente: Paciente) => {
+    setActingOnPatientId(paciente.id);
+    try {
+      // Simulação de chamada à API para regular o paciente
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setPacientesRegulados(prev => [...prev, paciente]);
+      setPacientes(prev => prev.filter(p => p.id !== paciente.id));
+      toast.success(`Paciente ${paciente.nome} regulado com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao regular paciente:', error);
+      toast.error('Erro ao regular paciente');
+    } finally {
+      setActingOnPatientId(null);
+    }
+  };
+
+  const handleRemanejarPaciente = async (paciente: Paciente) => {
+    setActingOnPatientId(paciente.id);
+    try {
+      // Simulação de chamada à API para solicitar o remanejamento
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setPacientesAguardandoRemanejamento(prev => [...prev, paciente]);
+      setPacientesRegulados(prev => prev.filter(p => p.id !== paciente.id));
+      toast.success(`Remanejamento do paciente ${paciente.nome} solicitado.`);
+    } catch (error) {
+      console.error('Erro ao solicitar remanejamento:', error);
+      toast.error('Erro ao solicitar remanejamento');
+    } finally {
+      setActingOnPatientId(null);
+    }
+  };
+
+  const handleConcluirRegulacao = (paciente: Paciente) => {
+    setActingOnPatientId(paciente.id);
+    setTimeout(() => {
+      setPacientesRegulados(prev => prev.filter(p => p.id !== paciente.id));
+      toast.success(`Regulação do paciente ${paciente.nome} concluída.`);
+      setActingOnPatientId(null);
+    }, 1000);
+  };
+
+  const handleAlterarRegulacao = (paciente: Paciente) => {
+    setActingOnPatientId(paciente.id);
+    setTimeout(() => {
+      toast.info(`Regulação do paciente ${paciente.nome} alterada.`);
+      setActingOnPatientId(null);
+    }, 1000);
+  };
+
+  const handleCancelarRegulacao = (paciente: Paciente) => {
+    setActingOnPatientId(paciente.id);
+    setTimeout(() => {
+      setPacientesRegulados(prev => prev.filter(p => p.id !== paciente.id));
+      setPacientes(prev => [...prev, paciente]);
+      toast.warn(`Regulação do paciente ${paciente.nome} cancelada.`);
+      setActingOnPatientId(null);
+    }, 1000);
+  };
+
+  const handleRemanejamento = (paciente: Paciente) => {
+    setActingOnPatientId(paciente.id);
+    setTimeout(() => {
+      setPacientesAguardandoRemanejamento(prev => prev.filter(p => p.id !== paciente.id));
+      toast.success(`Remanejamento do paciente ${paciente.nome} confirmado.`);
+      setActingOnPatientId(null);
+    }, 1000);
+  };
+
+  const handleCancelarRemanejamento = async (paciente: Paciente) => {
+    setActingOnPatientId(paciente.id);
+    try {
+      // Simulação de chamada à API para cancelar o remanejamento
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setPacientesAguardandoRemanejamento(prev => prev.filter(p => p.id !== paciente.id));
+      setPacientesRegulados(prev => [...prev, paciente]);
+      toast.warn(`Remanejamento do paciente ${paciente.nome} cancelado.`);
+    } catch (error) {
+      console.error('Erro ao cancelar remanejamento:', error);
+      toast.error('Erro ao cancelar remanejamento');
+    } finally {
+      setActingOnPatientId(null);
+    }
+  };
+
+  const handleObservacoesRemanejamento = (paciente: Paciente) => {
+    setActingOnPatientId(paciente.id);
+    setTimeout(() => {
+      toast.info(`Observações sobre o remanejamento do paciente ${paciente.nome}.`);
+      setActingOnPatientId(null);
+    }, 1000);
+  };
+
+  const handleVerResumoRegulacao = () => {
+    toast.info('Exibindo resumo da regulação de leitos.');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-subtle p-4 sm:p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* 1. Header */}
-        <header className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-medical-primary">
-              Central de Regulação
-            </h1>
-            <p className="text-muted-foreground">
-              Visão geral e controle das solicitações e pendências de leitos.
-            </p>
-          </div>
-          <AcoesRapidas
-            onImportarClick={() => handlers.setImportModalOpen(true)}
-            onPassagemClick={handlers.handlePassagemPlantao}
-            onSugestoesClick={handlers.handleAbrirSugestoes}
-            onPanoramaClick={handleAbrirPanorama}
-            showAllButtons={true}
-            sugestoesDisponiveis={listas.sugestoesDeRegulacao.length > 0}
-            panoramaDisponivel={true}
+    <div className="container mx-auto py-10">
+      <h1 className="text-3xl font-bold mb-4 text-medical-primary">Regulação de Leitos</h1>
+
+      <div className="flex justify-between items-center mb-6">
+        <div className="relative flex items-center">
+          <Input
+            type="search"
+            placeholder="Buscar paciente..."
+            className="pl-10 pr-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={handleSearch}
           />
-        </header>
+          <Search className="absolute left-3 text-gray-400" />
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar Paciente
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Paciente</DialogTitle>
+              <DialogDescription>
+                Crie um novo paciente para a regulação de leitos.
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="nome"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do paciente" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dataNascimento"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Data de Nascimento</FormLabel>
+                      <DatePicker
+                        className={cn(
+                          "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                          !field.value && "text-muted-foreground"
+                        )}
+                        onSelect={field.onChange}
+                        value={field.value}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="sexo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sexo</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o sexo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="M">Masculino</SelectItem>
+                          <SelectItem value="F">Feminino</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="diagnostico"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Diagnóstico</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Insira o diagnóstico do paciente"
+                          className="resize-none"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="crmMedico"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CRM do Médico</FormLabel>
+                      <FormControl>
+                        <Input placeholder="CRM do médico responsável" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="nomeMedico"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Médico</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome do médico responsável" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit">Criar Paciente</Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-        {/* 2. Bloco de Indicadores */}
-        <IndicadoresRegulacao indicadores={indicadores} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="shadow-card border border-border/50">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-medical-primary flex items-center gap-2">
+              Pacientes Aguardando Regulação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pacientes.map((paciente) => (
+                <RegulacaoLeitoItem
+                  key={paciente.id}
+                  paciente={paciente}
+                  onRegular={() => handleRegularPaciente(paciente)}
+                  isActing={actingOnPatientId === paciente.id}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* 3. Bloco de Filtros */}
-        <FiltrosBlocoRegulacao filtrosProps={filtrosProps} />
-
-        {/* 4. Bloco Principal: Pacientes Aguardando Regulação */}
-        <PacientesAguardandoRegulacao
-          listas={{
-            decisaoCirurgica: listas.decisaoCirurgica,
-            decisaoClinica: listas.decisaoClinica,
-            recuperacaoCirurgica: listas.recuperacaoCirurgica,
-            totalPendentes: listas.totalPendentes,
-            pacientesJaRegulados: listas.pacientesJaRegulados,
-          }}
-          handlers={{
-            handleOpenRegulacaoModal: handlers.handleOpenRegulacaoModal,
-            handleConcluir: handlers.handleConcluir,
-            handleAlterar: handlers.handleAlterar,
-            handleCancelar: handlers.handleCancelar,
-            altaAposRecuperacao: handlers.altaAposRecuperacao,
-            setResumoModalOpen: handlers.setResumoModalOpen,
-            handleAltaDireta: handlers.handleAltaDireta,
-          }}
-          filtrosProps={{
-            sortConfig: filtrosProps.sortConfig,
-          }}
-          actingOnPatientId={modals.actingOnPatientId}
-        />
-
-        {/* 5. Bloco: Pacientes Regulados */}
         <PacientesReguladosBloco
-          pacientesRegulados={listas.pacientesJaRegulados}
-          onConcluir={handlers.handleConcluir}
-          onAlterar={handlers.handleAlterar}
-          onCancelar={handlers.handleCancelar}
-          onVerResumo={() => handlers.setResumoModalOpen(true)}
-          actingOnPatientId={modals.actingOnPatientId}
+          pacientesRegulados={pacientesRegulados}
+          onConcluir={handleConcluirRegulacao}
+          onAlterar={handleAlterarRegulacao}
+          onCancelar={handleCancelarRegulacao}
+          onVerResumo={handleVerResumoRegulacao}
+          actingOnPatientId={actingOnPatientId}
         />
 
-        {/* 6. Bloco Agrupador: Espera por UTI e Transferências Externas */}
-        <EsperaUTITransferencias
-          pacientesAguardandoUTI={listas.pacientesAguardandoUTI}
-          pacientesAguardandoTransferencia={
-            listas.pacientesAguardandoTransferencia
-          }
-          onCancelarUTI={handlers.cancelarPedidoUTI}
-          onTransferirExterna={handlers.handleIniciarTransferenciaExterna}
-          onRegularUTI={(p) => handlers.handleOpenRegulacaoModal(p, "uti")}
-          onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
-        />
-
-        {/* 7. Bloco: Pacientes Aguardando Cirurgia Eletiva */}
-        <CirurgiasEletivasBloco
-          cirurgias={listas.cirurgias}
-          onAlocarCirurgia={handlers.handleAlocarLeitoCirurgia}
-        />
-
-        {/* 8. Bloco: Remanejamentos Pendentes */}
-        {listas.pacientesAguardandoRemanejamento.length > 0 && (
           <RemanejamentosPendentesBloco
-            pacientesAguardandoRemanejamento={
-              listas.pacientesAguardandoRemanejamento
-            }
-            onRemanejar={(paciente) =>
-              handlers.handleOpenRegulacaoModal(paciente, "normal")
-            }
-            onCancelar={handlers.handleCancelarRemanejamento}
+            remanejamentosPendentes={pacientesAguardandoRemanejamento}
+            onConfirmarRemanejamento={handleRemanejamento}
+            onCancelarRemanejamento={handleCancelarRemanejamento}
+            onObservacoesRemanejamento={handleObservacoesRemanejamento}
           />
-        )}
-
-        {/* Modais */}
-        <RegulacaoModals
-          importModalOpen={modals.importModalOpen}
-          regulacaoModalOpen={modals.regulacaoModalOpen}
-          cancelamentoModalOpen={modals.cancelamentoModalOpen}
-          transferenciaModalOpen={modals.transferenciaModalOpen}
-          alocacaoCirurgiaModalOpen={modals.alocacaoCirurgiaModalOpen}
-          gerenciarTransferenciaOpen={modals.gerenciarTransferenciaOpen}
-          resumoModalOpen={modals.resumoModalOpen}
-          sugestoesModalOpen={modals.sugestoesModalOpen}
-          pacienteParaRegular={modals.pacienteParaRegular}
-          pacienteParaAcao={modals.pacienteParaAcao}
-          cirurgiaParaAlocar={modals.cirurgiaParaAlocar}
-          isAlteracaoMode={modals.isAlteracaoMode}
-          validationResult={modals.validationResult}
-          syncSummary={modals.syncSummary}
-          modoRegulacao={modals.modoRegulacao}
-          processing={loading}
-          isSyncing={loading}
-          pacientesRegulados={listas.pacientesJaRegulados}
-          sugestoes={listas.sugestoesDeRegulacao}
-          totalPendentes={listas.totalPendentes}
-          onProcessFileRequest={handlers.handleProcessFileRequest}
-          onConfirmSync={handlers.handleConfirmSync}
-          onConfirmarRegulacao={handleConfirmarRegulacao}
-          onConfirmarCancelamento={handlers.onConfirmarCancelamento}
-          onConfirmarTransferenciaExterna={
-            handlers.handleConfirmarTransferenciaExterna
-          }
-          onConfirmarAlocacaoCirurgia={handlers.handleConfirmarAlocacaoCirurgia}
-          setImportModalOpen={handlers.setImportModalOpen}
-          setRegulacaoModalOpen={handlers.setRegulacaoModalOpen}
-          setCancelamentoModalOpen={handlers.setCancelamentoModalOpen}
-          setTransferenciaModalOpen={handlers.setTransferenciaModalOpen}
-          setAlocacaoCirurgiaModalOpen={handlers.setAlocacaoCirurgiaModalOpen}
-          setGerenciarTransferenciaOpen={handlers.setGerenciarTransferenciaOpen}
-          setResumoModalOpen={handlers.setResumoModalOpen}
-          setSugestoesModalOpen={handlers.setSugestoesModalOpen}
-        />
-
-        <JustificativaHomonimoModal
-          open={justificativaOpen}
-          onOpenChange={(open) => {
-            if (!open) setRegulacaoPendente(null);
-            setJustificativaOpen(open);
-          }}
-          onConfirm={handleConfirmarJustificativa}
-          pacienteNome={modals.pacienteParaRegular?.nomeCompleto || ''}
-          leitoCodigo={regulacaoPendente?.leitoDestino.codigoLeito || ''}
-        />
-
-        {/* Novos Modais de Panorama */}
-        <PanoramaSelecaoPeriodoModal
-          open={panoramaSelecaoOpen}
-          onOpenChange={setPanoramaSelecaoOpen}
-          onGerarPanorama={handleGerarPanorama}
-        />
-
-        <PanoramaVisualizacaoModal
-          open={panoramaVisualizacaoOpen}
-          onOpenChange={setPanoramaVisualizacaoOpen}
-          pacientesRegulados={listas.pacientesJaRegulados}
-          dataInicio={periodoSelecionado.inicio}
-          dataFim={periodoSelecionado.fim}
-        />
       </div>
     </div>
   );
-};
-
-export default RegulacaoLeitos;
+}
