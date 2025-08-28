@@ -1,10 +1,9 @@
+
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { api } from '@/lib/axios';
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -59,13 +58,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 import { Paciente } from '@/types/hospital';
-import { Plus, Search, Trash } from 'lucide-react';
+import { Plus, Search, Trash, CalendarIcon } from 'lucide-react';
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { DatePicker } from '@/components/ui/date-picker';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -91,7 +91,6 @@ const formSchema = z.object({
 })
 
 export default function RegulacaoLeitos() {
-  const router = useRouter();
   const queryClient = useQueryClient();
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [search, setSearch] = useState('');
@@ -122,41 +121,62 @@ export default function RegulacaoLeitos() {
 
   const fetchPacientes = async () => {
     try {
-      const response = await api.get('/pacientes', { params: { search } });
-      setPacientes(response.data);
+      // Simulação de dados para o exemplo
+      const mockPacientes: Paciente[] = [
+        {
+          id: '1',
+          nomeCompleto: 'João da Silva Santos',
+          sexoPaciente: 'M',
+          dataNascimento: '1980-05-15',
+          especialidadePaciente: 'Cardiologia',
+          dataInternacao: '2024-01-15T10:30:00Z',
+          isolamentosVigentes: []
+        },
+        {
+          id: '2',
+          nomeCompleto: 'Maria Oliveira Costa',
+          sexoPaciente: 'F',
+          dataNascimento: '1975-08-22',
+          especialidadePaciente: 'Neurologia',
+          dataInternacao: '2024-01-14T14:20:00Z',
+          isolamentosVigentes: [
+            { id: '1', nome: 'Precaução de Contato', sigla: 'PC' }
+          ]
+        }
+      ];
+      setPacientes(mockPacientes);
     } catch (error) {
       console.error('Erro ao buscar pacientes:', error);
       toast.error('Erro ao buscar pacientes');
     }
   };
 
-  const { toast } = useToast()
+  const { toast: toastHook } = useToast()
 
-  const criarPacienteMutation = useMutation(
-    async (novoPaciente: Omit<Paciente, 'id'>) => {
-      const response = await api.post('/pacientes', novoPaciente);
-      return response.data;
+  const criarPacienteMutation = useMutation({
+    mutationFn: async (novoPaciente: Omit<Paciente, 'id'>) => {
+      // Simulação de criação de paciente
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return { ...novoPaciente, id: Date.now().toString() };
     },
-    {
-      onSuccess: () => {
-        toast({
-          title: "Sucesso!",
-          description: "Paciente criado com sucesso.",
-        })
-        queryClient.invalidateQueries(['pacientes']);
-        fetchPacientes();
-        setIsDialogOpen(false);
-        form.reset();
-      },
-      onError: (error: any) => {
-        toast({
-          variant: "destructive",
-          title: "Erro!",
-          description: error?.response?.data?.message || "Erro ao criar paciente.",
-        })
-      },
-    }
-  );
+    onSuccess: () => {
+      toastHook({
+        title: "Sucesso!",
+        description: "Paciente criado com sucesso.",
+      })
+      queryClient.invalidateQueries({ queryKey: ['pacientes'] });
+      fetchPacientes();
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toastHook({
+        variant: "destructive",
+        title: "Erro!",
+        description: error?.message || "Erro ao criar paciente.",
+      })
+    },
+  });
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -169,7 +189,7 @@ export default function RegulacaoLeitos() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setPacientesRegulados(prev => [...prev, paciente]);
       setPacientes(prev => prev.filter(p => p.id !== paciente.id));
-      toast.success(`Paciente ${paciente.nome} regulado com sucesso!`);
+      toast.success(`Paciente ${paciente.nomeCompleto} regulado com sucesso!`);
     } catch (error) {
       console.error('Erro ao regular paciente:', error);
       toast.error('Erro ao regular paciente');
@@ -185,7 +205,7 @@ export default function RegulacaoLeitos() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setPacientesAguardandoRemanejamento(prev => [...prev, paciente]);
       setPacientesRegulados(prev => prev.filter(p => p.id !== paciente.id));
-      toast.success(`Remanejamento do paciente ${paciente.nome} solicitado.`);
+      toast.success(`Remanejamento do paciente ${paciente.nomeCompleto} solicitado.`);
     } catch (error) {
       console.error('Erro ao solicitar remanejamento:', error);
       toast.error('Erro ao solicitar remanejamento');
@@ -198,7 +218,7 @@ export default function RegulacaoLeitos() {
     setActingOnPatientId(paciente.id);
     setTimeout(() => {
       setPacientesRegulados(prev => prev.filter(p => p.id !== paciente.id));
-      toast.success(`Regulação do paciente ${paciente.nome} concluída.`);
+      toast.success(`Regulação do paciente ${paciente.nomeCompleto} concluída.`);
       setActingOnPatientId(null);
     }, 1000);
   };
@@ -206,7 +226,7 @@ export default function RegulacaoLeitos() {
   const handleAlterarRegulacao = (paciente: Paciente) => {
     setActingOnPatientId(paciente.id);
     setTimeout(() => {
-      toast.info(`Regulação do paciente ${paciente.nome} alterada.`);
+      toast.info(`Regulação do paciente ${paciente.nomeCompleto} alterada.`);
       setActingOnPatientId(null);
     }, 1000);
   };
@@ -216,7 +236,7 @@ export default function RegulacaoLeitos() {
     setTimeout(() => {
       setPacientesRegulados(prev => prev.filter(p => p.id !== paciente.id));
       setPacientes(prev => [...prev, paciente]);
-      toast.warn(`Regulação do paciente ${paciente.nome} cancelada.`);
+      toast.warning(`Regulação do paciente ${paciente.nomeCompleto} cancelada.`);
       setActingOnPatientId(null);
     }, 1000);
   };
@@ -225,7 +245,7 @@ export default function RegulacaoLeitos() {
     setActingOnPatientId(paciente.id);
     setTimeout(() => {
       setPacientesAguardandoRemanejamento(prev => prev.filter(p => p.id !== paciente.id));
-      toast.success(`Remanejamento do paciente ${paciente.nome} confirmado.`);
+      toast.success(`Remanejamento do paciente ${paciente.nomeCompleto} confirmado.`);
       setActingOnPatientId(null);
     }, 1000);
   };
@@ -237,7 +257,7 @@ export default function RegulacaoLeitos() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setPacientesAguardandoRemanejamento(prev => prev.filter(p => p.id !== paciente.id));
       setPacientesRegulados(prev => [...prev, paciente]);
-      toast.warn(`Remanejamento do paciente ${paciente.nome} cancelado.`);
+      toast.warning(`Remanejamento do paciente ${paciente.nomeCompleto} cancelado.`);
     } catch (error) {
       console.error('Erro ao cancelar remanejamento:', error);
       toast.error('Erro ao cancelar remanejamento');
@@ -249,7 +269,7 @@ export default function RegulacaoLeitos() {
   const handleObservacoesRemanejamento = (paciente: Paciente) => {
     setActingOnPatientId(paciente.id);
     setTimeout(() => {
-      toast.info(`Observações sobre o remanejamento do paciente ${paciente.nome}.`);
+      toast.info(`Observações sobre o remanejamento do paciente ${paciente.nomeCompleto}.`);
       setActingOnPatientId(null);
     }, 1000);
   };
@@ -307,14 +327,38 @@ export default function RegulacaoLeitos() {
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Data de Nascimento</FormLabel>
-                      <DatePicker
-                        className={cn(
-                          "w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                          !field.value && "text-muted-foreground"
-                        )}
-                        onSelect={field.onChange}
-                        value={field.value}
-                      />
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP", { locale: ptBR })
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -420,12 +464,12 @@ export default function RegulacaoLeitos() {
           actingOnPatientId={actingOnPatientId}
         />
 
-          <RemanejamentosPendentesBloco
-            remanejamentosPendentes={pacientesAguardandoRemanejamento}
-            onConfirmarRemanejamento={handleRemanejamento}
-            onCancelarRemanejamento={handleCancelarRemanejamento}
-            onObservacoesRemanejamento={handleObservacoesRemanejamento}
-          />
+        <RemanejamentosPendentesBloco
+          remanejamentosPendentes={pacientesAguardandoRemanejamento}
+          onConfirmarRemanejamento={handleRemanejamento}
+          onCancelarRemanejamento={handleCancelarRemanejamento}
+          onObservacoesRemanejamento={handleObservacoesRemanejamento}
+        />
       </div>
     </div>
   );
