@@ -26,7 +26,7 @@ import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamen
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { RelatorioEspecialidadeModal } from '@/components/modals/RelatorioEspecialidadeModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
-import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido, InfoAltaPendente } from '@/types/hospital';
+import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido, InfoAltaPendente, DetalhesRemanejamento } from '@/types/hospital';
 import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -279,10 +279,10 @@ const MapaLeitos = () => {
       toast({ title: "Sucesso!", description: "Pedido de UTI solicitado." });
     },
 
-    onSolicitarRemanejamento: async (pacienteId: string, motivo: string) => {
+    onSolicitarRemanejamento: async (pacienteId: string, motivo: DetalhesRemanejamento) => {
       const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      await updateDoc(pacienteRef, { 
-        remanejarPaciente: true, 
+      await updateDoc(pacienteRef, {
+        remanejarPaciente: true,
         motivoRemanejamento: motivo,
         dataPedidoRemanejamento: new Date().toISOString()
       });

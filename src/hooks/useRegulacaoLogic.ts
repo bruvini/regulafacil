@@ -8,7 +8,7 @@ import { useAuditoria } from "@/hooks/useAuditoria";
 import { useSetores } from "@/hooks/useSetores";
 import { useLeitos } from "@/hooks/useLeitos";
 import { usePacientes } from "@/hooks/usePacientes";
-import { Paciente } from "@/types/hospital";
+import { Paciente, DetalhesRemanejamento } from "@/types/hospital";
 import {
   ResultadoValidacao,
   SyncSummary,
@@ -31,6 +31,7 @@ import { db } from "@/lib/firebase";
 import { intervalToDuration, parse, isValid } from "date-fns";
 import * as XLSX from "xlsx";
 import { useAuth } from "@/hooks/useAuth";
+import { descreverMotivoRemanejamento } from "@/lib/utils";
 
 export const useRegulacaoLogic = () => {
   const { userData } = useAuth();
@@ -728,7 +729,7 @@ const registrarHistoricoRegulacao = async (
   const solicitarRemanejamento = async (
     setorId: string,
     leitoId: string,
-    motivo: string
+    motivo: DetalhesRemanejamento | string
   ) => {
     try {
       const paciente = pacientes.find((p) => p.leitoId === leitoId);
@@ -740,7 +741,7 @@ const registrarHistoricoRegulacao = async (
           dataPedidoRemanejamento: new Date().toISOString(),
         });
         registrarLog(
-          `Solicitou remanejamento para ${paciente.nomeCompleto}. Motivo: ${motivo}`,
+          `Solicitou remanejamento para ${paciente.nomeCompleto}. Motivo: ${descreverMotivoRemanejamento(motivo)}`,
           "Regulação de Leitos"
         );
       }
@@ -1185,7 +1186,9 @@ const registrarHistoricoRegulacao = async (
     todosPacientesPendentes.forEach((p) => {
       if (
         p.remanejarPaciente &&
-        p.motivoRemanejamento?.startsWith("Risco de contaminação")
+        (typeof p.motivoRemanejamento === 'string'
+          ? p.motivoRemanejamento.startsWith("Risco de contaminação")
+          : p.motivoRemanejamento?.tipo === 'incompatibilidade_biologica')
       ) {
         mapaRemanejamentoContaminacao.set(p.nomeCompleto, p);
       }

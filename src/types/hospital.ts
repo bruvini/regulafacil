@@ -1,6 +1,19 @@
 
 import { Observacao } from './observacao';
 
+export type TipoRemanejamento =
+  | 'priorizacao'
+  | 'adequacao_perfil'
+  | 'melhoria_assistencia'
+  | 'liberado_isolamento'
+  | 'incompatibilidade_biologica';
+
+export interface DetalhesRemanejamento {
+  tipo: TipoRemanejamento;
+  justificativa?: string;
+  setoresSugeridos?: string[];
+}
+
 export interface AltaLeitoInfo {
   status: boolean;
   pendencia: string;
@@ -32,7 +45,7 @@ export interface Paciente {
   motivoTransferencia?: string;
   dataTransferencia?: string;
   remanejarPaciente?: boolean;
-  motivoRemanejamento?: string;
+  motivoRemanejamento?: DetalhesRemanejamento | string | null;
   dataPedidoRemanejamento?: string;
   provavelAlta?: boolean;
   altaNoLeito?: AltaLeitoInfo;

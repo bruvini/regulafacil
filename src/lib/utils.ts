@@ -56,3 +56,32 @@ export const formatarDuracao = (dataISOouString: string | Date | undefined | nul
     return 'Erro';
   }
 };
+
+import type { DetalhesRemanejamento } from '@/types/hospital';
+
+export const descreverMotivoRemanejamento = (
+  detalhes?: DetalhesRemanejamento | string | null
+): string => {
+  if (!detalhes) return '';
+  if (typeof detalhes === 'string') return detalhes;
+  switch (detalhes.tipo) {
+    case 'priorizacao':
+      return detalhes.justificativa
+        ? `Pedido de Priorização: ${detalhes.justificativa}`
+        : 'Pedido de Priorização';
+    case 'adequacao_perfil':
+      return detalhes.setoresSugeridos?.length
+        ? `Adequação de Perfil Clínico: ${detalhes.setoresSugeridos.join(', ')}`
+        : 'Adequação de Perfil Clínico';
+    case 'melhoria_assistencia':
+      return detalhes.justificativa
+        ? `Melhoria na Assistência: ${detalhes.justificativa}`
+        : 'Melhoria na Assistência';
+    case 'liberado_isolamento':
+      return 'Liberado de Isolamento';
+    case 'incompatibilidade_biologica':
+      return 'Incompatibilidade Biológica';
+    default:
+      return '';
+  }
+};
