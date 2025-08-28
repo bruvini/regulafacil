@@ -46,6 +46,12 @@ export interface Paciente {
   obsAltaProvavel?: Observacao[];
   obsInternacaoProlongada?: Observacao[];
   setorOrigem?: string;
+  idade?: number | string;
+  prioridade?: number;
+  solicitadoPor?: string;
+  leitoNecessario?: 'Enfermaria' | 'UTI';
+  condicaoClinica?: string;
+  dataSolicitacao?: string;
 }
 
 export interface IsolamentoVigente {
@@ -149,6 +155,7 @@ export interface Regulacao {
   setorDestinoNome: string;
   historicoEventos: Array<{ evento: string; timestamp: string }>;
   justificativaHomonimo?: string;
+  pacienteId: string;
 }
 
 // Alias for backward compatibility
