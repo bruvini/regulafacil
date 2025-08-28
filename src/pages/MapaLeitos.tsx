@@ -177,57 +177,63 @@ const MapaLeitos = () => {
     try {
       const setorInfo = setores.find(s => s.id === leitoParaAcao.setorId);
 
-      const pacienteId = await criarPacienteManual({
-        ...dadosForm,
-        leitoId: leitoParaAcao.id,
-        setorId: leitoParaAcao.setorId,
-        dataInternacao: new Date().toISOString(),
-        especialidadePaciente: 'Não Informada',
-        origem: {
-          deSetor: dadosForm.origem,
-          deLeito: 'Externo'
-        }
+      const pacienteId = await criarPacienteManual(
+        {
+          nomeCompleto: dadosForm.nomeCompleto,
+          dataNascimento: dadosForm.dataNascimento,
+          sexoPaciente: dadosForm.sexoPaciente,
+          dataInternacao: new Date().toISOString(),
+          especialidadePaciente: 'Não Informada',
+          origem: {
+            deSetor: dadosForm.origem,
+            deLeito: 'Externo'
+          }
+        },
+        { retornarExistente: true }
+      );
+
+      if (!pacienteId) {
+        throw new Error('Não foi possível criar ou encontrar o paciente para a reserva.');
+      }
+
+      const batch = writeBatch(db);
+      const agora = new Date().toISOString();
+
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+      batch.update(pacienteRef, { leitoId: leitoParaAcao.id, setorId: leitoParaAcao.setorId });
+
+      const leitoRef = doc(db, 'leitosRegulaFacil', leitoParaAcao.id);
+      batch.update(leitoRef, {
+        historicoMovimentacao: arrayUnion({
+          statusLeito: 'Reservado',
+          dataAtualizacaoStatus: agora,
+          pacienteId,
+          infoRegulacao: {
+            paraSetor: setorInfo?.nomeSetor || 'Setor não encontrado',
+            paraLeito: leitoParaAcao.codigoLeito,
+            origemExterna: dadosForm.origem,
+            tipoReserva: 'externo',
+          },
+        })
       });
 
-      if (pacienteId) {
-        const batch = writeBatch(db);
-        const agora = new Date().toISOString();
+      await batch.commit();
 
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-        batch.update(pacienteRef, { leitoId: leitoParaAcao.id, setorId: leitoParaAcao.setorId });
+      registrarLog(
+        `Reservou o leito ${leitoParaAcao.codigoLeito} para o paciente externo ${dadosForm.nomeCompleto} (origem: ${dadosForm.origem}).`,
+        'Mapa de Leitos'
+      );
 
-        const leitoRef = doc(db, 'leitosRegulaFacil', leitoParaAcao.id);
-        batch.update(leitoRef, {
-          historicoMovimentacao: arrayUnion({
-            statusLeito: 'Reservado',
-            dataAtualizacaoStatus: agora,
-            pacienteId,
-            infoRegulacao: {
-              paraSetor: setorInfo?.nomeSetor || 'Setor não encontrado',
-              paraLeito: leitoParaAcao.codigoLeito,
-              origemExterna: dadosForm.origem,
-              tipoReserva: 'externo',
-            },
-          })
-        });
-
-        await batch.commit();
-
-        registrarLog(
-          `Reservou o leito ${leitoParaAcao.codigoLeito} para o paciente externo ${dadosForm.nomeCompleto} (origem: ${dadosForm.origem}).`,
-          'Mapa de Leitos'
-        );
-
-        toast({
-          title: 'Sucesso!',
-          description: 'Leito reservado para paciente externo.'
-        });
-      }
+      toast({
+        title: 'Sucesso!',
+        description: 'Leito reservado com sucesso.'
+      });
 
       setReservaModalOpen(false);
       setLeitoParaAcao(null);
     } catch (error) {
-      console.error('Erro ao reservar leito:', error);
+      console.error('Erro ao confirmar reserva:', error);
+      toast({ title: 'Erro', description: 'Não foi possível criar a reserva.', variant: 'destructive' });
     }
   };
 
