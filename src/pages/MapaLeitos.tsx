@@ -515,7 +515,6 @@ const MapaLeitos = () => {
               <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
               <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
             </div>
-            <AcoesRapidas onGerarBoletimClick={() => setBoletimModalOpen(true)} />
           </header>
 
           {loading ? (
