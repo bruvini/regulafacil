@@ -1,23 +1,20 @@
-
 // src/components/PacientePendenteItem.tsx
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Biohazard, Clock, CheckCircle, LogOut, Edit, X } from 'lucide-react';
+import { Biohazard, Clock, CheckCircle, LogOut } from 'lucide-react'; // Ícones atualizados
 import { formatarDuracao } from '@/lib/utils';
-import { Paciente, IsolamentoVigente } from '@/types/hospital';
+import { Paciente, IsolamentoVigente } from '@/types/hospital'; // Tipo IsolamentoVigente importado
 
+// A interface de props permanece a mesma
 interface PacientePendenteItemProps {
   paciente: Paciente;
   onRegularClick: (paciente: Paciente) => void;
-  onAlta?: (paciente: Paciente) => void;
-  onConcluir?: (paciente: Paciente) => void;
-  onAlterar?: (paciente: Paciente) => void;
-  onCancelar?: (paciente: Paciente) => void;
-  onAltaDireta?: (paciente: any) => void;
+  onAlta: (paciente: Paciente) => void;
 }
 
+// A função de calcular idade permanece a mesma
 const calcularIdade = (dataNascimento?: string): string => {
   if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return '?';
   const [dia, mes, ano] = dataNascimento.split('/').map(Number);
@@ -27,24 +24,17 @@ const calcularIdade = (dataNascimento?: string): string => {
   return idade.toString();
 };
 
-export const PacientePendenteItem = ({ 
-  paciente, 
-  onRegularClick, 
-  onAlta,
-  onConcluir,
-  onAlterar,
-  onCancelar,
-  onAltaDireta
-}: PacientePendenteItemProps) => {
+export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
 
+  // Substitua o return atual por este JSX aprimorado:
   return (
     <div className="flex items-center justify-between gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors border">
       
-      {/* Coluna da Esquerda: Informações do Paciente */}
-      <div className="flex-grow min-w-0">
+      {/* Coluna da Esquerda: Informações do Paciente (com correção de overflow) */}
+      <div className="flex-grow min-w-0"> {/* min-w-0 é a chave para evitar o overflow */}
         
-        {/* Linha 1: Nome, Idade/Sexo e Alerta de Isolamento */}
+        {/* Linha 1: Nome (com truncamento), Idade/Sexo e Alerta de Isolamento */}
         <div className="flex items-center gap-2">
           <p className="font-bold text-base truncate" title={paciente.nomeCompleto}>
             {paciente.nomeCompleto}
@@ -53,7 +43,7 @@ export const PacientePendenteItem = ({
             {paciente.sexoPaciente?.charAt(0)} - {idade}a
           </Badge>
           
-          {/* Badge de Isolamento Condicional */}
+          {/* Badge de Isolamento Condicional (com tooltip corrigido) */}
           {paciente.isolamentosVigentes && paciente.isolamentosVigentes.length > 0 && (
             <TooltipProvider>
               <Tooltip>
@@ -65,8 +55,9 @@ export const PacientePendenteItem = ({
                 <TooltipContent>
                   <p className="font-bold">Isolamentos Ativos:</p>
                   <ul className="list-disc list-inside">
-                    {paciente.isolamentosVigentes.map((iso: IsolamentoVigente, index: number) => (
-                      <li key={index}>- {iso.sigla}</li>
+                    {/* CORREÇÃO: Usando a 'sigla' que é garantida de existir */}
+                    {paciente.isolamentosVigentes.map((iso: IsolamentoVigente) => (
+                      <li key={iso.sigla}>- {iso.sigla}</li>
                     ))}
                   </ul>
                 </TooltipContent>
@@ -75,7 +66,7 @@ export const PacientePendenteItem = ({
           )}
         </div>
 
-        {/* Linha 2: Especialidade e Tempo de Internação */}
+        {/* Linha 2: Especialidade e Tempo de Internação (com fonte menor) */}
         <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
           <span>{paciente.especialidadePaciente}</span>
           <span className="text-gray-400">•</span>
@@ -87,8 +78,8 @@ export const PacientePendenteItem = ({
 
       </div>
 
-      {/* Coluna da Direita: Botões de Ação */}
-      <div className="flex items-center flex-shrink-0 gap-1">
+      {/* Coluna da Direita: Botões de Ação com Ícones e Tooltips */}
+      <div className="flex items-center flex-shrink-0">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -100,58 +91,18 @@ export const PacientePendenteItem = ({
           </Tooltip>
         </TooltipProvider>
 
-        {onAlta && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => onAlta(paciente)}>
-                  <LogOut className="h-5 w-5 text-destructive" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Dar Alta</p></TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-
-        {onConcluir && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => onConcluir(paciente)}>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Concluir</p></TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-
-        {onAlterar && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => onAlterar(paciente)}>
-                  <Edit className="h-4 w-4 text-blue-600" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Alterar</p></TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-
-        {onCancelar && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => onCancelar(paciente)}>
-                  <X className="h-4 w-4 text-destructive" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p>Cancelar</p></TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => onAlta(paciente)}>
+                <LogOut className="h-5 w-5 text-destructive" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p>Dar Alta</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
 };
+

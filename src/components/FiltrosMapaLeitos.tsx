@@ -101,7 +101,6 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Especialidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todas">Todas as especialidades</SelectItem>
                   {especialidades.map(e => (
                     <SelectItem key={e} value={e}>{e}</SelectItem>
                   ))}
@@ -113,7 +112,6 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Setor" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos os setores</SelectItem>
                   {setores.map(s => (
                     <SelectItem key={s.id} value={s.id!}>{s.nomeSetor}</SelectItem>
                   ))}
@@ -125,7 +123,6 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Sexo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="Masculino">Masculino</SelectItem>
                   <SelectItem value="Feminino">Feminino</SelectItem>
                 </SelectContent>
@@ -136,7 +133,6 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Status do Leito" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos os status</SelectItem>
                   {todosStatus.map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
@@ -148,7 +144,6 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Alta Provável" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="sim">Sim</SelectItem>
                   <SelectItem value="nao">Não</SelectItem>
                 </SelectContent>
@@ -159,7 +154,6 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Aguardando UTI" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="sim">Sim</SelectItem>
                   <SelectItem value="nao">Não</SelectItem>
                 </SelectContent>
