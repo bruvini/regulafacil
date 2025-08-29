@@ -567,6 +567,14 @@ const MapaLeitos = () => {
                         </TooltipTrigger>
                         <TooltipContent><p>Ocupação por Especialidade</p></TooltipContent>
                       </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => setBoletimModalOpen(true)}>
+                            <Newspaper className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Gerar Boletim Diário</p></TooltipContent>
+                      </Tooltip>
                       {isAdmin && (
                         <Tooltip>
                           <TooltipTrigger asChild>
