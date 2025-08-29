@@ -3,6 +3,7 @@ import { CheckCircle, AlertTriangle, LogIn, ArrowRightLeft, LogOut } from 'lucid
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Paciente } from '@/types/hospital';
 
 export interface ResultadoValidacao {
   setoresFaltantes: string[];
@@ -23,6 +24,8 @@ export interface SyncSummary {
   novasInternacoes: PacienteDaPlanilha[];
   transferencias: { paciente: PacienteDaPlanilha; leitoAntigo: string }[];
   altas: { nomePaciente: string; leitoAntigo: string }[];
+  reservasExternasEfetivadas: PacienteDaPlanilha[];
+  regulacoesConcluidas: Paciente[];
 }
 
 interface ValidacaoImportacaoProps {
@@ -93,7 +96,12 @@ export const ValidacaoImportacao = ({
   
   // Cenário 2: Resumo de sincronização (cards totalizadores)
   if (syncSummary) {
-    const totalMudancas = syncSummary.novasInternacoes.length + syncSummary.transferencias.length + syncSummary.altas.length;
+    const totalMudancas =
+      syncSummary.novasInternacoes.length +
+      syncSummary.transferencias.length +
+      syncSummary.altas.length +
+      syncSummary.reservasExternasEfetivadas.length +
+      syncSummary.regulacoesConcluidas.length;
     
     return (
       <div className="space-y-6">
@@ -140,6 +148,42 @@ export const ValidacaoImportacao = ({
             </CardContent>
           </Card>
         </div>
+
+        {syncSummary.reservasExternasEfetivadas.length > 0 && (
+          <Card className="border-blue-500">
+            <CardHeader>
+              <CardTitle className="text-blue-600 flex items-center">
+                <LogIn className="mr-2 h-5 w-5" />
+                Reservas Efetivadas ({syncSummary.reservasExternasEfetivadas.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul>
+                {syncSummary.reservasExternasEfetivadas.map((p, i) => (
+                  <li key={i}>{p.nomeCompleto} → <strong>{p.leitoCodigo}</strong></li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {syncSummary.regulacoesConcluidas.length > 0 && (
+          <Card className="border-green-500">
+            <CardHeader>
+              <CardTitle className="text-green-600 flex items-center">
+                <CheckCircle className="mr-2 h-5 w-5" />
+                Regulações Concluídas ({syncSummary.regulacoesConcluidas.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul>
+                {syncSummary.regulacoesConcluidas.map((p, i) => (
+                  <li key={i}>{p.nomeCompleto} → <strong>{(p as any).regulacao?.paraLeito}</strong></li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         {totalMudancas === 0 && (
           <p className="text-center text-muted-foreground pt-4">
