@@ -44,8 +44,10 @@ export function usePassagemPlantao(
       .filter((p) => p.isolamentosVigentes?.length)
       .map((p) => {
         const leito = getLeito(p.leitoId);
-        const siglas = p.isolamentosVigentes.map((i) => i.sigla).join(', ');
-        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} (${siglas})`;
+        const tiposIsolamento = p.isolamentosVigentes
+          .map((i) => i.tipo)
+          .join(', ');
+        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} (${tiposIsolamento})`;
       });
 
     const leitosRegulados = leitosSetor
@@ -57,16 +59,12 @@ export function usePassagemPlantao(
         const hist = getUltimoHistorico(l);
         const paciente = hist?.pacienteId ? getPaciente(hist.pacienteId) : undefined;
         if (hist?.statusLeito === 'Regulado') {
-          const destino = `${hist.infoRegulacao?.paraSetor || ''} - ${hist.infoRegulacao?.paraLeito || ''}`;
-          return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} - VAI PARA: ${destino}`;
+          const destino = hist?.infoRegulacao?.paraSetor || 'N/A';
+          return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} → ${destino}`;
         }
         if (hist?.statusLeito === 'Reservado') {
-          const origemSetor = hist.infoRegulacao?.deSetor || 'Origem Externa';
-          const origemLeitoId = paciente?.origem?.deLeito;
-          const origemLeito = origemLeitoId
-            ? getLeito(origemLeitoId)?.codigoLeito || origemLeitoId
-            : '';
-          return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} - VEM DE: ${origemSetor} - ${origemLeito}`;
+          const origem = hist?.infoRegulacao?.deSetor || 'Externa';
+          return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} ← ${origem}`;
         }
         return '';
       })
