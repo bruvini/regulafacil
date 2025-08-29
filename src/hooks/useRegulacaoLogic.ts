@@ -992,6 +992,38 @@ const registrarHistoricoRegulacao = async (
         );
         const mapaLeitosSistema = new Map(leitos.map((l) => [l.id, l]));
 
+        const pacientesJaProcessados = new Set<string>();
+
+        // Detecta reservas externas que estão sendo efetivadas
+        const reservasExternasEfetivadas: PacienteDaPlanilha[] = [];
+        for (const pacientePlanilha of pacientesDaPlanilha) {
+          const chave = gerarChaveUnica(pacientePlanilha);
+          const pacienteSistema: any = mapaPacientesSistema.get(chave);
+          if (
+            pacienteSistema &&
+            pacienteSistema.origem?.deLeito === 'Externo'
+          ) {
+            reservasExternasEfetivadas.push(pacientePlanilha);
+            pacientesJaProcessados.add(chave);
+          }
+        }
+
+        // Detecta regulações concluídas
+        const regulacoesConcluidas: Paciente[] = [];
+        for (const pacientePlanilha of pacientesDaPlanilha) {
+          const chave = gerarChaveUnica(pacientePlanilha);
+          if (pacientesJaProcessados.has(chave)) continue;
+          const pacienteSistema: any = mapaPacientesSistema.get(chave);
+          if (
+            pacienteSistema &&
+            pacienteSistema.regulacao &&
+            pacienteSistema.regulacao.paraLeito === pacientePlanilha.leitoCodigo
+          ) {
+            regulacoesConcluidas.push(pacienteSistema);
+            pacientesJaProcessados.add(chave);
+          }
+        }
+
         // Identifica ALTAS: Pacientes que estão no sistema, mas não na nova planilha.
         const altas = pacientes
           .filter((p) => !mapaPacientesPlanilha.has(gerarChaveUnica(p)))
@@ -1007,7 +1039,12 @@ const registrarHistoricoRegulacao = async (
 
         // Identifica TRANSFERÊNCIAS: Pacientes que estão em ambos, mas em leitos diferentes.
         const transferencias = pacientesDaPlanilha
-          .filter((p) => mapaPacientesSistema.has(gerarChaveUnica(p)))
+          .filter((p) => {
+            const chave = gerarChaveUnica(p);
+            return (
+              mapaPacientesSistema.has(chave) && !pacientesJaProcessados.has(chave)
+            );
+          })
           .map((p) => {
             const pacienteSistema = mapaPacientesSistema.get(gerarChaveUnica(p))!;
             const leitoAntigo = mapaLeitosSistema.get(pacienteSistema.leitoId);
@@ -1018,7 +1055,13 @@ const registrarHistoricoRegulacao = async (
         // --- ETAPA E: GERAÇÃO DO RESUMO FINAL ---
 
         // Armazena o resultado da análise no estado para exibir no modal de confirmação.
-        setSyncSummary({ novasInternacoes, transferencias, altas });
+        setSyncSummary({
+          novasInternacoes,
+          transferencias,
+          altas,
+          reservasExternasEfetivadas,
+          regulacoesConcluidas,
+        });
 
       } catch (error) {
         // Se qualquer erro acontecer durante o processo, exibe uma notificação.
@@ -1045,6 +1088,11 @@ const registrarHistoricoRegulacao = async (
     if (!syncSummary) return;
     // Ativa o indicador de "sincronizando" na tela para o usuário.
     setIsSyncing(true);
+
+    // Processa regulações concluídas antes de iniciar o batch principal
+    for (const paciente of syncSummary.regulacoesConcluidas) {
+      await handleConcluir(paciente);
+    }
 
     // 2. CRIAÇÃO DO "CARRINHO DE COMPRAS" (BATCH) E PREPARAÇÃO DE DADOS
     // --------------------------------------------------
@@ -1088,8 +1136,8 @@ const registrarHistoricoRegulacao = async (
     const reservasConfirmadas: { nomeCompleto: string; codigoLeito: string }[] = [];
     const processados = new Set<string>();
 
-    // Processa pacientes da planilha que tinham reserva
-    for (const pacientePlanilha of dadosPlanilhaProcessados) {
+    // Processa pacientes com reservas externas efetivadas
+    for (const pacientePlanilha of syncSummary.reservasExternasEfetivadas) {
       const chave = normalizarChave(
         pacientePlanilha.nomeCompleto,
         pacientePlanilha.dataNascimento
@@ -1277,7 +1325,7 @@ const registrarHistoricoRegulacao = async (
       // --------------------------------------------------
 
       // Cria a mensagem de resumo com base na contagem de cada tipo de operação.
-      const logResumo = `Sincronização via planilha concluída. Resumo: ${syncSummary.novasInternacoes.length} novas internações, ${syncSummary.transferencias.length} transferências e ${syncSummary.altas.length} altas.`;
+      const logResumo = `Sincronização via planilha concluída. Resumo: ${syncSummary.novasInternacoes.length} novas internações, ${syncSummary.transferencias.length} transferências, ${syncSummary.altas.length} altas, ${syncSummary.reservasExternasEfetivadas.length} reservas efetivadas e ${syncSummary.regulacoesConcluidas.length} regulações concluídas.`;
 
       // Registra o resumo como um único evento na auditoria.
       registrarLog(logResumo, "Sincronização MV");
