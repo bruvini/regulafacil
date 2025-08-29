@@ -28,7 +28,7 @@ const renderSetores = (setores: SetorPassagem[]) => (
                 {b.itens.length ? (
                   <ul className="list-disc pl-4 space-y-1">
                     {b.itens.map((i, iIdx) => (
-                      <li key={iIdx} className="text-sm">
+                      <li key={iIdx} className="text-sm whitespace-pre-wrap">
                         {i}
                       </li>
                     ))}

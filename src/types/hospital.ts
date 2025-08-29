@@ -96,6 +96,7 @@ export interface InfoRegulacao {
   regulacaoId?: string;
   paraSetor: string;
   paraLeito: string;
+  deSetor?: string;
   observacoes?: string;
   origemExterna?: string; // Novo campo para origem externa
   tipoReserva?: 'regulacao' | 'externo'; // Novo campo para tipo de reserva
