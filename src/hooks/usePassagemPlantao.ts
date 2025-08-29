@@ -98,13 +98,18 @@ export function usePassagemPlantao(
       .map((p) => `${getLeito(p.leitoId)?.codigoLeito || ''} - ${p.nomeCompleto}`);
 
     const pendenciasDeAlta = pacientesSetor
-      .filter(
-        (p) => Array.isArray(p.altaPendente) && p.altaPendente.length > 0
-      )
+      .filter((p) => p.altaPendente)
       .map((p) => {
         const leito = getLeito(p.leitoId);
-        const pendencias = (p.altaPendente as InfoAltaPendente[])
-          .map((pend) => `${pend.tipo}: ${pend.detalhe}`)
+        const pendencias = (
+          Array.isArray(p.altaPendente)
+            ? p.altaPendente
+            : [p.altaPendente]
+        )
+          .filter(Boolean)
+          .map(
+            (pend) => `${pend.tipo}${pend.detalhe ? `: ${pend.detalhe}` : ''}`
+          )
           .join('; ');
         return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} - Pendências: ${pendencias}`;
       });
