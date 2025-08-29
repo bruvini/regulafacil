@@ -1057,14 +1057,125 @@ const registrarHistoricoRegulacao = async (
     const mapaLeitos = new Map(leitos.map((l) => [l.codigoLeito, l]));
     const mapaSetores = new Map(setores.map((s) => [s.nomeSetor, s]));
 
+    // --- PREPROCESSAMENTO DE RESERVAS ---
+    const normalizarChave = (nome: string, nasc: string) =>
+      `${nome.toUpperCase().trim()}-${nasc.trim()}`;
+
+    const mapaReservas = new Map<
+      string,
+      { pacienteId: string; leitoReservadoId: string; codigoLeitoReservado: string }
+    >();
+
+    leitos.forEach((leito) => {
+      const historico = leito.historicoMovimentacao || [];
+      const ultimo = historico[historico.length - 1];
+      if (ultimo?.statusLeito === "Reservado" && ultimo.pacienteId) {
+        const pacienteDoc = pacientes.find((p) => p.id === ultimo.pacienteId);
+        if (pacienteDoc) {
+          const chave = normalizarChave(
+            pacienteDoc.nomeCompleto,
+            pacienteDoc.dataNascimento
+          );
+          mapaReservas.set(chave, {
+            pacienteId: pacienteDoc.id,
+            leitoReservadoId: leito.id,
+            codigoLeitoReservado: leito.codigoLeito,
+          });
+        }
+      }
+    });
+
+    const reservasConfirmadas: { nomeCompleto: string; codigoLeito: string }[] = [];
+    const processados = new Set<string>();
+
+    // Processa pacientes da planilha que tinham reserva
+    for (const pacientePlanilha of dadosPlanilhaProcessados) {
+      const chave = normalizarChave(
+        pacientePlanilha.nomeCompleto,
+        pacientePlanilha.dataNascimento
+      );
+      const reserva = mapaReservas.get(chave);
+      if (!reserva) continue;
+
+      const leitoPlanilha = mapaLeitos.get(pacientePlanilha.leitoCodigo);
+      if (!leitoPlanilha) continue;
+
+      const pacienteRef = doc(db, "pacientesRegulaFacil", reserva.pacienteId);
+      batch.update(pacienteRef, {
+        leitoId: leitoPlanilha.id,
+        setorId: leitoPlanilha.setorId,
+        nomeCompleto: pacientePlanilha.nomeCompleto.toUpperCase(),
+        dataNascimento: pacientePlanilha.dataNascimento,
+        sexoPaciente: pacientePlanilha.sexo,
+        dataInternacao: pacientePlanilha.dataInternacao,
+        especialidadePaciente: pacientePlanilha.especialidade,
+      });
+
+      if (reserva.codigoLeitoReservado === pacientePlanilha.leitoCodigo) {
+        const leitoRef = doc(db, "leitosRegulaFacil", reserva.leitoReservadoId);
+        batch.update(leitoRef, {
+          historicoMovimentacao: arrayUnion({
+            statusLeito: "Ocupado",
+            dataAtualizacaoStatus: agora,
+            pacienteId: reserva.pacienteId,
+          }),
+        });
+      } else {
+        const leitoReservadoRef = doc(
+          db,
+          "leitosRegulaFacil",
+          reserva.leitoReservadoId
+        );
+        batch.update(leitoReservadoRef, {
+          historicoMovimentacao: arrayUnion({
+            statusLeito: "Vago",
+            dataAtualizacaoStatus: agora,
+            pacienteId: null,
+            infoRegulacao: null,
+          }),
+        });
+
+        const leitoCorretoRef = doc(db, "leitosRegulaFacil", leitoPlanilha.id);
+        batch.update(leitoCorretoRef, {
+          historicoMovimentacao: arrayUnion({
+            statusLeito: "Ocupado",
+            dataAtualizacaoStatus: agora,
+            pacienteId: reserva.pacienteId,
+          }),
+        });
+
+        registrarLog(
+          `Paciente ${pacientePlanilha.nomeCompleto} foi internado no leito ${pacientePlanilha.leitoCodigo}, mas a reserva original era para o leito ${reserva.codigoLeitoReservado}. A reserva foi cancelada e o leito liberado.`,
+          "Importação de Pacientes"
+        );
+      }
+
+      reservasConfirmadas.push({
+        nomeCompleto: pacientePlanilha.nomeCompleto,
+        codigoLeito: pacientePlanilha.leitoCodigo,
+      });
+      processados.add(chave);
+      mapaReservas.delete(chave);
+    }
+
     try {
       // 3. PROCESSANDO AS ALTAS
       // --------------------------------------------------
       for (const itemAlta of syncSummary.altas) {
         // Encontra o paciente completo no estado atual para obter os IDs necessários.
-        const pacienteParaAlta = pacientes.find(p => p.nomeCompleto === itemAlta.nomePaciente);
+        const pacienteParaAlta = pacientes.find(
+          (p) => p.nomeCompleto === itemAlta.nomePaciente
+        );
 
         if (pacienteParaAlta) {
+          const chaveAlta = normalizarChave(
+            pacienteParaAlta.nomeCompleto,
+            pacienteParaAlta.dataNascimento
+          );
+          if (mapaReservas.has(chaveAlta)) {
+            continue; // mantém reserva ativa
+          }
+
           // Prepara as referências aos documentos que vamos modificar.
           const leitoRef = doc(db, "leitosRegulaFacil", pacienteParaAlta.leitoId);
           const pacienteRef = doc(db, "pacientesRegulaFacil", pacienteParaAlta.id);
@@ -1086,6 +1197,12 @@ const registrarHistoricoRegulacao = async (
       // 4. PROCESSANDO AS TRANSFERÊNCIAS
       // --------------------------------------------------
       for (const { paciente, leitoAntigo } of syncSummary.transferencias) {
+        const chave = normalizarChave(
+          paciente.nomeCompleto,
+          paciente.dataNascimento
+        );
+        if (processados.has(chave)) continue;
+
         const pacienteSistema = pacientes.find(
           (p) => p.nomeCompleto === paciente.nomeCompleto
         )!;
@@ -1124,6 +1241,12 @@ const registrarHistoricoRegulacao = async (
       // 5. PROCESSANDO NOVAS INTERNAÇÕES
       // --------------------------------------------------
       for (const novaInternacao of syncSummary.novasInternacoes) {
+        const chaveNova = normalizarChave(
+          novaInternacao.nomeCompleto,
+          novaInternacao.dataNascimento
+        );
+        if (processados.has(chaveNova)) continue;
+
         const leito = mapaLeitos.get(novaInternacao.leitoCodigo)!;
         const setor = mapaSetores.get(novaInternacao.setorNome)!;
         const leitoRef = doc(db, "leitosRegulaFacil", leito.id);
@@ -1163,6 +1286,16 @@ const registrarHistoricoRegulacao = async (
       // --------------------------------------------------
       // Envia todas as operações do "carrinho" para o Firestore de uma só vez.
       await batch.commit();
+
+      if (reservasConfirmadas.length > 0) {
+        const lista = reservasConfirmadas
+          .map((r) => `${r.nomeCompleto} (${r.codigoLeito})`)
+          .join(", ");
+        registrarLog(
+          `Importação da planilha confirmou a internação dos seguintes pacientes com reserva: ${lista}. Seus leitos foram atualizados para 'Ocupado'.`,
+          "Importação de Pacientes"
+        );
+      }
 
       // Se tudo deu certo, exibe a notificação de sucesso.
       toast({
