@@ -13,6 +13,7 @@ import { AltaNoLeitoModal } from '@/components/modals/AltaNoLeitoModal';
 import { InternacaoManualModal } from '@/components/modals/InternacaoManualModal';
 import { ReservaExternaModal } from '@/components/modals/ReservaExternaModal';
 import AltaPendenteModal from '@/components/modals/AltaPendenteModal';
+import { BoletimDiarioModal } from '@/components/modals/BoletimDiarioModal';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -20,7 +21,8 @@ import { useIndicadoresHospital } from '@/hooks/useIndicadoresHospital';
 import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
-import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope } from 'lucide-react';
+import { useBoletimDiario } from '@/hooks/useBoletimDiario';
+import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope, Newspaper } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
@@ -44,6 +46,7 @@ const MapaLeitos = () => {
   const [internacaoModalOpen, setInternacaoModalOpen] = useState(false);
   const [reservaModalOpen, setReservaModalOpen] = useState(false);
   const [relatorioEspecialidadeOpen, setRelatorioEspecialidadeOpen] = useState(false);
+  const [boletimModalOpen, setBoletimModalOpen] = useState(false);
   const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
   interface PacienteMoverInfo {
     dados: Paciente;
@@ -109,6 +112,13 @@ const MapaLeitos = () => {
   const { setoresEnriquecidos, todosLeitosEnriquecidos } = dadosCombinados;
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
   const { filteredSetores, filtrosAvancados, setFiltrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
+
+  const { gerarTextoBoletim } = useBoletimDiario({
+    pacientes,
+    leitos: todosLeitosEnriquecidos,
+    setores,
+    nivelPCP: nivelPCP.nivel,
+  });
 
   // Verificar se o usuário é administrador
   const isAdmin = userData?.tipoAcesso === 'Administrador';
@@ -555,6 +565,14 @@ const MapaLeitos = () => {
                         </TooltipTrigger>
                         <TooltipContent><p>Ocupação por Especialidade</p></TooltipContent>
                       </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => setBoletimModalOpen(true)}>
+                            <Newspaper className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Gerar Boletim Diário</p></TooltipContent>
+                      </Tooltip>
                       {isAdmin && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -675,6 +693,11 @@ const MapaLeitos = () => {
         leito={leitoParaAcao}
       />
       <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
+      <BoletimDiarioModal
+        open={boletimModalOpen}
+        onOpenChange={setBoletimModalOpen}
+        gerarTextoBoletim={gerarTextoBoletim}
+      />
     </div>
   );
 };
