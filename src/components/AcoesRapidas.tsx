@@ -6,11 +6,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Download, FileText, Lightbulb, BarChart3, Stethoscope } from 'lucide-react';
+import { Download, FileText, Lightbulb, BarChart3, Stethoscope, Newspaper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AcoesRapidasProps {
-  onImportarClick: () => void;
+  onImportarClick?: () => void;
+  onGerarBoletimClick?: () => void;
   onPassagemClick?: () => void;
   onSugestoesClick?: () => void;
   onPanoramaClick?: () => void;
@@ -22,6 +23,7 @@ interface AcoesRapidasProps {
 
 export const AcoesRapidas = ({
   onImportarClick,
+  onGerarBoletimClick,
   onPassagemClick,
   onSugestoesClick,
   onPanoramaClick,
@@ -33,20 +35,39 @@ export const AcoesRapidas = ({
   return (
     <div className="flex items-center gap-2">
       <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onImportarClick}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Importar pacientes MV</p>
-          </TooltipContent>
-        </Tooltip>
+        {onImportarClick && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onImportarClick}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Importar pacientes MV</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {onGerarBoletimClick && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onGerarBoletimClick}
+              >
+                <Newspaper className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Gerar Boletim Diário</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         {onRelatorioEspecialidadeClick && (
           <Tooltip>
