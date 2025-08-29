@@ -23,7 +23,7 @@ import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
 import { useBoletimDiario } from '@/hooks/useBoletimDiario';
-import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope } from 'lucide-react';
+import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope, Newspaper } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
