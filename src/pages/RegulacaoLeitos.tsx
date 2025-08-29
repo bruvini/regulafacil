@@ -5,6 +5,13 @@ import { RegulacaoModals } from "@/components/modals/regulacao/RegulacaoModals";
 import { useRegulacaoLogic } from "@/hooks/useRegulacaoLogic";
 import { useState } from "react";
 import { useRegulacoes } from "@/hooks/useRegulacoes";
+import { usePacientes } from "@/hooks/usePacientes";
+import { useLeitos } from "@/hooks/useLeitos";
+import { useSetores } from "@/hooks/useSetores";
+import usePassagemPlantao from "@/hooks/usePassagemPlantao";
+import { PassagemPlantaoModal } from "@/components/modals/PassagemPlantaoModal";
+import { ExportacaoPdfModal, ExportacaoForm } from "@/components/modals/ExportacaoPdfModal";
+import { gerarPassagemPlantaoPdf } from "@/pdf/passagemPlantaoPdf";
 import { IndicadoresRegulacao } from "@/components/IndicadoresRegulacao";
 // Importações necessárias para o cálculo
 import { differenceInMinutes, isValid, parse } from 'date-fns'; 
@@ -26,6 +33,19 @@ import { JustificativaHomonimoModal } from "@/components/modals/JustificativaHom
 const RegulacaoLeitos = () => {
   const { loading, listas, modals, handlers, filtrosProps } = useRegulacaoLogic();
   const { regulacoes, loading: regulacoesLoading } = useRegulacoes();
+
+  const { pacientes } = usePacientes();
+  const { leitos } = useLeitos();
+  const { setores } = useSetores();
+
+  const passagemData = usePassagemPlantao(pacientes, leitos, setores);
+
+  const [passagemOpen, setPassagemOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+
+  const handleExportPdf = (data: ExportacaoForm) => {
+    gerarPassagemPlantaoPdf(passagemData, data);
+  };
 
   // Estados para os novos modais de panorama
   const [panoramaSelecaoOpen, setPanoramaSelecaoOpen] = useState(false);
@@ -217,7 +237,7 @@ const RegulacaoLeitos = () => {
           </div>
           <AcoesRapidas
             onImportarClick={() => handlers.setImportModalOpen(true)}
-            onPassagemClick={handlers.handlePassagemPlantao}
+            onPassagemClick={() => setPassagemOpen(true)}
             onSugestoesClick={handlers.handleAbrirSugestoes}
             onPanoramaClick={handleAbrirPanorama}
             showAllButtons={true}
@@ -361,6 +381,19 @@ const RegulacaoLeitos = () => {
           pacientesRegulados={listas.pacientesJaRegulados}
           dataInicio={periodoSelecionado.inicio}
           dataFim={periodoSelecionado.fim}
+        />
+
+        <PassagemPlantaoModal
+          open={passagemOpen}
+          onOpenChange={setPassagemOpen}
+          dados={passagemData}
+          onExport={() => setExportOpen(true)}
+        />
+
+        <ExportacaoPdfModal
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          onConfirm={handleExportPdf}
         />
       </div>
     </div>
