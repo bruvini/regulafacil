@@ -1,9 +1,10 @@
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PassagemPlantaoData, SetorPassagem } from '@/hooks/usePassagemPlantao';
+import { X } from 'lucide-react';
 
 interface PassagemPlantaoModalProps {
   open: boolean;
@@ -47,11 +48,18 @@ const renderSetores = (setores: SetorPassagem[]) => (
 export const PassagemPlantaoModal = ({ open, onOpenChange, dados, onExport }: PassagemPlantaoModalProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-full h-screen p-0">
-        <div className="flex flex-col h-full bg-background">
+      <DialogContent className="max-w-full p-0">
+        <div className="flex flex-col h-screen bg-background">
           <header className="flex items-center justify-between p-4 border-b">
             <DialogTitle className="text-xl font-bold">Passagem de Plantão</DialogTitle>
-            <Button onClick={onExport}>Exportar</Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={onExport}>Exportar</Button>
+              <DialogClose asChild>
+                <Button variant="ghost" size="icon">
+                  <X className="h-6 w-6" />
+                </Button>
+              </DialogClose>
+            </div>
           </header>
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-6">
