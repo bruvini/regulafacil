@@ -27,10 +27,10 @@ const RegulacaoLeitos = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Hooks para dados
-  const { data: pacientes = [] } = usePacientes();
-  const { data: setores = [] } = useSetores();
-  const { data: leitos = [] } = useLeitos();
+  // Hooks para dados - accessing the correct properties
+  const { pacientes } = usePacientes();
+  const { setores } = useSetores();
+  const { leitos } = useLeitos();
 
   // Mock de dados para desenvolvimento
   const mockPacientes = useMemo(() => [
@@ -41,10 +41,10 @@ const RegulacaoLeitos = () => {
       nomeCompleto: 'João Silva',
       dataNascimento: '1980-05-15',
       sexoPaciente: 'Masculino' as const,
-      dataInternacao: '2024-01-15 10:30',
+      dataInternacao: '2024-01-15T10:30:00Z',
       especialidadePaciente: 'Cardiologia',
       aguardaUTI: true,
-      dataPedidoUTI: '2024-01-16 08:00'
+      dataPedidoUTI: '2024-01-16T08:00:00Z'
     },
     {
       id: '2',
@@ -53,10 +53,10 @@ const RegulacaoLeitos = () => {
       nomeCompleto: 'Maria Santos',
       dataNascimento: '1975-08-22',
       sexoPaciente: 'Feminino' as const,
-      dataInternacao: '2024-01-14 14:15',
+      dataInternacao: '2024-01-14T14:15:00Z',
       especialidadePaciente: 'Neurologia',
       remanejarPaciente: true,
-      dataPedidoRemanejamento: '2024-01-17 09:30'
+      dataPedidoRemanejamento: '2024-01-17T09:30:00Z'
     }
   ], []);
 
