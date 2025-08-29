@@ -44,27 +44,31 @@ export function usePassagemPlantao(
       .filter((p) => p.isolamentosVigentes?.length)
       .map((p) => {
         const leito = getLeito(p.leitoId);
-        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto}`;
+        const tiposIsolamento = p.isolamentosVigentes
+          .map((i) => i.tipo)
+          .join(', ');
+        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} (${tiposIsolamento})`;
       });
 
-    const regulacoesSaindo = leitosSetor
-      .filter((l) => getUltimoHistorico(l)?.statusLeito === 'Regulado')
+    const leitosRegulados = leitosSetor
+      .filter((l) => {
+        const status = getUltimoHistorico(l)?.statusLeito;
+        return status === 'Regulado' || status === 'Reservado';
+      })
       .map((l) => {
         const hist = getUltimoHistorico(l);
-        const paciente = hist?.pacienteId
-          ? getPaciente(hist.pacienteId)
-          : undefined;
-        const destino = hist?.infoRegulacao?.paraSetor || '';
-        return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} → ${destino}`;
-      });
-
-    const regulacoesEntrando = leitosSetor
-      .filter((l) => getUltimoHistorico(l)?.statusLeito === 'Reservado')
-      .map((l) => {
-        const hist = getUltimoHistorico(l);
-        const origem = hist?.infoRegulacao?.paraSetor || '';
-        return `${l.codigoLeito} ← ${origem}`;
-      });
+        const paciente = hist?.pacienteId ? getPaciente(hist.pacienteId) : undefined;
+        if (hist?.statusLeito === 'Regulado') {
+          const destino = hist?.infoRegulacao?.paraSetor || 'N/A';
+          return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} → ${destino}`;
+        }
+        if (hist?.statusLeito === 'Reservado') {
+          const origem = hist?.infoRegulacao?.deSetor || 'Externa';
+          return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} ← ${origem}`;
+        }
+        return '';
+      })
+      .filter(Boolean);
 
     const remanejamentos = pacientesSetor
       .filter((p) => p.remanejarPaciente)
@@ -111,8 +115,7 @@ export function usePassagemPlantao(
 
     const blocos: BlocoInfo[] = [
       { titulo: 'Isolamentos', itens: isolamentos },
-      { titulo: 'Regulações Saindo', itens: regulacoesSaindo },
-      { titulo: 'Regulações Entrando', itens: regulacoesEntrando },
+      { titulo: 'Leitos Regulados', itens: leitosRegulados },
       { titulo: 'Remanejamentos', itens: remanejamentos },
       { titulo: 'Leitos PCP', itens: leitosPcp },
       { titulo: 'Provável Alta', itens: provavelAlta },

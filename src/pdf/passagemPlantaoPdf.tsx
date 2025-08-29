@@ -15,6 +15,11 @@ export async function gerarPassagemPlantaoPdf(
   dados: PassagemPlantaoData,
   form: ExportacaoForm
 ) {
+  const newWindow = window.open('', '_blank');
+  if (newWindow) {
+    newWindow.document.write('Gerando PDF, por favor aguarde...');
+  }
+
   const doc = (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -53,7 +58,12 @@ export async function gerarPassagemPlantaoPdf(
 
   const blob = await pdf(doc).toBlob();
   const url = URL.createObjectURL(blob);
-  window.open(url);
+
+  if (newWindow) {
+    newWindow.location.href = url;
+  } else {
+    window.open(url);
+  }
 }
 
 export default gerarPassagemPlantaoPdf;
