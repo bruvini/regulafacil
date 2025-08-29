@@ -14,6 +14,7 @@ import { InternacaoManualModal } from '@/components/modals/InternacaoManualModal
 import { ReservaExternaModal } from '@/components/modals/ReservaExternaModal';
 import AltaPendenteModal from '@/components/modals/AltaPendenteModal';
 import { BoletimDiarioModal } from '@/components/modals/BoletimDiarioModal';
+import { AcoesRapidas } from '@/components/AcoesRapidas';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -22,7 +23,7 @@ import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
 import { useBoletimDiario } from '@/hooks/useBoletimDiario';
-import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope, Newspaper } from 'lucide-react';
+import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
@@ -514,6 +515,7 @@ const MapaLeitos = () => {
               <h1 className="text-3xl font-bold text-medical-primary">Mapa de Leitos</h1>
               <p className="text-muted-foreground">Visualização em tempo real dos leitos hospitalares</p>
             </div>
+            <AcoesRapidas onGerarBoletimClick={() => setBoletimModalOpen(true)} />
           </header>
 
           {loading ? (
