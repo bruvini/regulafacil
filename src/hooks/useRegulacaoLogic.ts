@@ -23,9 +23,10 @@ import {
   deleteDoc,
   addDoc,
   serverTimestamp,
-  query, 
-  where, 
-  getDocs
+  query,
+  where,
+  getDocs,
+  deleteField
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { intervalToDuration, parse, isValid } from "date-fns";
@@ -581,6 +582,22 @@ const registrarHistoricoRegulacao = async (
         return;
       }
 
+      const destinoEhUTI = paciente.regulacao.paraSetor?.toUpperCase().includes("UTI");
+      const finalizouUTI = destinoEhUTI && pacienteCompleto.aguardaUTI;
+
+      let tempoDeEsperaFormatado = "";
+      if (finalizouUTI && pacienteCompleto.dataPedidoUTI) {
+        const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
+        const dataConclusao = new Date();
+        const duracao = intervalToDuration({ start: dataPedido, end: dataConclusao });
+        const partes: string[] = [];
+        if (duracao.days) partes.push(`${duracao.days} dia${duracao.days > 1 ? "s" : ""}`);
+        if (duracao.hours) partes.push(`${duracao.hours} hora${duracao.hours > 1 ? "s" : ""}`);
+        const minutos = duracao.minutes || 0;
+        if (minutos || partes.length === 0) partes.push(`${minutos} minuto${minutos === 1 ? "" : "s"}`);
+        tempoDeEsperaFormatado = partes.join(", ").replace(/, ([^,]*)$/, " e $1");
+      }
+
       // --- INÍCIO DA OPERAÇÃO ATÔMICA (BATCH) ---
       const batch = writeBatch(db);
       const agora = new Date().toISOString();
@@ -602,13 +619,9 @@ const registrarHistoricoRegulacao = async (
           setorId: leitoDestino.setorId,
       };
 
-      const finalizouUTI =
-        pacienteCompleto.aguardaUTI &&
-        leitoDestino.tipoLeito?.toUpperCase() === 'UTI';
-
       if (finalizouUTI) {
-        dadosUpdate.aguardaUTI = false;
-        dadosUpdate.dataPedidoUTI = null;
+        dadosUpdate.aguardaUTI = deleteField();
+        dadosUpdate.dataPedidoUTI = deleteField();
       }
 
       batch.update(pacienteRef, dadosUpdate);
@@ -619,18 +632,8 @@ const registrarHistoricoRegulacao = async (
 
       // 4. LOG DE FINALIZAÇÃO DO PEDIDO DE UTI (se aplicável)
       if (finalizouUTI) {
-        const dataPedido = new Date(pacienteCompleto.dataPedidoUTI);
-        const dataConclusao = new Date();
-        const duracao = intervalToDuration({
-          start: dataPedido,
-          end: dataConclusao,
-        });
-        const tempoDeEspera = `${duracao.days || 0}d ${duracao.hours || 0}h ${duracao.minutes || 0}m`;
-
-        registrarLog(
-          `Pedido de UTI para ${pacienteCompleto.nomeCompleto} finalizado automaticamente após ${tempoDeEspera} de espera. Paciente alocado no leito ${leitoDestino.codigoLeito}.`,
-          "Fila de UTI"
-        );
+        const logUTI = `O pedido de UTI foi finalizado para o paciente ${pacienteCompleto.nomeCompleto} após ser regulado para o leito ${paciente.regulacao.paraSetor} - ${paciente.regulacao.paraLeito} depois de ${tempoDeEsperaFormatado}.`;
+        registrarLog(logUTI, "Regulação de Leitos");
       }
 
       // --- LOGS E NOTIFICAÇÕES (APENAS APÓS SUCESSO DO BATCH) ---
