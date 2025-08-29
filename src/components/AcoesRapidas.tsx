@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Download, FileText, Lightbulb, BarChart3, Stethoscope, Newspaper } from 'lucide-react';
+import { Download, ClipboardPaste, Lightbulb, BarChart3, Stethoscope, Newspaper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AcoesRapidasProps {
@@ -95,7 +95,7 @@ export const AcoesRapidas = ({
                   size="icon"
                   onClick={onPassagemClick}
                 >
-                  <FileText className="h-4 w-4" />
+                  <ClipboardPaste className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
