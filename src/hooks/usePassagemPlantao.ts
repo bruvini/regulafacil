@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Paciente, Leito, Setor } from '@/types/hospital';
+import { Paciente, Leito, Setor, InfoAltaPendente } from '@/types/hospital';
 
 export interface BlocoInfo {
   titulo: string;
@@ -44,36 +44,44 @@ export function usePassagemPlantao(
       .filter((p) => p.isolamentosVigentes?.length)
       .map((p) => {
         const leito = getLeito(p.leitoId);
-        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto}`;
+        const siglas = p.isolamentosVigentes.map((i) => i.sigla).join(', ');
+        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} (${siglas})`;
       });
 
-    const regulacoesSaindo = leitosSetor
-      .filter((l) => getUltimoHistorico(l)?.statusLeito === 'Regulado')
+    const leitosRegulados = leitosSetor
+      .filter((l) => {
+        const status = getUltimoHistorico(l)?.statusLeito;
+        return status === 'Regulado' || status === 'Reservado';
+      })
       .map((l) => {
         const hist = getUltimoHistorico(l);
-        const paciente = hist?.pacienteId
-          ? getPaciente(hist.pacienteId)
-          : undefined;
-        const destino = hist?.infoRegulacao?.paraSetor || '';
-        return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} → ${destino}`;
-      });
-
-    const regulacoesEntrando = leitosSetor
-      .filter((l) => getUltimoHistorico(l)?.statusLeito === 'Reservado')
-      .map((l) => {
-        const hist = getUltimoHistorico(l);
-        const origem = hist?.infoRegulacao?.paraSetor || '';
-        return `${l.codigoLeito} ← ${origem}`;
-      });
+        const paciente = hist?.pacienteId ? getPaciente(hist.pacienteId) : undefined;
+        if (hist?.statusLeito === 'Regulado') {
+          const destino = `${hist.infoRegulacao?.paraSetor || ''} - ${hist.infoRegulacao?.paraLeito || ''}`;
+          return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} - VAI PARA: ${destino}`;
+        }
+        if (hist?.statusLeito === 'Reservado') {
+          const origemSetor = hist.infoRegulacao?.deSetor || 'Origem Externa';
+          const origemLeitoId = paciente?.origem?.deLeito;
+          const origemLeito = origemLeitoId
+            ? getLeito(origemLeitoId)?.codigoLeito || origemLeitoId
+            : '';
+          return `${l.codigoLeito} - ${paciente?.nomeCompleto || ''} - VEM DE: ${origemSetor} - ${origemLeito}`;
+        }
+        return '';
+      })
+      .filter(Boolean);
 
     const remanejamentos = pacientesSetor
       .filter((p) => p.remanejarPaciente)
       .map((p) => {
         const leito = getLeito(p.leitoId);
-        const motivo = typeof p.motivoRemanejamento === 'object'
-          ? p.motivoRemanejamento.tipo
-          : p.motivoRemanejamento;
-        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} (${motivo || ''})`;
+        const motivo = p.motivoRemanejamento;
+        let textoMotivo = typeof motivo === 'object' ? motivo.tipo : motivo;
+        if (typeof motivo === 'object' && motivo.detalhes) {
+          textoMotivo += `: ${motivo.detalhes}`;
+        }
+        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} (${textoMotivo || ''})`;
       });
 
     const leitosPcp = leitosSetor
@@ -91,9 +99,17 @@ export function usePassagemPlantao(
       .filter((p) => p.provavelAlta)
       .map((p) => `${getLeito(p.leitoId)?.codigoLeito || ''} - ${p.nomeCompleto}`);
 
-    const altaNoLeito = pacientesSetor
-      .filter((p) => p.altaNoLeito?.status)
-      .map((p) => `${getLeito(p.leitoId)?.codigoLeito || ''} - ${p.nomeCompleto}`);
+    const pendenciasDeAlta = pacientesSetor
+      .filter(
+        (p) => Array.isArray(p.altaPendente) && p.altaPendente.length > 0
+      )
+      .map((p) => {
+        const leito = getLeito(p.leitoId);
+        const pendencias = (p.altaPendente as InfoAltaPendente[])
+          .map((pend) => `${pend.tipo}: ${pend.detalhe}`)
+          .join('; ');
+        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} - Pendências: ${pendencias}`;
+      });
 
     const aguardandoUti = pacientesSetor
       .filter((p) => p.aguardaUTI)
@@ -101,26 +117,56 @@ export function usePassagemPlantao(
 
     const transferenciaExterna = pacientesSetor
       .filter((p) => p.transferirPaciente)
-      .map(
-        (p) => `${getLeito(p.leitoId)?.codigoLeito || ''} - ${p.nomeCompleto}`
-      );
+      .map((p) => {
+        const leito = getLeito(p.leitoId);
+        const ultimoStatus = p.historicoTransferencia && p.historicoTransferencia.length > 0
+          ? p.historicoTransferencia[p.historicoTransferencia.length - 1].etapa
+          : 'N/A';
+        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto} | Destino: ${p.destinoTransferencia || ''} | Motivo: ${p.motivoTransferencia || ''} | Último Status: ${ultimoStatus}`;
+      });
 
     const observacoes = pacientesSetor
       .filter((p) => p.obsPaciente && p.obsPaciente.length > 0)
-      .map((p) => `${getLeito(p.leitoId)?.codigoLeito || ''} - ${p.nomeCompleto}`);
+      .map((p) => {
+        const leito = getLeito(p.leitoId);
+        const obsTextos = p.obsPaciente
+          .map((obs) => `- ${obs.texto} (${new Date(obs.timestamp).toLocaleDateString('pt-BR')})`)
+          .join('\n');
+        return `${leito?.codigoLeito || ''} - ${p.nomeCompleto}:\n${obsTextos}`;
+      });
 
     const blocos: BlocoInfo[] = [
       { titulo: 'Isolamentos', itens: isolamentos },
-      { titulo: 'Regulações Saindo', itens: regulacoesSaindo },
-      { titulo: 'Regulações Entrando', itens: regulacoesEntrando },
+      { titulo: 'Leitos Regulados', itens: leitosRegulados },
       { titulo: 'Remanejamentos', itens: remanejamentos },
-      { titulo: 'Leitos PCP', itens: leitosPcp },
+    ];
+
+    if (leitosPcp.length > 0) {
+      blocos.push({ titulo: 'Leitos PCP', itens: leitosPcp });
+    }
+
+    blocos.push(
       { titulo: 'Provável Alta', itens: provavelAlta },
-      { titulo: 'Alta no Leito', itens: altaNoLeito },
+      { titulo: 'Pendências de Alta', itens: pendenciasDeAlta },
       { titulo: 'Aguardando UTI', itens: aguardandoUti },
       { titulo: 'Transferência Externa', itens: transferenciaExterna },
-      { titulo: 'Observações', itens: observacoes },
-    ];
+      { titulo: 'Observações', itens: observacoes }
+    );
+
+    if (setor?.nomeSetor === 'UNID. CLINICA MEDICA') {
+      const leitoUtq = leitosSetor.find((l) => l.codigoLeito === '504');
+      if (leitoUtq) {
+        const hist = getUltimoHistorico(leitoUtq);
+        const pacienteUtq = hist?.pacienteId ? getPaciente(hist.pacienteId) : undefined;
+        let textoUtq = '';
+        if (hist?.statusLeito === 'Vago' || hist?.statusLeito === 'Higienizacao') {
+          textoUtq = `${leitoUtq.codigoLeito} - ${hist.statusLeito}`;
+        } else {
+          textoUtq = `${leitoUtq.codigoLeito} - ${pacienteUtq?.nomeCompleto || 'Reservado'}`;
+        }
+        blocos.push({ titulo: 'Leito UTQ (504)', itens: [textoUtq] });
+      }
+    }
 
     if (options?.contarPacientes) {
       blocos.unshift({

@@ -522,6 +522,7 @@ const registrarHistoricoRegulacao = async (
                 regulacaoId: regulacaoIdParaHistorico,
                 paraSetor: leitoDestino.setorNome,
                 paraLeito: leitoDestino.codigoLeito,
+                deSetor: pacienteParaRegular.setorOrigem,
                 observacoes,
             },
         });
