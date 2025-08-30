@@ -3,10 +3,16 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FileText, Trash2, Search } from 'lucide-react';
 import { useAuditoriaLogs } from '@/hooks/useAuditoriaLogs';
-import { useUsuarios } from '@/hooks/useUsuarios';
+import { format } from 'date-fns';
 import { 
   AlertDialog, 
   AlertDialogTrigger, 
@@ -19,25 +25,31 @@ import {
   AlertDialogAction 
 } from '@/components/ui/alert-dialog';
 
-const paginasSistema = ["Mapa de Leitos", "Regulação de Leitos", "Gestão de Isolamentos", "Marcação Cirúrgica", "Gestão de Usuários"];
-
 const Auditoria = () => {
   const { logs, loading, deleteAllLogs } = useAuditoriaLogs();
-  const { usuarios } = useUsuarios();
   const [filtros, setFiltros] = useState({
     texto: '',
-    pagina: '',
-    usuarioId: '',
+    usuario: '',
     dataInicio: '',
-    dataFim: ''
+    dataFim: '',
   });
+
+  const usuariosUnicos = useMemo(
+    () => Array.from(new Set(logs.map(log => log.usuario))),
+    [logs],
+  );
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
-      const dataLog = log.data.toDate();
-      if (filtros.texto && !log.acao.toLowerCase().includes(filtros.texto.toLowerCase()) && !log.usuario.nome.toLowerCase().includes(filtros.texto.toLowerCase())) return false;
-      if (filtros.pagina && log.origem !== filtros.pagina) return false;
-      if (filtros.usuarioId && log.usuario.uid !== filtros.usuarioId) return false;
+      const dataLog = log.timestamp.toDate();
+      if (
+        filtros.texto &&
+        !log.acao.toLowerCase().includes(filtros.texto.toLowerCase()) &&
+        !log.detalhes.toLowerCase().includes(filtros.texto.toLowerCase()) &&
+        !log.usuario.toLowerCase().includes(filtros.texto.toLowerCase())
+      )
+        return false;
+      if (filtros.usuario && log.usuario !== filtros.usuario) return false;
       if (filtros.dataInicio && dataLog < new Date(filtros.dataInicio)) return false;
       if (filtros.dataFim && dataLog > new Date(filtros.dataFim)) return false;
       return true;
@@ -101,45 +113,40 @@ const Auditoria = () => {
             <CardContent className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Pesquisar por ação, usuário ou origem..." 
+                <Input
+                  placeholder="Pesquisar por ação, usuário ou detalhes..."
                   className="pl-10"
                   value={filtros.texto}
                   onChange={(e) => handleFiltroChange('texto', e.target.value)}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Select value={filtros.pagina} onValueChange={(v) => handleFiltroChange('pagina', v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por Página" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {paginasSistema.map(p => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={filtros.usuarioId} onValueChange={(v) => handleFiltroChange('usuarioId', v)}>
+                <Select
+                  value={filtros.usuario}
+                  onValueChange={v => handleFiltroChange('usuario', v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Filtrar por Usuário" />
                   </SelectTrigger>
                   <SelectContent>
-                    {usuarios.map(u => (
-                      <SelectItem key={u.uid} value={u.uid!}>{u.nomeCompleto}</SelectItem>
+                    {usuariosUnicos.map(u => (
+                      <SelectItem key={u} value={u}>
+                        {u}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Input 
-                  type="datetime-local" 
+                <Input
+                  type="datetime-local"
                   placeholder="Data Início"
-                  value={filtros.dataInicio} 
-                  onChange={(e) => handleFiltroChange('dataInicio', e.target.value)} 
+                  value={filtros.dataInicio}
+                  onChange={e => handleFiltroChange('dataInicio', e.target.value)}
                 />
-                <Input 
-                  type="datetime-local" 
+                <Input
+                  type="datetime-local"
                   placeholder="Data Fim"
-                  value={filtros.dataFim} 
-                  onChange={(e) => handleFiltroChange('dataFim', e.target.value)} 
+                  value={filtros.dataFim}
+                  onChange={e => handleFiltroChange('dataFim', e.target.value)}
                 />
               </div>
             </CardContent>
@@ -159,29 +166,37 @@ const Auditoria = () => {
                     <p className="text-slate-400">Carregando logs...</p>
                   </div>
                 )}
-                
+
                 {!loading && filteredLogs.length === 0 && (
                   <div className="flex items-center justify-center py-8">
                     <p className="text-slate-400">Nenhum log encontrado</p>
                   </div>
                 )}
-                
-                {!loading && filteredLogs.map(log => (
-                  <div key={log.id} className="flex flex-col lg:flex-row lg:items-start gap-2 text-sm py-1 hover:bg-slate-800/50 px-2 rounded">
-                    <span className="text-green-400 whitespace-nowrap font-medium">
-                      [{log.data?.toDate ? new Date(log.data.toDate()).toLocaleString('pt-BR') : 'Data inválida'}]
-                    </span>
-                    <span className="text-cyan-400 whitespace-nowrap font-medium">
-                      [{log.usuario.nome}]
-                    </span>
-                    <span className="text-yellow-400 whitespace-nowrap font-medium">
-                      [{log.origem}]
-                    </span>
-                    <span className="text-slate-200 flex-1 break-words">
-                      {log.acao}
-                    </span>
-                  </div>
-                ))}
+
+                {!loading &&
+                  filteredLogs.map(log => (
+                    <div
+                      key={log.id}
+                      className="flex flex-col lg:flex-row lg:items-start gap-2 text-sm py-1 hover:bg-slate-800/50 px-2 rounded"
+                    >
+                      <span className="text-green-400 whitespace-nowrap font-medium">
+                        [
+                        {log.timestamp?.toDate
+                          ? format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss')
+                          : 'Data inválida'}
+                        ]
+                      </span>
+                      <span className="text-cyan-400 whitespace-nowrap font-medium">
+                        [{log.usuario}]
+                      </span>
+                      <span className="text-yellow-400 whitespace-nowrap font-medium">
+                        [{log.acao}]
+                      </span>
+                      <span className="text-slate-200 flex-1 break-words">
+                        {log.detalhes}
+                      </span>
+                    </div>
+                  ))}
               </div>
             </CardContent>
           </Card>
