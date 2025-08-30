@@ -5,6 +5,7 @@ export type TipoRemanejamento =
   | 'priorizacao'
   | 'adequacao_perfil'
   | 'melhoria_assistencia'
+  | 'contra_fluxo'
   | 'liberado_isolamento'
   | 'incompatibilidade_biologica'
   | 'reserva_oncologia'
@@ -13,7 +14,6 @@ export type TipoRemanejamento =
 export interface DetalhesRemanejamento {
   tipo: TipoRemanejamento;
   justificativa?: string;
-  setoresSugeridos?: string[];
 }
 
 export interface AltaLeitoInfo {

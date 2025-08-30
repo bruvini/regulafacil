@@ -70,17 +70,25 @@ export const descreverMotivoRemanejamento = (
         ? `Pedido de Priorização: ${detalhes.justificativa}`
         : 'Pedido de Priorização';
     case 'adequacao_perfil':
-      return detalhes.setoresSugeridos?.length
-        ? `Adequação de Perfil Clínico: ${detalhes.setoresSugeridos.join(', ')}`
+      return detalhes.justificativa
+        ? `Adequação de Perfil Clínico: ${detalhes.justificativa}`
         : 'Adequação de Perfil Clínico';
     case 'melhoria_assistencia':
       return detalhes.justificativa
         ? `Melhoria na Assistência: ${detalhes.justificativa}`
         : 'Melhoria na Assistência';
+    case 'contra_fluxo':
+      return detalhes.justificativa
+        ? `Contra-fluxo: ${detalhes.justificativa}`
+        : 'Contra-fluxo';
     case 'liberado_isolamento':
       return 'Liberado de Isolamento';
     case 'incompatibilidade_biologica':
       return 'Incompatibilidade Biológica';
+    case 'reserva_oncologia':
+      return 'Reserva para Oncologia';
+    case 'alta_uti':
+      return 'Alta da UTI';
     default:
       return '';
   }
