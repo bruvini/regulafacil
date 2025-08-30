@@ -546,6 +546,39 @@ const registrarHistoricoRegulacao = async (
           ? `${baseLog} Justificativa homônimo: ${justificativaHomonimo}`
           : baseLog;
         registrarLog(logComJustificativa, "Regulação de Leitos");
+
+        // --------- Geração da mensagem de notificação ---------
+        const dataHora = new Date().toLocaleString('pt-BR');
+
+        const baseMensagem = `- *Paciente:* _${pacienteParaRegular.nomeCompleto}_\n- *De:* _${pacienteParaRegular.setorOrigem} ${pacienteParaRegular.leitoCodigo}_ → *Para:* _${leitoDestino.setorNome} ${leitoDestino.codigoLeito}_`;
+
+        let mensagem = '';
+        if (isAlteracaoMode) {
+          const obsNir = [observacoes, motivoAlteracao].filter(Boolean).join(' - ');
+          mensagem = `*🔄 REGULAÇÃO ALTERADA*\n\n${baseMensagem}`;
+          if (obsNir) mensagem += `\n- *Obs. NIR:* _${obsNir}_`;
+          mensagem += `\n\n- _${dataHora}_`;
+        } else {
+          mensagem = baseMensagem;
+          const isolamentos =
+            pacienteParaRegular.isolamentosVigentes?.map((iso: any) => iso.sigla).join(', ');
+          if (isolamentos) mensagem += `\n- *Isolamento:* _${isolamentos}_`;
+          if (observacoes) mensagem += `\n- *Obs. NIR:* _${observacoes}_`;
+          if (pacienteParaRegular.motivoRemanejamento) {
+            const motivo = descreverMotivoRemanejamento(pacienteParaRegular.motivoRemanejamento);
+            if (motivo) mensagem += `\n- *Motivo Remanejamento:* _${motivo}_`;
+          }
+          mensagem += `\n\n- _${dataHora}_`;
+        }
+
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          try {
+            await navigator.clipboard.writeText(mensagem);
+          } catch (err) {
+            console.error('Erro ao copiar mensagem:', err);
+          }
+        }
+
         toast({ title: isAlteracaoMode ? "Alteração Confirmada!" : "Regulação Confirmada!", description: "A mensagem foi copiada para a área de transferência." });
 
         setRegulacaoModalOpen(false);
@@ -703,7 +736,20 @@ const registrarHistoricoRegulacao = async (
       await atualizarStatusLeito(leitoDestino.id, "Vago");
 
       registrarLog(logMessage, "Regulação de Leitos");
-      toast({ title: "Cancelado!", description: "A regulação foi desfeita com sucesso." });
+      // --------- Geração da mensagem de cancelamento ---------
+      const dataHora = new Date().toLocaleString('pt-BR');
+      const destinoCancelado = `${leitoDestino.setorNome} ${leitoDestino.codigoLeito}`;
+      const mensagem = `*❌ REGULAÇÃO CANCELADA*\n\n- *Paciente:* _${pacienteParaAcao.nomeCompleto}_\n- *Origem:* _${pacienteParaAcao.setorOrigem} ${pacienteParaAcao.leitoCodigo}_\n- *Destino Cancelado:* _${destinoCancelado}_\n- *Motivo:* _${motivo}_\n- _${dataHora}_`;
+
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        try {
+          await navigator.clipboard.writeText(mensagem);
+        } catch (err) {
+          console.error('Erro ao copiar mensagem de cancelamento:', err);
+        }
+      }
+
+      toast({ title: "Cancelado!", description: "A mensagem foi copiada para a área de transferência." });
       setCancelamentoModalOpen(false);
       setPacienteParaAcao(null);
     } finally {

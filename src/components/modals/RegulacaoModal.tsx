@@ -91,72 +91,41 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
   };
 
 const getMensagemConfirmacao = () => {
-    // Guarda de segurança, não faz nada se não houver paciente ou leito selecionado.
     if (!paciente || !leitoSelecionado) return "";
 
-    // Calcula a idade e formata os isolamentos para incluir na mensagem.
-    const idade = calcularIdade(paciente.dataNascimento);
-    const isolamentos = paciente.isolamentosVigentes?.map(i => i.sigla).join(', ') || 'Nenhum';
-    const obs = observacoes ? `\nObservações NIR: ${observacoes}` : "";
-    const motivoAlt = isAlteracao && motivoAlteracao ? `\nMotivo da Alteração: ${motivoAlteracao}` : "";
+    // Lógica para Nova Regulação
+    if (!isAlteracao) {
+        let mensagem = `*✨ LEITO REGULADO ✨*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *Origem:* _${origem.setor} - ${origem.leito}_ → *Destino:* _${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}_`;
 
-    // --- LÓGICA DE MENSAGEM PERSONALIZADA ---
-
-    // 1. VERIFICA SE É UM REMANEJAMENTO
-    // Se o paciente que está sendo regulado tem a flag `remanejarPaciente` como true...
-    if (paciente.remanejarPaciente && !isAlteracao) {
-        
-        // **AJUSTE PRINCIPAL: VERIFICA O TIPO DE REMANEJAMENTO**
-        // --------------------------------------------------
-        // Compara o nome do setor de destino com o nome do setor de origem.
-        const isMesmoSetor = leitoSelecionado.setorNome === origem.setor;
-
-        // Monta a parte principal da mensagem, que é comum aos dois tipos.
-        const baseMensagem = `⚠️ SOLICITAÇÃO DE REMANEJAMENTO ⚠️
-Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
-Origem: ${origem.setor} - ${origem.leito}
-Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
-Motivo do Remanejamento: ${descreverMotivoRemanejamento(paciente.motivoRemanejamento)}
-Isolamento: ${isolamentos}${obs}`;
-
-        // Define as orientações com base na comparação dos setores.
-        const orientacoes = isMesmoSetor
-            // Se for o MESMO setor:
-            ? `- Assim que possível, puxe o paciente para o novo leito no MV.\n- Informar ao NIR quando o remanejamento for efetivado.`
-            // Se for para OUTRO setor:
-            : `- Fazer contato com o destino para passar plantão e agilizar transferências.\n- Avisar o NIR caso haja alguma intercorrência, dificuldade na passagem de plantão ou demais eventualidades!`;
-
-        // Junta tudo e retorna a mensagem completa e contextualizada.
-        return `${baseMensagem}\n\n${orientacoes}\n\nData e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
-    } 
-    // --------------------------------------------------
-    
-    // 2. VERIFICA SE É UMA ALTERAÇÃO
-    // Se for uma alteração, usa a mensagem de alteração.
-    else if (isAlteracao) {
-        return `⚠️ ALTERAÇÃO DE REGULAÇÃO ⚠️
-Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
-Origem: ${origem.setor} - ${origem.leito}
-Regulação Prévia: ${(paciente as any).regulacao?.paraSetorSigla || 'N/A'} - ${(paciente as any).regulacao?.paraLeito || 'N/A'}
-Novo Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
-Isolamento: ${isolamentos}${motivoAlt}${obs}
-
-Data e hora da alteração: ${new Date().toLocaleString('pt-BR')}`;
-    } 
-    
-    // 3. CASO PADRÃO
-    // Caso contrário, usa a mensagem de regulação padrão.
-    else {
-        return `⚠️ LEITO REGULADO ⚠️
-Paciente: ${paciente.nomeCompleto} - ${paciente.sexoPaciente} - ${idade} anos
-Origem: ${origem.setor} - ${origem.leito}
-Destino: ${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}
-Isolamento: ${isolamentos}${obs}
-
-- Fazer contato com o destino para passar plantão e agilizar transferências. Avisar o NIR caso haja alguma intercorrência, dificuldade na passagem de plantão ou demais eventualidades!
-
-Data e hora da regulação: ${new Date().toLocaleString('pt-BR')}`;
+        const isolamentos = paciente.isolamentosVigentes?.map(i => i.sigla).join(', ');
+        if (isolamentos) {
+            mensagem += `\n- *Isolamento:* _${isolamentos}_`;
+        }
+        if (observacoes) {
+            mensagem += `\n- *Obs. NIR:* _${observacoes}_`;
+        }
+        if (paciente.remanejarPaciente) {
+            const motivo = descreverMotivoRemanejamento(paciente.motivoRemanejamento);
+            if (motivo) {
+                mensagem += `\n- *Motivo Remanejamento:* _${motivo}_`;
+            }
+        }
+        mensagem += `\n\n- _${new Date().toLocaleString('pt-BR')}_`;
+        return mensagem;
     }
+
+    // Lógica para Alteração de Regulação
+    if (isAlteracao) {
+        let mensagem = `*🔄 REGULAÇÃO ALTERADA 🔄*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *Origem:* _${origem.setor} - ${origem.leito}_\n- *Destino Anterior:* _${(paciente as any).regulacao?.paraLeito || 'N/A'}_\n- *Novo Destino:* _${leitoSelecionado.codigoLeito}_`;
+
+        if (motivoAlteracao) {
+            mensagem += `\n- *Motivo:* _${motivoAlteracao}_`;
+        }
+        mensagem += `\n\n- _${new Date().toLocaleString('pt-BR')}_`;
+        return mensagem;
+    }
+
+    return "";
 };
 
   const copiarParaClipboard = () => {
