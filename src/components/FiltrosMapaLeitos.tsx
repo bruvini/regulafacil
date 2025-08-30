@@ -15,6 +15,7 @@ import { SlidersHorizontal, X, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsolamentos } from '@/hooks/useIsolamentos';
 import { Setor } from '@/types/hospital';
+import { ESPECIALIDADES_MEDICAS } from '@/lib/constants';
 
 interface FiltrosMapaLeitosProps {
   setores: Setor[];
@@ -31,19 +32,17 @@ interface FiltrosMapaLeitosProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   resetFiltros: () => void;
-  especialidades: string[];
   todosStatus: string[];
 }
 
-export const FiltrosMapaLeitos = ({ 
-  setores, 
-  filtrosAvancados, 
-  setFiltrosAvancados, 
-  searchTerm, 
-  setSearchTerm, 
-  resetFiltros, 
-  especialidades, 
-  todosStatus 
+export const FiltrosMapaLeitos = ({
+  setores,
+  filtrosAvancados,
+  setFiltrosAvancados,
+  searchTerm,
+  setSearchTerm,
+  resetFiltros,
+  todosStatus
 }: FiltrosMapaLeitosProps) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const { isolamentos: tiposDeIsolamento } = useIsolamentos();
@@ -101,7 +100,7 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Especialidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {especialidades.map(e => (
+                  {ESPECIALIDADES_MEDICAS.map(e => (
                     <SelectItem key={e} value={e}>{e}</SelectItem>
                   ))}
                 </SelectContent>

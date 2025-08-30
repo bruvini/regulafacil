@@ -2,14 +2,6 @@
 import { useState, useMemo } from 'react';
 import { SetorComLeitos } from './useSetores';
 
-const especialidades = [
-  "CIRURGIA CABECA E PESCOCO", "CIRURGIA GERAL", "CIRURGIA TORACICA",
-  "CIRURGIA VASCULAR", "CLINICA GERAL", "HEMATOLOGIA", "INTENSIVISTA",
-  "NEFROLOGIA", "NEUROCIRURGIA", "NEUROLOGIA", "ODONTOLOGIA C.TRAUM.B.M.F.",
-  "ONCOLOGIA CIRURGICA", "ONCOLOGIA CLINICA/CANCEROLOGIA",
-  "ORTOPEDIA/TRAUMATOLOGIA", "PROCTOLOGIA", "UROLOGIA", 'BUCOMAXILO', 'HEPATOLOGISTA', 'MASTOLOGIA', 'RESIDENTE'
-];
-
 const todosStatus = ['Vago', 'Ocupado', 'Bloqueado', 'Higienizacao', 'Regulado', 'Reservado'];
 
 export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
@@ -120,7 +112,6 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
     filtrosAvancados, setFiltrosAvancados,
     resetFiltros,
     filteredSetores,
-    especialidades,
     todosStatus
   };
 };

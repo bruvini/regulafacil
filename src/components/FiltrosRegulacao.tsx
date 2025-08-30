@@ -4,15 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
-
-// Lista de especialidades atualizada
-const especialidades = [
-  "CIRURGIA CABECA E PESCOCO", "CIRURGIA GERAL", "CIRURGIA TORACICA",
-  "CIRURGIA VASCULAR", "CLINICA GERAL", "HEMATOLOGIA", "INTENSIVISTA",
-  "NEFROLOGIA", "NEUROCIRURGIA", "NEUROLOGIA", "ODONTOLOGIA C.TRAUM.B.M.F.",
-  "ONCOLOGIA CIRURGICA", "ONCOLOGIA CLINICA/CANCEROLOGIA",
-  "ORTOPEDIA/TRAUMATOLOGIA", "PROCTOLOGIA", "UROLOGIA", 'BUCOMAXILO', 'HEPATOLOGISTA', 'MASTOLOGIA', 'RESIDENTE'
-];
+import { ESPECIALIDADES_MEDICAS } from '@/lib/constants';
 
 interface FiltrosRegulacaoProps {
     filtrosAvancados: {
@@ -81,7 +73,7 @@ export const FiltrosRegulacao = ({
                         <Select value={filtrosAvancados?.especialidade || ''} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, especialidade: v})}>
                             <SelectTrigger><SelectValue placeholder="Especialidade" /></SelectTrigger>
                             <SelectContent>
-                                {especialidades.map(e => (
+                                {ESPECIALIDADES_MEDICAS.map(e => (
                                     <SelectItem key={e} value={e}>{e}</SelectItem>
                                 ))}
                             </SelectContent>
