@@ -116,7 +116,7 @@ const getMensagemConfirmacao = () => {
 
     // Lógica para Alteração de Regulação
     if (isAlteracao) {
-        let mensagem = `*🔄 REGULAÇÃO ALTERADA 🔄*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *Origem:* _${origem.setor} - ${origem.leito}_\n- *Destino Anterior:* _${(paciente as any).regulacao?.paraLeito || 'N/A'}_\n- *Novo Destino:* _${leitoSelecionado.codigoLeito}_`;
+        let mensagem = `*🔄 REGULAÇÃO ALTERADA 🔄*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *Origem:* _${origem.setor} - ${origem.leito}_\n- *Novo Destino:* _${leitoSelecionado.setorNome} ${leitoSelecionado.codigoLeito}_`;
 
         if (motivoAlteracao) {
             mensagem += `\n- *Motivo:* _${motivoAlteracao}_`;

@@ -39,13 +39,9 @@ export const CancelamentoModal = ({ open, onOpenChange, onConfirm, paciente }: P
     return `*❌ REGULAÇÃO CANCELADA ❌*
 
 Paciente: ${paciente.nomeCompleto}
-
 Origem: ${paciente.setorOrigem} - ${paciente.leitoCodigo}
-
 Destino Cancelado: ${paciente.regulacao?.paraSetor || 'N/A'} - ${paciente.regulacao?.paraLeito || 'N/A'}
-
 Motivo: ${motivo || '(preencha o motivo abaixo)'}
-
 ${new Date().toLocaleString('pt-BR')}`;
   };
 
