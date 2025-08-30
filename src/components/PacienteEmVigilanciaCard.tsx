@@ -52,7 +52,7 @@ export const PacienteEmVigilanciaCard = ({ paciente, setorId, leitoId }: Pacient
                     <div className="w-4 h-4 rounded-full" style={{ backgroundColor: tipoIsolamento.cor }} />
                     <div>
                        <p className="font-semibold">{tipoIsolamento.nomeMicroorganismo}</p>
-                       <p className="text-xs text-muted-foreground">Início: {new Date(isolamentoVigente.dataInicioVigilancia).toLocaleDateString('pt-BR')}</p>
+                       <p className="text-xs text-muted-foreground">Início: {new Date(isolamentoVigente.dataInicio).toLocaleDateString('pt-BR')}</p>
                     </div>
                   </div>
                   <Badge style={{ backgroundColor: tipoIsolamento.cor, color: 'white' }}>{tipoIsolamento.sigla}</Badge>

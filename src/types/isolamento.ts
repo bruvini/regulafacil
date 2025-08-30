@@ -38,3 +38,11 @@ export interface TipoIsolamentoFormData {
   cor: string;
   regrasPrecaucao: RegrasPrecaucao;
 }
+
+export interface PacienteIsolamento {
+  isolamentoId?: string;
+  sigla: string;
+  status: 'suspeita' | 'confirmada';
+  dataInicio: string;
+  regrasCumpridas?: string[];
+}
