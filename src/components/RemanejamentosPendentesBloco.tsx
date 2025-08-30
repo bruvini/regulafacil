@@ -34,6 +34,11 @@ export const RemanejamentosPendentesBloco = ({
           .startsWith("risco de contaminação cruzada")
       ) {
         motivoBase = "Risco de Contaminação Cruzada";
+        // Remove o prefixo para exibição no item
+        (paciente.motivoRemanejamento as any).detalhes = motivoCompleto.replace(
+          /Risco de contaminação cruzada: /i,
+          ""
+        );
       }
       if (!acc[motivoBase]) acc[motivoBase] = [];
       acc[motivoBase].push(paciente);
@@ -70,7 +75,7 @@ export const RemanejamentosPendentesBloco = ({
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                         {pacientes.map((paciente) => (
                           <RemanejamentoPendenteItem
                             key={paciente.id}
