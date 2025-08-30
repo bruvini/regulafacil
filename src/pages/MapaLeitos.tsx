@@ -14,7 +14,8 @@ import { InternacaoManualModal } from '@/components/modals/InternacaoManualModal
 import { ReservaExternaModal } from '@/components/modals/ReservaExternaModal';
 import AltaPendenteModal from '@/components/modals/AltaPendenteModal';
 import { BoletimDiarioModal } from '@/components/modals/BoletimDiarioModal';
-import { AcoesRapidas } from '@/components/AcoesRapidas';
+import { ReservaOncologiaModal } from '@/components/modals/ReservaOncologiaModal';
+import { useReservaOncologia } from '@/hooks/useReservaOncologia';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
@@ -23,7 +24,7 @@ import { useFiltrosMapaLeitos } from '@/hooks/useFiltrosMapaLeitos';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuditoria } from '@/hooks/useAuditoria';
 import { useBoletimDiario } from '@/hooks/useBoletimDiario';
-import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope, Newspaper } from 'lucide-react';
+import { Settings, ShieldQuestion, ClipboardList, Trash2, Stethoscope, Newspaper, ClipboardPlus } from 'lucide-react';
 import { MovimentacaoModal } from '@/components/modals/MovimentacaoModal';
 import { RelatorioIsolamentosModal } from '@/components/modals/RelatorioIsolamentosModal';
 import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
@@ -48,6 +49,7 @@ const MapaLeitos = () => {
   const [reservaModalOpen, setReservaModalOpen] = useState(false);
   const [relatorioEspecialidadeOpen, setRelatorioEspecialidadeOpen] = useState(false);
   const [boletimModalOpen, setBoletimModalOpen] = useState(false);
+  const [reservaOncologiaModalOpen, setReservaOncologiaModalOpen] = useState(false);
   const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
   interface PacienteMoverInfo {
     dados: Paciente;
@@ -70,6 +72,7 @@ const MapaLeitos = () => {
   const { setores, loading: setoresLoading } = useSetores();
   const { leitos, loading: leitosLoading, atualizarStatusLeito, vincularPacienteLeito, togglePrioridadeHigienizacao } = useLeitos();
   const { pacientes, loading: pacientesLoading, criarPacienteManual, atualizarStatusAltaPendente } = usePacientes();
+  const reservaOncologia = useReservaOncologia();
   const loading = setoresLoading || leitosLoading || pacientesLoading;
 
   // Scroll to top on component mount
@@ -111,6 +114,12 @@ const MapaLeitos = () => {
   }, [setores, leitos, pacientes, loading]);
 
   const { setoresEnriquecidos, todosLeitosEnriquecidos } = dadosCombinados;
+  const leitosOncologia = useMemo(() => {
+    return todosLeitosEnriquecidos.filter(l => {
+      const setorInfo = setores.find(s => s.id === l.setorId);
+      return setorInfo?.nomeSetor === 'UNID. ONCOLOGIA' && (l.statusLeito === 'Vago' || l.statusLeito === 'Higienizacao');
+    });
+  }, [todosLeitosEnriquecidos, setores]);
   const { contagemPorStatus, taxaOcupacao, tempoMedioStatus, nivelPCP } = useIndicadoresHospital(setoresEnriquecidos);
   const { filteredSetores, filtrosAvancados, setFiltrosAvancados, ...filtrosProps } = useFiltrosMapaLeitos(setoresEnriquecidos);
 
@@ -182,11 +191,15 @@ const MapaLeitos = () => {
     origem: string;
   }
 
-  const handleConfirmarReserva = async (dadosForm: ReservaExternaFormData) => {
-    if (!leitoParaAcao) return;
+  const handleConfirmarReserva = async (
+    dadosForm: ReservaExternaFormData,
+    leitoParam?: LeitoEnriquecido
+  ) => {
+    const leitoAlvo = leitoParam || leitoParaAcao;
+    if (!leitoAlvo) return;
 
     try {
-      const setorInfo = setores.find(s => s.id === leitoParaAcao.setorId);
+      const setorInfo = setores.find(s => s.id === leitoAlvo.setorId);
 
       const pacienteId = await criarPacienteManual(
         {
@@ -211,9 +224,9 @@ const MapaLeitos = () => {
       const agora = new Date().toISOString();
 
       const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
-      batch.update(pacienteRef, { leitoId: leitoParaAcao.id, setorId: leitoParaAcao.setorId });
+      batch.update(pacienteRef, { leitoId: leitoAlvo.id, setorId: leitoAlvo.setorId });
 
-      const leitoRef = doc(db, 'leitosRegulaFacil', leitoParaAcao.id);
+      const leitoRef = doc(db, 'leitosRegulaFacil', leitoAlvo.id);
       batch.update(leitoRef, {
         historicoMovimentacao: arrayUnion({
           statusLeito: 'Reservado',
@@ -221,7 +234,7 @@ const MapaLeitos = () => {
           pacienteId,
           infoRegulacao: {
             paraSetor: setorInfo?.nomeSetor || 'Setor não encontrado',
-            paraLeito: leitoParaAcao.codigoLeito,
+            paraLeito: leitoAlvo.codigoLeito,
             origemExterna: dadosForm.origem,
             tipoReserva: 'externo',
           },
@@ -231,7 +244,7 @@ const MapaLeitos = () => {
       await batch.commit();
 
       registrarLog(
-        `Reservou o leito ${leitoParaAcao.codigoLeito} para o paciente externo ${dadosForm.nomeCompleto} (origem: ${dadosForm.origem}).`,
+        `Reservou o leito ${leitoAlvo.codigoLeito} para o paciente externo ${dadosForm.nomeCompleto} (origem: ${dadosForm.origem}).`,
         'Mapa de Leitos'
       );
 
@@ -574,11 +587,19 @@ const MapaLeitos = () => {
                         </TooltipTrigger>
                         <TooltipContent><p>Gerar Boletim Diário</p></TooltipContent>
                       </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="outline" size="icon" onClick={() => setReservaOncologiaModalOpen(true)}>
+                            <ClipboardPlus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Reservas Oncologia</p></TooltipContent>
+                      </Tooltip>
                       {isAdmin && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              variant="outline" 
+                              variant="outline"
                               size="icon" 
                               onClick={() => setLimpezaModalOpen(true)}
                               className="border-destructive/20 hover:bg-destructive/10 hover:border-destructive/30"
@@ -692,6 +713,18 @@ const MapaLeitos = () => {
         onOpenChange={setReservaModalOpen}
         onConfirm={handleConfirmarReserva}
         leito={leitoParaAcao}
+      />
+      <ReservaOncologiaModal
+        open={reservaOncologiaModalOpen}
+        onOpenChange={setReservaOncologiaModalOpen}
+        leitos={leitosOncologia}
+        handleConfirmarReserva={handleConfirmarReserva}
+        registrarTentativa={reservaOncologia.registrarTentativaContato}
+        marcarComoInternado={reservaOncologia.marcarComoInternado}
+        adicionarReserva={reservaOncologia.adicionarReserva}
+        atualizarReserva={reservaOncologia.atualizarReserva}
+        excluirReserva={reservaOncologia.excluirReserva}
+        reservas={reservaOncologia.reservas}
       />
       <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
       <BoletimDiarioModal

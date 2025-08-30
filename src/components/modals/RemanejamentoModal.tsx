@@ -40,6 +40,7 @@ const options: { value: TipoRemanejamento; label: string }[] = [
   { value: 'adequacao_perfil', label: 'Adequação de Perfil Clínico' },
   { value: 'melhoria_assistencia', label: 'Melhoria na Assistência' },
   { value: 'liberado_isolamento', label: 'Liberado de Isolamento' },
+  { value: 'reserva_oncologia', label: 'Reserva para Oncologia' },
 ];
 
 export const RemanejamentoModal = ({ open, onOpenChange, onConfirm }: RemanejamentoModalProps) => {
@@ -73,6 +74,9 @@ export const RemanejamentoModal = ({ open, onOpenChange, onConfirm }: Remanejame
     }
     if (tipo === 'adequacao_perfil') {
       detalhes.setoresSugeridos = setoresSelecionados;
+    }
+    if (tipo === 'reserva_oncologia') {
+      detalhes.justificativa = 'Reserva para Oncologia';
     }
     onConfirm(detalhes);
     onOpenChange(false);

@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Download, ClipboardPaste, Lightbulb, BarChart3, Stethoscope, Newspaper } from 'lucide-react';
+import { Download, ClipboardPaste, Lightbulb, BarChart3, Stethoscope, Newspaper, ClipboardPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AcoesRapidasProps {
@@ -16,6 +16,7 @@ interface AcoesRapidasProps {
   onSugestoesClick?: () => void;
   onPanoramaClick?: () => void;
   onRelatorioEspecialidadeClick?: () => void;
+  onReservaOncologiaClick?: () => void;
   showAllButtons?: boolean;
   sugestoesDisponiveis?: boolean;
   panoramaDisponivel?: boolean;
@@ -28,6 +29,7 @@ export const AcoesRapidas = ({
   onSugestoesClick,
   onPanoramaClick,
   onRelatorioEspecialidadeClick,
+  onReservaOncologiaClick,
   showAllButtons = false,
   sugestoesDisponiveis = false,
   panoramaDisponivel = false
@@ -82,6 +84,23 @@ export const AcoesRapidas = ({
             </TooltipTrigger>
             <TooltipContent>
               <p>Ocupação por Especialidade</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {onReservaOncologiaClick && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onReservaOncologiaClick}
+              >
+                <ClipboardPlus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Reservas Oncologia</p>
             </TooltipContent>
           </Tooltip>
         )}
