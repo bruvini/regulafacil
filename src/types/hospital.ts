@@ -17,7 +17,9 @@ export interface DetalhesRemanejamento {
 
 export interface AltaLeitoInfo {
   status: boolean;
-  pendencia: string;
+  tipo: 'medicacao' | 'transporte' | 'familiar' | 'emad' | 'outros';
+  detalhe?: string; // Detalhe adicional da pendência
+  pendencia: string; // Texto completo para exibição rápida
   timestamp: string; // Data e hora no formato ISO
   usuario: string; // Nome do usuário que registrou
 }

@@ -5,12 +5,15 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { AltaLeitoInfo } from '@/types/hospital';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pacienteNome: string;
-  onConfirm: (pendencia: string) => void;
+  onConfirm: (
+    dados: Pick<AltaLeitoInfo, 'tipo' | 'detalhe' | 'pendencia'>
+  ) => void;
 }
 
 export const AltaNoLeitoModal = ({ open, onOpenChange, pacienteNome, onConfirm }: Props) => {
@@ -42,7 +45,13 @@ export const AltaNoLeitoModal = ({ open, onOpenChange, pacienteNome, onConfirm }
         break;
     }
 
-    onConfirm(pendencia);
+    const dadosAlta: Pick<AltaLeitoInfo, 'tipo' | 'detalhe' | 'pendencia'> = {
+      tipo,
+      detalhe,
+      pendencia,
+    };
+
+    onConfirm(dadosAlta);
     resetar();
     onOpenChange(false);
   };
