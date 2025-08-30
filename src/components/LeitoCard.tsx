@@ -1,9 +1,35 @@
 // src/components/LeitoCard.tsx
 
 import { useState, useMemo } from 'react';
-import { Star, ShieldAlert, Lock, Paintbrush, Info, BedDouble, AlertTriangle, ArrowRightLeft, Unlock, User, Stethoscope, Ambulance, XCircle, CheckCircle, Move, LogOut, Bell, MessageSquarePlus, UserPlus, BookMarked, Siren, PlaneTakeoff } from 'lucide-react';
+import {
+  Star,
+  ShieldAlert,
+  Lock,
+  Paintbrush,
+  Info,
+  AlertTriangle,
+  ArrowRightLeft,
+  Unlock,
+  User,
+  Stethoscope,
+  Ambulance,
+  XCircle,
+  CheckCircle,
+  Bell,
+  UserPlus,
+  BookMarked,
+  Siren,
+  PlaneTakeoff,
+  MoreVertical,
+} from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -127,6 +153,18 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                             <Ambulance className="h-4 w-4 text-blue-500" />
                           </TooltipTrigger>
                           <TooltipContent><p>Transferência Externa</p></TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {paciente?.altaNoLeito?.status && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <PlaneTakeoff className="h-4 w-4 text-blue-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Paciente com alta no leito: {paciente.altaNoLeito.pendencia}</p>
+                          </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     )}
@@ -354,139 +392,47 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
               </div>
             )}
             
-            {leito.statusLeito === 'Ocupado' && (
-              <div className="flex justify-center flex-wrap gap-1">
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <BedDouble className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Liberar Leito</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Liberar Leito</AlertDialogTitle>
-                      <AlertDialogDescription>Confirmar a liberação do leito {leito.codigoLeito}? O leito será enviado para higienização.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onLiberarLeito(leito.id, paciente!.id)}>Liberar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onMoverPaciente(leito)}>
-                        <Move className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Mover Paciente</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onAbrirObs(leito)}>
-                        <MessageSquarePlus className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Observações</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <AlertTriangle className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Solicitar UTI</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Solicitar UTI</AlertDialogTitle>
-                      <AlertDialogDescription>Confirmar a solicitação de vaga de UTI para o paciente {paciente?.nomeCompleto}?</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onSolicitarUTI(paciente!.id)}>Solicitar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setRemanejamentoModalOpen(true)}>
-                        <ArrowRightLeft className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Solicitar Remanejamento</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTransferenciaModalOpen(true)}>
-                        <Ambulance className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Transferência Externa</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => actions.onToggleProvavelAlta(paciente!.id, paciente?.provavelAlta || false)}>
-                        <LogOut className={`h-4 w-4 ${paciente?.provavelAlta ? 'text-green-500' : ''}`} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent><p>Sinalizar Provável Alta</p></TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() =>
-                          paciente?.altaNoLeito?.status
-                            ? actions.onCancelarAltaNoLeito(paciente!.id)
-                            : actions.onAltaNoLeito(leito)
-                        }
-                      >
-                        <PlaneTakeoff
-                          className={`h-4 w-4 ${
-                            paciente?.altaNoLeito?.status ? 'text-blue-500' : ''
-                          }`}
-                        />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{paciente?.altaNoLeito?.status ? paciente.altaNoLeito.pendencia : 'Alta no leito'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+            {leito.statusLeito === 'Ocupado' && paciente && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">Opções</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => actions.onLiberarLeito(leito.id, paciente.id)}>
+                    Liberar Leito
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => actions.onMoverPaciente(leito)}>
+                    Mover Paciente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => actions.onAbrirObs(leito)}>
+                    Observações
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => actions.onSolicitarUTI(paciente.id)}>
+                    Solicitar UTI
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRemanejamentoModalOpen(true)}>
+                    Solicitar Remanejamento
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTransferenciaModalOpen(true)}>
+                    Transferência Externa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => actions.onToggleProvavelAlta(paciente.id, paciente.provavelAlta || false)}>
+                    {paciente.provavelAlta ? 'Cancelar Provável Alta' : 'Sinalizar Provável Alta'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      paciente.altaNoLeito?.status
+                        ? actions.onCancelarAltaNoLeito(paciente.id)
+                        : actions.onAltaNoLeito(leito)
+                    }
+                  >
+                    {paciente.altaNoLeito?.status ? 'Cancelar Alta no Leito' : 'Alta no Leito'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
