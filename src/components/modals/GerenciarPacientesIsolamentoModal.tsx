@@ -1,6 +1,6 @@
 // src/components/modals/GerenciarPacientesIsolamentoModal.tsx
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,21 +19,28 @@ import { useIsolamentos } from '@/hooks/useIsolamentos';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore'; // NOVO
 import { db } from '@/lib/firebase'; // NOVO
 import { useToast } from '@/hooks/use-toast'; // NOVO
+import { Paciente } from '@/types/hospital';
+import { PacienteIsolamento } from '@/types/isolamento';
+import { useAuditoria } from '@/hooks/useAuditoria';
 
 interface GerenciarPacientesIsolamentoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode?: 'adicionar' | 'editar';
+  paciente?: Paciente;
+  isolamento?: PacienteIsolamento;
 }
 
-export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: GerenciarPacientesIsolamentoModalProps) => {
+export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange, mode = 'adicionar', paciente, isolamento }: GerenciarPacientesIsolamentoModalProps) => {
   const [busca, setBusca] = useState('');
   const [setorFiltro, setSetorFiltro] = useState<string>('todos');
   const [etapa, setEtapa] = useState<'lista' | 'isolamentos'>('lista');
-  const [pacienteSelecionado, setPacienteSelecionado] = useState<any>(null);
+  const [pacienteSelecionado, setPacienteSelecionado] = useState<any>(paciente || null);
   const [isolamentosSelecionados, setIsolamentosSelecionados] = useState<string[]>([]);
   const [datasIsolamentos, setDatasIsolamentos] = useState<Record<string, string>>({});
   const [buscaIsolamento, setBuscaIsolamento] = useState('');
   const [statusIsolamento, setStatusIsolamento] = useState<'suspeita' | 'confirmada'>('suspeita');
+  const [dataEdicao, setDataEdicao] = useState<string>(isolamento?.dataInicio || '');
 
   // CORREÇÃO: Usando os hooks corretos
   const { setores } = useSetores();
@@ -41,6 +48,14 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
   const { pacientes } = usePacientes();
   const { isolamentos } = useIsolamentos();
   const { toast } = useToast();
+  const { registrarLog } = useAuditoria();
+
+  useEffect(() => {
+    if (mode === 'editar' && paciente) {
+      setPacienteSelecionado(paciente);
+      setDataEdicao(isolamento?.dataInicio || '');
+    }
+  }, [mode, paciente, isolamento, open]);
 
   // CORREÇÃO: Lógica de dados refatorada para usar as coleções separadas
   const pacientesDisponiveis = useMemo(() => {
@@ -76,9 +91,30 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
   
   // CORREÇÃO: Função de confirmação atualizada para usar updateDoc
   const handleConfirmarIsolamentos = async () => {
+    if (mode === 'editar') {
+      if (!pacienteSelecionado || !isolamento) return;
+      try {
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteSelecionado.id);
+        const novosIsolamentos = pacienteSelecionado.isolamentosVigentes!.map((iso: PacienteIsolamento) =>
+          iso.isolamentoId === isolamento.isolamentoId ? { ...iso, dataInicio: dataEdicao } : iso
+        );
+        await updateDoc(pacienteRef, { isolamentosVigentes: novosIsolamentos });
+        toast({ title: 'Sucesso!', description: 'Data do isolamento atualizada.' });
+        registrarLog(
+          'Data de isolamento alterada',
+          `Paciente ${pacienteSelecionado.nomeCompleto} - isolamento ${isolamento.sigla} alterado para ${dataEdicao}`
+        );
+        onOpenChange(false);
+      } catch (error) {
+        console.error('Erro ao atualizar isolamento:', error);
+        toast({ title: 'Erro', description: 'Não foi possível atualizar o isolamento.', variant: 'destructive' });
+      }
+      return;
+    }
+
     if (!pacienteSelecionado || isolamentosSelecionados.length === 0) return;
 
-    const temDatasCompletas = isolamentosSelecionados.every(isolamentoId => 
+    const temDatasCompletas = isolamentosSelecionados.every(isolamentoId =>
       datasIsolamentos[isolamentoId] && datasIsolamentos[isolamentoId].trim() !== ''
     );
 
@@ -86,7 +122,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
         toast({ title: "Atenção", description: "Preencha a data de início para todos os isolamentos selecionados.", variant: "destructive" });
         return;
     }
-    
+
     const isolamentosParaAdicionar = isolamentosSelecionados.map(isolamentoId => {
         const tipoIsolamento = isolamentos.find(t => t.id === isolamentoId);
         return {
@@ -104,6 +140,10 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
             isolamentosVigentes: arrayUnion(...isolamentosParaAdicionar)
         });
         toast({ title: "Sucesso!", description: "Isolamentos adicionados ao paciente." });
+        registrarLog(
+          'Isolamento adicionado',
+          `Paciente ${pacienteSelecionado.nomeCompleto} - isolamentos ${isolamentosParaAdicionar.map(i => i.sigla).join(', ')}`
+        );
 
         // Reset do modal
         voltarParaLista();
@@ -147,17 +187,47 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
       datasIsolamentos[isolamentoId] && datasIsolamentos[isolamentoId].trim() !== ''
     );
 
+  if (mode === 'editar' && pacienteSelecionado && isolamento) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Isolamento - {pacienteSelecionado.nomeCompleto}</DialogTitle>
+            <DialogDescription>
+              Altere a data de início do isolamento {isolamento.sigla}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="data-edicao">Data de Início</Label>
+              <Input
+                id="data-edicao"
+                type="date"
+                value={dataEdicao}
+                onChange={(e) => setDataEdicao(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleConfirmarIsolamentos} disabled={!dataEdicao}>
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
             {etapa === 'lista' ? 'Gerenciar Pacientes em Vigilância' : `Adicionar Isolamento - ${pacienteSelecionado?.nomeCompleto}`}
           </DialogTitle>
           <DialogDescription>
-            {etapa === 'lista' 
+            {etapa === 'lista'
               ? 'Selecione pacientes para iniciar vigilância de isolamento'
               : 'Selecione os tipos de isolamento e defina a data de início para cada um'
             }
@@ -189,22 +259,21 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
 
             <ScrollArea className="h-96">
               <div className="space-y-2">
-                {pacientesDisponiveis.map(paciente => (
-                  <Card key={paciente.id} className="p-4">
+                {pacientesDisponiveis.map(p => (
+                  <Card key={p.id} className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
-                        <p className="font-semibold">{paciente.nomeCompleto}</p>
+                        <p className="font-semibold">{p.nomeCompleto}</p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Badge variant="outline">{paciente.sexoPaciente?.charAt(0)}</Badge>
-                          <span>{paciente.setorNome}</span>
+                          <Badge variant="outline">{p.sexoPaciente?.charAt(0)}</Badge>
+                          <span>{p.setorNome}</span>
                           <span>•</span>
-                          <span>Leito {paciente.leitoCodigo}</span>
+                          <span>Leito {p.leitoCodigo}</span>
                           <span>•</span>
-                          <span>{paciente.especialidadePaciente}</span>
+                          <span>{p.especialidadePaciente}</span>
                         </div>
                       </div>
-                      <Button onClick={() => handleAdicionarVigilancia(paciente)}>
+                      <Button onClick={() => handleAdicionarVigilancia(p)}>
                         Adicionar Vigilância
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -220,7 +289,6 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
             </ScrollArea>
           </div>
         ) : (
-          // O JSX da etapa 'isolamentos' permanece o mesmo, pois já está correto
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -254,7 +322,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
                     const jaTemEsteIsolamento = pacienteSelecionado?.isolamentosVigentes?.some(
                       (iso: any) => iso.isolamentoId === tipo.id
                     );
-                    
+
                     return (
                       <div key={tipo.id} className="space-y-2">
                         <div className="flex items-center space-x-2">
@@ -265,8 +333,8 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
                             onCheckedChange={(checked) => handleIsolamentoToggle(tipo.id!, !!checked)}
                           />
                           <Label htmlFor={tipo.id} className="flex items-center gap-2">
-                            <div 
-                              className="w-4 h-4 rounded-full" 
+                            <div
+                              className="w-4 h-4 rounded-full"
                               style={{ backgroundColor: tipo.cor }}
                             />
                             <span className="font-medium">{tipo.sigla}</span>
@@ -278,7 +346,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
                             )}
                           </Label>
                         </div>
-                        
+
                         {isolamentosSelecionados.includes(tipo.id!) && (
                           <div className="ml-6 mt-2">
                             <Label htmlFor={`data-${tipo.id}`} className="text-sm">
@@ -309,7 +377,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
               <Button variant="outline" onClick={voltarParaLista}>
                 Voltar
               </Button>
-              <Button 
+              <Button
                 onClick={handleConfirmarIsolamentos}
                 disabled={!todasDatasPreenchidas}
               >

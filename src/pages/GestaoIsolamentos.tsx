@@ -1,23 +1,34 @@
 import { useMemo, useState } from 'react';
-import { Users, ShieldPlus, Terminal } from 'lucide-react';
+import { Users, ShieldPlus, Terminal, Bell } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
 import { usePacientes } from '@/hooks/usePacientes';
+import { useAlertasIsolamento } from '@/hooks/useAlertasIsolamento';
+import { AlertaIncompatibilidadeItem } from '@/components/AlertaIncompatibilidadeItem';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import GerenciamentoIsolamentoModal from '@/components/modals/GerenciamentoIsolamentoModal';
 import { GerenciarPacientesIsolamentoModal } from '@/components/modals/GerenciarPacientesIsolamentoModal';
 import { CardPacienteSuspeito } from '@/components/CardPacienteSuspeito';
 import { CardPacienteConfirmado } from '@/components/CardPacienteConfirmado';
+import { Paciente } from '@/types/hospital';
+import { PacienteIsolamento } from '@/types/isolamento';
 
 const GestaoIsolamentos = () => {
   const [modalTiposOpen, setModalTiposOpen] = useState(false);
   const [modalPacientesOpen, setModalPacientesOpen] = useState(false);
+  const [modalPacientesMode, setModalPacientesMode] = useState<'adicionar' | 'editar'>('adicionar');
+  const [pacienteEdicao, setPacienteEdicao] = useState<Paciente | null>(null);
+  const [isolamentoEdicao, setIsolamentoEdicao] = useState<PacienteIsolamento | null>(null);
 
   const { setores } = useSetores();
   const { leitos } = useLeitos();
   const { pacientes } = usePacientes();
+  const { alertas, loading: alertasLoading } = useAlertasIsolamento();
 
   const pacientesEmVigilancia = useMemo(() => {
     const mapaLeitos = new Map(leitos.map(l => [l.id, l]));
@@ -43,8 +54,21 @@ const GestaoIsolamentos = () => {
     .map(p => ({ ...p, isolamento: p.isolamentosVigentes.find((iso: any) => iso.status === 'suspeita') }));
 
   const pacientesConfirmados = pacientesEmVigilancia
-    .filter(p => p.isolamentosVigentes?.some((iso: any) => iso.status === 'confirmada'))
-    .map(p => ({ ...p, isolamento: p.isolamentosVigentes.find((iso: any) => iso.status === 'confirmada') }));
+    .filter(p => p.isolamentosVigentes?.some(iso => iso.status === 'confirmada'));
+
+  const abrirModalAdicionar = () => {
+    setModalPacientesMode('adicionar');
+    setPacienteEdicao(null);
+    setIsolamentoEdicao(null);
+    setModalPacientesOpen(true);
+  };
+
+  const abrirModalEditar = (paciente: Paciente, isolamento: PacienteIsolamento) => {
+    setModalPacientesMode('editar');
+    setPacienteEdicao(paciente);
+    setIsolamentoEdicao(isolamento);
+    setModalPacientesOpen(true);
+  };
 
   return (
     <div className="p-6">
@@ -65,7 +89,7 @@ const GestaoIsolamentos = () => {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" onClick={() => setModalPacientesOpen(true)}>
+                <Button variant="outline" size="icon" onClick={abrirModalAdicionar}>
                   <Users className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -83,28 +107,70 @@ const GestaoIsolamentos = () => {
         </AlertDescription>
       </Alert>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
+      <Card className="shadow-card border border-border/50 mb-6">
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Alertas de Incompatibilidade Biológica
+                <Badge variant="destructive">{alertas.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-4">
+              {alertasLoading ? (
+                <p>Analisando compatibilidade...</p>
+              ) : alertas.length > 0 ? (
+                <div className="space-y-2">
+                  {alertas.map(alerta => (
+                    <AlertaIncompatibilidadeItem key={alerta.pacienteId} alerta={alerta} />
+                  ))}
+                </div>
+              ) : (
+                <p>Nenhum risco detectado.</p>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:divide-x lg:divide-gray-200">
+        <div className="lg:pr-6">
           <h2 className="text-lg font-semibold mb-3 text-amber-600">Pacientes em Investigação (Suspeitos)</h2>
           <div className="space-y-4">
             {pacientesSuspeitos.map(paciente => (
-              <CardPacienteSuspeito key={paciente.id} paciente={paciente} />
+              <CardPacienteSuspeito key={paciente.id} paciente={paciente} onEdit={(p) => abrirModalEditar(p, p.isolamento)} />
             ))}
           </div>
         </div>
 
-        <div>
+        <div className="lg:pl-6">
           <h2 className="text-lg font-semibold mb-3 text-red-600">Pacientes com Isolamento Confirmado</h2>
           <div className="space-y-4">
             {pacientesConfirmados.map(paciente => (
-              <CardPacienteConfirmado key={paciente.id} paciente={paciente} setorId={paciente.setorId} leitoId={paciente.leitoId} />
+              <CardPacienteConfirmado key={paciente.id} paciente={paciente} setorId={paciente.setorId} leitoId={paciente.leitoId} onEditIsolamento={abrirModalEditar} />
             ))}
           </div>
         </div>
       </div>
 
       <GerenciamentoIsolamentoModal open={modalTiposOpen} onOpenChange={setModalTiposOpen} />
-      <GerenciarPacientesIsolamentoModal open={modalPacientesOpen} onOpenChange={setModalPacientesOpen} />
+      <GerenciarPacientesIsolamentoModal
+        open={modalPacientesOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setModalPacientesMode('adicionar');
+            setPacienteEdicao(null);
+            setIsolamentoEdicao(null);
+          }
+          setModalPacientesOpen(open);
+        }}
+        mode={modalPacientesMode}
+        paciente={pacienteEdicao || undefined}
+        isolamento={isolamentoEdicao || undefined}
+      />
     </div>
   );
 };
