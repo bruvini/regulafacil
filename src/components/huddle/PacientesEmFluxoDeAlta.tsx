@@ -37,11 +37,11 @@ export const PacientesEmFluxoDeAlta = ({
   const altasNoLeito = pacientes
     .filter(p => p.altaNoLeito?.status)
     .reduce((acc, paciente) => {
-      const pendencia = paciente.altaNoLeito!.pendencia;
-      if (!acc[pendencia]) {
-        acc[pendencia] = [];
+      const tipo = paciente.altaNoLeito!.tipo;
+      if (!acc[tipo]) {
+        acc[tipo] = [];
       }
-      acc[pendencia].push(paciente);
+      acc[tipo].push(paciente);
       return acc;
     }, {} as Record<string, Paciente[]>);
 
@@ -160,11 +160,11 @@ export const PacientesEmFluxoDeAlta = ({
                 </p>
               ) : (
                 <Accordion type="multiple" className="w-full">
-                  {Object.entries(altasNoLeito).map(([pendencia, pacientes]) => (
-                    <AccordionItem key={pendencia} value={pendencia}>
+                  {Object.entries(altasNoLeito).map(([tipo, pacientes]) => (
+                    <AccordionItem key={tipo} value={tipo}>
                       <AccordionTrigger className="text-left">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{motivoLabels[pendencia] || pendencia}</span>
+                          <span className="font-medium">{motivoLabels[tipo] || tipo}</span>
                           <Badge variant="outline">{pacientes.length}</Badge>
                         </div>
                       </AccordionTrigger>

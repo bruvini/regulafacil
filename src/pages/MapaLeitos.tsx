@@ -512,12 +512,16 @@ const MapaLeitos = () => {
     }
   };
 
-  const handleConfirmarAltaNoLeito = async (pendencia: string) => {
+  const handleConfirmarAltaNoLeito = async (
+    dadosAlta: Pick<AltaLeitoInfo, 'tipo' | 'detalhe' | 'pendencia'>
+  ) => {
     if (pacienteParaAltaNoLeito?.dadosPaciente && userData) {
       try {
         const altaLeitoInfo: AltaLeitoInfo = {
           status: true,
-          pendencia,
+          tipo: dadosAlta.tipo,
+          detalhe: dadosAlta.detalhe,
+          pendencia: dadosAlta.pendencia,
           timestamp: new Date().toISOString(),
           usuario: userData.nomeCompleto
         };
