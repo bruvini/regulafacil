@@ -15,6 +15,7 @@ import { ReservaExternaModal } from '@/components/modals/ReservaExternaModal';
 import AltaPendenteModal from '@/components/modals/AltaPendenteModal';
 import { BoletimDiarioModal } from '@/components/modals/BoletimDiarioModal';
 import { ReservaOncologiaModal } from '@/components/modals/ReservaOncologiaModal';
+import { CancelamentoReservaModal } from '@/components/modals/CancelamentoReservaModal';
 import { useReservaOncologia } from '@/hooks/useReservaOncologia';
 import { useSetores } from '@/hooks/useSetores';
 import { useLeitos } from '@/hooks/useLeitos';
@@ -50,6 +51,8 @@ const MapaLeitos = () => {
   const [relatorioEspecialidadeOpen, setRelatorioEspecialidadeOpen] = useState(false);
   const [boletimModalOpen, setBoletimModalOpen] = useState(false);
   const [reservaOncologiaModalOpen, setReservaOncologiaModalOpen] = useState(false);
+  const [cancelamentoReservaModalOpen, setCancelamentoReservaModalOpen] = useState(false);
+  const [leitoParaCancelar, setLeitoParaCancelar] = useState<LeitoEnriquecido | null>(null);
   const [accordionValue, setAccordionValue] = useState<string | undefined>(undefined);
   interface PacienteMoverInfo {
     dados: Paciente;
@@ -283,6 +286,25 @@ const MapaLeitos = () => {
     }
   };
 
+  const handleConfirmarCancelamento = async (motivo: string) => {
+    if (!leitoParaCancelar) return;
+
+    try {
+      await atualizarStatusLeito(leitoParaCancelar.id, 'Vago');
+      registrarLog(
+        `Reserva para o leito ${leitoParaCancelar.codigoLeito} (paciente: ${leitoParaCancelar.dadosPaciente?.nomeCompleto}) cancelada. Motivo: ${motivo}`,
+        'Mapa de Leitos'
+      );
+      toast({ title: 'Sucesso!', description: 'Reserva cancelada.' });
+    } catch (error) {
+      console.error('Erro ao cancelar reserva:', error);
+      toast({ title: 'Erro', description: 'Erro ao cancelar reserva.', variant: 'destructive' });
+    } finally {
+      setLeitoParaCancelar(null);
+      setCancelamentoReservaModalOpen(false);
+    }
+  };
+
   // --- OBJETO CENTRALIZADO DE AÇÕES ---
   const leitoActions = {
     onMoverPaciente: (leito: LeitoEnriquecido) => {
@@ -353,14 +375,9 @@ const MapaLeitos = () => {
       toast({ title: "Sucesso!", description: "Solicitação de transferência externa registrada." });
     },
 
-    onCancelarReserva: async (leitoId: string) => {
-      try {
-        await atualizarStatusLeito(leitoId, 'Vago');
-        toast({ title: "Sucesso!", description: "Reserva cancelada." });
-      } catch (error) {
-        console.error('Erro ao cancelar reserva:', error);
-        toast({ title: "Erro", description: "Erro ao cancelar reserva.", variant: "destructive" });
-      }
+    onCancelarReserva: (leito: LeitoEnriquecido) => {
+      setLeitoParaCancelar(leito);
+      setCancelamentoReservaModalOpen(true);
     },
 
     onConcluirTransferencia: async (leito: LeitoEnriquecido) => {
@@ -752,6 +769,11 @@ const MapaLeitos = () => {
         atualizarReserva={reservaOncologia.atualizarReserva}
         excluirReserva={reservaOncologia.excluirReserva}
         reservas={reservaOncologia.reservas}
+      />
+      <CancelamentoReservaModal
+        open={cancelamentoReservaModalOpen}
+        onOpenChange={setCancelamentoReservaModalOpen}
+        onConfirm={handleConfirmarCancelamento}
       />
       <LimpezaPacientesModal open={limpezaModalOpen} onOpenChange={setLimpezaModalOpen} />
       <BoletimDiarioModal

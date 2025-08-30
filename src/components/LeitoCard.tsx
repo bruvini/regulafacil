@@ -365,30 +365,21 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                   </AlertDialogContent>
                 </AlertDialog>
                 
-                <AlertDialog>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent><p>Cancelar Reserva</p></TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Cancelar Reserva</AlertDialogTitle>
-                      <AlertDialogDescription>Deseja cancelar a reserva do leito {leito.codigoLeito} para {leito.dadosPaciente?.nomeCompleto}?</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Não</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => actions.onCancelarReserva(leito.id)}>Cancelar Reserva</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => actions.onCancelarReserva(leito)}
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Cancelar Reserva</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )}
             
