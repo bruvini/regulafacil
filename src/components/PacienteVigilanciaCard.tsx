@@ -111,7 +111,7 @@ export const PacienteVigilanciaCard = ({ paciente, setorId, leitoId }: PacienteV
                           <div>
                             <p className="font-semibold">{tipoIsolamento.nomeMicroorganismo}</p>
                             <p className="text-xs text-muted-foreground">
-                              Início: {new Date(isolamentoVigente.dataInicioVigilancia).toLocaleDateString('pt-BR')}
+                              Início: {new Date(isolamentoVigente.dataInicio).toLocaleDateString('pt-BR')}
                             </p>
                           </div>
                         </div>

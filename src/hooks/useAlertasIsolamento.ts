@@ -9,6 +9,7 @@ export interface AlertaIncompatibilidade {
   leitoCodigo: string;
   isolamentos: string[];
   motivo: string;
+  status: 'suspeita' | 'confirmada';
 }
 
 export const useAlertasIsolamento = () => {
@@ -37,7 +38,7 @@ export const useAlertasIsolamento = () => {
     );
 
     const pacientesComIsolamento = todosOsLeitos.filter(
-      leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente?.isolamentosVigentes?.length && leito.dadosPaciente.isolamentosVigentes.length > 0
+      leito => leito.statusLeito === 'Ocupado' && leito.dadosPaciente?.isolamentosVigentes?.some(iso => iso.status === 'suspeita' || iso.status === 'confirmada')
     );
 
     pacientesComIsolamento.forEach(leitoComIsolamento => {
@@ -63,13 +64,15 @@ export const useAlertasIsolamento = () => {
 
       if (temIncompatibilidade) {
         const motivo = `Risco de contaminação cruzada. Paciente com isolamento por [${isolamentosPaciente.join(', ')}]`;
+        const status = dadosPaciente.isolamentosVigentes!.some(iso => iso.status === 'suspeita') ? 'suspeita' : 'confirmada';
         novosAlertas.push({
             pacienteId: dadosPaciente.nomeCompleto, // Usando nomeCompleto como ID temporário
             nomePaciente: dadosPaciente.nomeCompleto,
             setorNome: leitoComIsolamento.setorNome,
             leitoCodigo: leitoComIsolamento.codigoLeito,
             isolamentos: isolamentosPaciente,
-            motivo
+            motivo,
+            status
         });
       }
     });

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { UserPlus, ArrowRight, Search } from 'lucide-react';
@@ -32,6 +33,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
   const [isolamentosSelecionados, setIsolamentosSelecionados] = useState<string[]>([]);
   const [datasIsolamentos, setDatasIsolamentos] = useState<Record<string, string>>({});
   const [buscaIsolamento, setBuscaIsolamento] = useState('');
+  const [statusIsolamento, setStatusIsolamento] = useState<'suspeita' | 'confirmada'>('suspeita');
 
   // CORREÇÃO: Usando os hooks corretos
   const { setores } = useSetores();
@@ -90,7 +92,8 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
         return {
           isolamentoId,
           sigla: tipoIsolamento!.sigla,
-          dataInicioVigilancia: datasIsolamentos[isolamentoId],
+          dataInicio: datasIsolamentos[isolamentoId],
+          status: statusIsolamento,
           regrasCumpridas: []
         };
     });
@@ -118,6 +121,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
     setIsolamentosSelecionados([]);
     setDatasIsolamentos({});
     setBuscaIsolamento('');
+    setStatusIsolamento('suspeita');
   };
 
   const handleIsolamentoToggle = (isolamentoId: string, checked: boolean) => {
@@ -229,6 +233,20 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
             </div>
 
             <div>
+              <div className="space-y-2 mb-4">
+                <Label>Status do Isolamento</Label>
+                <RadioGroup required value={statusIsolamento} onValueChange={(v) => setStatusIsolamento(v as 'suspeita' | 'confirmada')} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="suspeita" id="suspeita" />
+                    <Label htmlFor="suspeita">Suspeita</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="confirmada" id="confirmada" />
+                    <Label htmlFor="confirmada">Confirmado</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
               <Label>Tipos de Isolamento</Label>
               <ScrollArea className="h-48 border rounded-md p-4 mt-2">
                 <div className="space-y-4">
@@ -264,7 +282,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange }: Gerenc
                         {isolamentosSelecionados.includes(tipo.id!) && (
                           <div className="ml-6 mt-2">
                             <Label htmlFor={`data-${tipo.id}`} className="text-sm">
-                              Data de Início da Vigilância
+                              Data de Início do Isolamento
                             </Label>
                             <Input
                               id={`data-${tipo.id}`}

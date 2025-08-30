@@ -1,5 +1,6 @@
 
 import { Observacao } from './observacao';
+import { PacienteIsolamento } from './isolamento';
 
 export type TipoRemanejamento =
   | 'priorizacao'
@@ -41,7 +42,7 @@ export interface Paciente {
   sexoPaciente: 'Masculino' | 'Feminino';
   dataInternacao: string;
   especialidadePaciente: string;
-  isolamentosVigentes?: IsolamentoVigente[];
+  isolamentosVigentes?: PacienteIsolamento[];
   aguardaUTI?: boolean;
   dataPedidoUTI?: string;
   transferirPaciente?: boolean;
@@ -71,11 +72,7 @@ export interface Paciente {
   dataSolicitacao?: string;
 }
 
-export interface IsolamentoVigente {
-  sigla: string;
-  dataInicioVigilancia?: string;
-  isolamentoId?: string;
-}
+export type IsolamentoVigente = PacienteIsolamento;
 
 export interface Leito {
   id: string;

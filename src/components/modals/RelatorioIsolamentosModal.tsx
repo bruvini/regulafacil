@@ -45,7 +45,7 @@ export const RelatorioIsolamentosModal = ({ open, onOpenChange }: Props) => {
         sexo: paciente.sexoPaciente.charAt(0),
         isolamentos: paciente.isolamentosVigentes!.map(i => ({
           sigla: i.sigla,
-          dataInicio: i.dataInicioVigilancia
+          dataInicio: i.dataInicio
         }))
       };
 
