@@ -41,6 +41,7 @@ const options: { value: TipoRemanejamento; label: string }[] = [
   { value: 'melhoria_assistencia', label: 'Melhoria na Assistência' },
   { value: 'liberado_isolamento', label: 'Liberado de Isolamento' },
   { value: 'reserva_oncologia', label: 'Reserva para Oncologia' },
+  { value: 'alta_uti', label: 'Alta da UTI' },
 ];
 
 export const RemanejamentoModal = ({ open, onOpenChange, onConfirm }: RemanejamentoModalProps) => {
@@ -141,7 +142,7 @@ export const RemanejamentoModal = ({ open, onOpenChange, onConfirm }: Remanejame
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command>
+                  <Command onPointerDown={(e) => e.stopPropagation()}>
                     <CommandInput placeholder="Buscar setor..." />
                     <CommandList>
                       <CommandEmpty>Nenhum setor encontrado.</CommandEmpty>

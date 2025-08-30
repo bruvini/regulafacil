@@ -7,7 +7,8 @@ export type TipoRemanejamento =
   | 'melhoria_assistencia'
   | 'liberado_isolamento'
   | 'incompatibilidade_biologica'
-  | 'reserva_oncologia';
+  | 'reserva_oncologia'
+  | 'alta_uti';
 
 export interface DetalhesRemanejamento {
   tipo: TipoRemanejamento;

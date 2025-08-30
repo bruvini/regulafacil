@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { LeitoEnriquecido } from '@/types/hospital';
+import { ESPECIALIDADES_MEDICAS } from '@/lib/constants';
 
 const formSchema = z.object({
   nomeCompleto: z.string().min(1, 'Nome completo é obrigatório'),
@@ -51,25 +52,6 @@ interface InternacaoManualModalProps {
   onConfirm: (data: FormData) => void;
   leito: LeitoEnriquecido | null;
 }
-
-const especialidades = [
-  "CIRURGIA CABECA E PESCOCO", 
-  "CIRURGIA GERAL", 
-  "CIRURGIA TORACICA",
-  "CIRURGIA VASCULAR", 
-  "CLINICA GERAL", 
-  "HEMATOLOGIA", 
-  "INTENSIVISTA",
-  "NEFROLOGIA", 
-  "NEUROCIRURGIA", 
-  "NEUROLOGIA", 
-  "ODONTOLOGIA C.TRAUM.B.M.F.",
-  "ONCOLOGIA CIRURGICA", 
-  "ONCOLOGIA CLINICA/CANCEROLOGIA",
-  "ORTOPEDIA/TRAUMATOLOGIA", 
-  "PROCTOLOGIA", 
-  "UROLOGIA"
-];
 
 export function InternacaoManualModal({ open, onOpenChange, onConfirm, leito }: InternacaoManualModalProps) {
   const form = useForm<FormData>({
@@ -210,7 +192,7 @@ export function InternacaoManualModal({ open, onOpenChange, onConfirm, leito }: 
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {especialidades.map((especialidade) => (
+                      {ESPECIALIDADES_MEDICAS.map((especialidade) => (
                         <SelectItem key={especialidade} value={especialidade}>
                           {especialidade}
                         </SelectItem>
