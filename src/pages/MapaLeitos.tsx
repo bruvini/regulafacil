@@ -31,7 +31,7 @@ import { RelatorioVagosModal } from '@/components/modals/RelatorioVagosModal';
 import { RelatorioEspecialidadeModal } from '@/components/modals/RelatorioEspecialidadeModal';
 import { ObservacoesModal } from '@/components/modals/ObservacoesModal';
 import { Leito, Paciente, HistoricoMovimentacao, AltaLeitoInfo, LeitoEnriquecido, InfoAltaPendente, DetalhesRemanejamento } from '@/types/hospital';
-import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, deleteDoc, arrayRemove, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Observacao } from '@/types/observacao';
@@ -261,6 +261,28 @@ const MapaLeitos = () => {
     }
   };
 
+  const handleCancelarAltaNoLeito = async (pacienteId: string) => {
+    const confirmar = window.confirm('Deseja realmente cancelar a alta no leito para este paciente?');
+    if (!confirmar) return;
+
+    try {
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteId);
+      await updateDoc(pacienteRef, {
+        altaNoLeito: deleteField()
+      });
+
+      const paciente = pacientes.find((p) => p.id === pacienteId);
+      registrarLog(
+        `Cancelou a alta no leito do paciente ${paciente?.nomeCompleto || pacienteId}.`,
+        'Mapa de Leitos'
+      );
+      toast({ title: 'Sucesso!', description: 'Alta no leito cancelada.' });
+    } catch (error) {
+      console.error('Erro ao cancelar alta no leito:', error);
+      toast({ title: 'Erro', description: 'Erro ao cancelar alta no leito.', variant: 'destructive' });
+    }
+  };
+
   // --- OBJETO CENTRALIZADO DE AÇÕES ---
   const leitoActions = {
     onMoverPaciente: (leito: LeitoEnriquecido) => {
@@ -281,6 +303,7 @@ const MapaLeitos = () => {
       setPacienteParaAltaNoLeito(leito);
       setAltaNoLeitoModalOpen(true);
     },
+    onCancelarAltaNoLeito: handleCancelarAltaNoLeito,
 
     onInternarManualmente: (leito: LeitoEnriquecido) => {
       setLeitoParaAcao(leito);
