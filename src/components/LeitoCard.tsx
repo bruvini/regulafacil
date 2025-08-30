@@ -14,7 +14,7 @@ import { RemanejamentoModal } from './modals/RemanejamentoModal';
 import { TransferenciaModal } from './modals/TransferenciaModal';
 import { cn } from '@/lib/utils';
 import { LeitoStatusIsolamento } from './LeitoStatusIsolamento';
-import { LeitoEnriquecido, InfoAltaPendente } from '@/types/hospital';
+import { LeitoEnriquecido } from '@/types/hospital';
 
 interface LeitoCardProps {
   leito: LeitoEnriquecido;
@@ -33,23 +33,6 @@ const calcularIdade = (dataNascimento: string): string => {
     return idade.toString();
 };
 
-const descreverAltaPendente = (info: InfoAltaPendente | null | undefined): string => {
-    if (!info) return '';
-    switch (info.tipo) {
-        case 'medicacao':
-            return `Finalizando medicação${info.detalhe ? ` às ${info.detalhe}` : ''}`;
-        case 'transporte':
-            return `Aguardando transporte${info.detalhe ? ` de ${info.detalhe}` : ''}`;
-        case 'familiar':
-            return 'Aguardando familiar';
-        case 'emad':
-            return 'Aguardando EMAD';
-        case 'outros':
-            return info.detalhe || 'Outros';
-        default:
-            return '';
-    }
-};
 
 const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
     const [motivoBloqueioModalOpen, setMotivoBloqueioModalOpen] = useState(false);
@@ -485,17 +468,21 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => actions.onAltaPendente(paciente!)}
+                        onClick={() =>
+                          paciente?.altaNoLeito?.status
+                            ? actions.onCancelarAltaNoLeito(paciente!.id)
+                            : actions.onAltaNoLeito(leito)
+                        }
                       >
-                        <PlaneTakeoff className={`h-4 w-4 ${paciente?.altaPendente ? 'text-blue-500' : ''}`} />
+                        <PlaneTakeoff
+                          className={`h-4 w-4 ${
+                            paciente?.altaNoLeito?.status ? 'text-blue-500' : ''
+                          }`}
+                        />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>
-                        {paciente?.altaPendente
-                          ? descreverAltaPendente(paciente.altaPendente)
-                          : 'Registrar pendência de alta'}
-                      </p>
+                      <p>{paciente?.altaNoLeito?.status ? paciente.altaNoLeito.pendencia : 'Alta no leito'}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
