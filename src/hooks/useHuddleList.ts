@@ -11,5 +11,11 @@ export const useHuddleList = (pacientes: Paciente[]) => {
       return differenceInDays(new Date(), dataInternacao) > 60;
     });
   }, [pacientes]);
-  return { internacoesProlongadas };
+  const altasNoLeito = useMemo(() => {
+    return pacientes.filter(
+      paciente => paciente.altaNoLeito && paciente.altaNoLeito.status === true
+    );
+  }, [pacientes]);
+
+  return { internacoesProlongadas, altasNoLeito };
 };

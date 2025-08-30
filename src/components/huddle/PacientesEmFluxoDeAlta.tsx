@@ -34,19 +34,19 @@ export const PacientesEmFluxoDeAlta = ({
   const [pacienteSelecionado, setPacienteSelecionado] = useState<Paciente | null>(null);
 
   const pacientesProvavelAlta = pacientes.filter(p => p.provavelAlta);
-  const altasPendentes = pacientes
-    .filter(p => p.altaPendente)
+  const altasNoLeito = pacientes
+    .filter(p => p.altaNoLeito?.status)
     .reduce((acc, paciente) => {
-      const tipo = paciente.altaPendente!.tipo;
-      if (!acc[tipo]) {
-        acc[tipo] = [];
+      const pendencia = paciente.altaNoLeito!.pendencia;
+      if (!acc[pendencia]) {
+        acc[pendencia] = [];
       }
-      acc[tipo].push(paciente);
+      acc[pendencia].push(paciente);
       return acc;
     }, {} as Record<string, Paciente[]>);
 
-  const totalAltasPendentes = Object.values(altasPendentes).reduce((sum, arr) => sum + arr.length, 0);
-  const totalGeral = pacientesProvavelAlta.length + totalAltasPendentes;
+  const totalAltasNoLeito = Object.values(altasNoLeito).reduce((sum, arr) => sum + arr.length, 0);
+  const totalGeral = pacientesProvavelAlta.length + totalAltasNoLeito;
 
   const getSetorNome = (setorId: string) => {
     const setor = setores.find(s => s.id === setorId);
@@ -151,20 +151,20 @@ export const PacientesEmFluxoDeAlta = ({
             <section>
               <div className="flex items-center gap-2 mb-4">
                 <PlaneTakeoff className="h-5 w-5 text-blue-600" />
-                <h3 className="font-semibold">Pendências para Alta</h3>
-                <Badge variant="outline">{totalAltasPendentes}</Badge>
+                <h3 className="font-semibold">Alta no leito</h3>
+                <Badge variant="outline">{totalAltasNoLeito}</Badge>
               </div>
-              {totalAltasPendentes === 0 ? (
+              {totalAltasNoLeito === 0 ? (
                 <p className="text-center text-muted-foreground py-4">
-                  Nenhum paciente com alta pendente
+                  Nenhum paciente com alta no leito
                 </p>
               ) : (
                 <Accordion type="multiple" className="w-full">
-                  {Object.entries(altasPendentes).map(([tipo, pacientes]) => (
-                    <AccordionItem key={tipo} value={tipo}>
+                  {Object.entries(altasNoLeito).map(([pendencia, pacientes]) => (
+                    <AccordionItem key={pendencia} value={pendencia}>
                       <AccordionTrigger className="text-left">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{motivoLabels[tipo] || tipo}</span>
+                          <span className="font-medium">{motivoLabels[pendencia] || pendencia}</span>
                           <Badge variant="outline">{pacientes.length}</Badge>
                         </div>
                       </AccordionTrigger>
@@ -176,14 +176,14 @@ export const PacientesEmFluxoDeAlta = ({
                               <p className="text-sm text-muted-foreground">
                                 {getSetorSigla(paciente.setorId)} - {getLeitoNome(paciente.leitoId)}
                               </p>
-                              {paciente.altaPendente?.timestamp && (
+                              {paciente.altaNoLeito?.timestamp && (
                                 <p className="text-xs text-muted-foreground">
-                                  Espera: {formatarDuracao(paciente.altaPendente.timestamp)}
+                                  Espera: {formatarDuracao(paciente.altaNoLeito.timestamp)}
                                 </p>
                               )}
-                              {paciente.altaPendente?.detalhe && (
+                              {paciente.altaNoLeito?.pendencia && (
                                 <p className="mt-1 text-sm font-medium">
-                                  {paciente.altaPendente.detalhe}
+                                  {paciente.altaNoLeito.pendencia}
                                 </p>
                               )}
                             </div>
