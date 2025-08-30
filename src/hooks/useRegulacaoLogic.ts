@@ -423,6 +423,32 @@ const registrarHistoricoRegulacao = async (
   const remanejamentosPendentes = filteredPacientes.filter(
     (p) => p.remanejarPaciente && p.statusLeito !== 'Regulado'
   );
+
+  // Agrupa os remanejamentos pendentes por motivo base, aplicando
+  // tratamento especial para qualquer variação que comece com
+  // "Risco de contaminação cruzada". Esses casos são agrupados
+  // sob o nome fixo "Risco de Contaminação Cruzada".
+  const remanejamentosAgrupados = remanejamentosPendentes.reduce(
+    (acc, paciente) => {
+      const motivoCompleto = descreverMotivoRemanejamento(
+        paciente.motivoRemanejamento
+      );
+
+      let grupo = motivoCompleto.split(':')[0].trim() || 'Outro';
+      if (
+        motivoCompleto
+          .toLowerCase()
+          .startsWith('risco de contaminação cruzada')
+      ) {
+        grupo = 'Risco de Contaminação Cruzada';
+      }
+
+      if (!acc[grupo]) acc[grupo] = [];
+      acc[grupo].push(paciente);
+      return acc;
+    },
+    {} as Record<string, Paciente[]>
+  );
   const decisaoCirurgica = pacientesAguardandoRegulacao.filter(
     (p) => p.setorOrigem === "PS DECISÃO CIRURGICA"
   );
