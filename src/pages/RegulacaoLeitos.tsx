@@ -298,24 +298,20 @@ const RegulacaoLeitos = () => {
           onGerenciarTransferencia={handlers.handleGerenciarTransferencia}
         />
 
-        {/* 7. Bloco: Pacientes Aguardando Cirurgia Eletiva */}
+        {/* 7. Bloco: Remanejamentos Pendentes */}
+        <RemanejamentosPendentesBloco
+          remanejamentos={listas.remanejamentosPendentes}
+          onRemanejar={(paciente) =>
+            handlers.handleOpenRegulacaoModal(paciente, "normal")
+          }
+          onCancelar={handlers.handleCancelarRemanejamento}
+        />
+
+        {/* 8. Bloco: Pacientes Aguardando Cirurgia Eletiva */}
         <CirurgiasEletivasBloco
           cirurgias={listas.cirurgias}
           onAlocarCirurgia={handlers.handleAlocarLeitoCirurgia}
         />
-
-        {/* 8. Bloco: Remanejamentos Pendentes */}
-        {listas.pacientesAguardandoRemanejamento.length > 0 && (
-          <RemanejamentosPendentesBloco
-            pacientesAguardandoRemanejamento={
-              listas.pacientesAguardandoRemanejamento
-            }
-            onRemanejar={(paciente) =>
-              handlers.handleOpenRegulacaoModal(paciente, "normal")
-            }
-            onCancelar={handlers.handleCancelarRemanejamento}
-          />
-        )}
 
         {/* Modais */}
         <RegulacaoModals

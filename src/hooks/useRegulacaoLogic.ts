@@ -420,7 +420,7 @@ const registrarHistoricoRegulacao = async (
   const pacientesAguardandoTransferencia = filteredPacientes.filter(
     (p) => p.transferirPaciente
   );
-  const pacientesAguardandoRemanejamento = filteredPacientes.filter(
+  const remanejamentosPendentes = filteredPacientes.filter(
     (p) => p.remanejarPaciente && p.statusLeito !== 'Regulado'
   );
   const decisaoCirurgica = pacientesAguardandoRegulacao.filter(
@@ -440,14 +440,14 @@ const registrarHistoricoRegulacao = async (
       ...pacientesJaRegulados,
       ...pacientesAguardandoUTI,
       ...pacientesAguardandoTransferencia,
-      ...pacientesAguardandoRemanejamento,
+      ...remanejamentosPendentes,
     ],
     [
       pacientesAguardandoRegulacao,
       pacientesJaRegulados,
       pacientesAguardandoUTI,
       pacientesAguardandoTransferencia,
-      pacientesAguardandoRemanejamento,
+      remanejamentosPendentes,
     ]
   );
 
@@ -1509,7 +1509,7 @@ const registrarHistoricoRegulacao = async (
       pacientesAguardandoRegulacao,
       pacientesAguardandoUTI,
       pacientesAguardandoTransferencia,
-      pacientesAguardandoRemanejamento,
+      remanejamentosPendentes,
       pacientesJaRegulados,
       decisaoCirurgica,
       decisaoClinica,

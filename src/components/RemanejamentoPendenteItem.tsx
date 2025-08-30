@@ -1,10 +1,10 @@
 
-import React from 'react';
-import { Paciente } from '@/types/hospital';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { CalendarClock, MapPin } from 'lucide-react';
-import { descreverMotivoRemanejamento } from '@/lib/utils';
+import React from "react";
+import { Paciente } from "@/types/hospital";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { CalendarClock, MapPin } from "lucide-react";
+import { descreverMotivoRemanejamento } from "@/lib/utils";
 
 interface RemanejamentoPendenteItemProps {
   paciente: Paciente & {
@@ -12,16 +12,14 @@ interface RemanejamentoPendenteItemProps {
     siglaSetorOrigem?: string;
     leitoCodigo?: string;
   };
-  onConfirmar: (paciente: Paciente) => void;
+  onRemanejar: (paciente: Paciente) => void;
   onCancelar: (paciente: Paciente) => void;
-  onObservacoes: (paciente: Paciente) => void;
 }
 
-export const RemanejamentoPendenteItem = ({ 
-  paciente, 
-  onConfirmar, 
-  onCancelar, 
-  onObservacoes 
+export const RemanejamentoPendenteItem = ({
+  paciente,
+  onRemanejar,
+  onCancelar,
 }: RemanejamentoPendenteItemProps) => {
   const prioridadeCores = {
     'Muito Urgente': 'bg-red-500 text-white',
@@ -70,14 +68,11 @@ export const RemanejamentoPendenteItem = ({
       </div>
 
       <div className="mt-4 flex justify-end gap-2">
-        <Button size="sm" variant="outline" onClick={() => onObservacoes(paciente)}>
-          Observações
-        </Button>
         <Button size="sm" variant="destructive" onClick={() => onCancelar(paciente)}>
           Cancelar
         </Button>
-        <Button size="sm" onClick={() => onConfirmar(paciente)}>
-          Confirmar Remanejamento
+        <Button size="sm" onClick={() => onRemanejar(paciente)}>
+          Remanejar
         </Button>
       </div>
     </div>
