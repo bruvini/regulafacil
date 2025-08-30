@@ -4,6 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { RemanejamentoPendenteItem } from "@/components/RemanejamentoPendenteItem";
 import { Paciente } from "@/types/hospital";
 import { descreverMotivoRemanejamento } from "@/lib/utils";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface RemanejamentosPendentesBlocoProps {
   remanejamentos: Paciente[];
@@ -18,11 +24,22 @@ export const RemanejamentosPendentesBloco = ({
 }: RemanejamentosPendentesBlocoProps) => {
   const grupos = remanejamentos.reduce(
     (acc, paciente) => {
-      const motivoBase = descreverMotivoRemanejamento(
+      const motivoCompleto = descreverMotivoRemanejamento(
         paciente.motivoRemanejamento
-      )
-        .split(":")[0]
-        .trim() || "Outro";
+      );
+      let motivoBase = motivoCompleto.split(":")[0].trim() || "Outro";
+      if (
+        motivoCompleto
+          .toLowerCase()
+          .startsWith("risco de contaminação cruzada")
+      ) {
+        motivoBase = "Risco de Contaminação Cruzada";
+        // Remove o prefixo para exibição no item
+        (paciente.motivoRemanejamento as any).detalhes = motivoCompleto.replace(
+          /Risco de contaminação cruzada: /i,
+          ""
+        );
+      }
       if (!acc[motivoBase]) acc[motivoBase] = [];
       acc[motivoBase].push(paciente);
       return acc;
@@ -36,29 +53,46 @@ export const RemanejamentosPendentesBloco = ({
 
   return (
     <Card className="shadow-card border border-border/50">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-medical-primary flex items-center gap-2">
-          Remanejamentos Pendentes
-          <Badge variant="secondary">{remanejamentos.length}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {Object.entries(grupos).map(([motivo, pacientes]) => (
-          <div key={motivo} className="mb-6 last:mb-0">
-            <h3 className="font-medium text-medical-primary mb-2">{motivo}</h3>
-            <div className="space-y-4">
-              {pacientes.map((paciente) => (
-                <RemanejamentoPendenteItem
-                  key={paciente.id}
-                  paciente={paciente}
-                  onRemanejar={onRemanejar}
-                  onCancelar={onCancelar}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </CardContent>
+      <Accordion type="single" collapsible>
+        <AccordionItem value="remanejamentos">
+          <CardHeader className="p-0">
+            <AccordionTrigger className="px-6">
+              <CardTitle className="text-xl font-semibold text-medical-primary flex items-center gap-2">
+                Remanejamentos Pendentes
+                <Badge variant="secondary">{remanejamentos.length}</Badge>
+              </CardTitle>
+            </AccordionTrigger>
+          </CardHeader>
+          <AccordionContent>
+            <CardContent className="pt-4">
+              <Accordion type="multiple" className="space-y-2" collapsible>
+                {Object.entries(grupos).map(([motivo, pacientes]) => (
+                  <AccordionItem value={motivo} key={motivo}>
+                    <AccordionTrigger className="text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-medical-primary">{motivo}</span>
+                        <Badge variant="secondary">{pacientes.length}</Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        {pacientes.map((paciente) => (
+                          <RemanejamentoPendenteItem
+                            key={paciente.id}
+                            paciente={paciente}
+                            onRemanejar={onRemanejar}
+                            onCancelar={onCancelar}
+                          />
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardContent>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Card>
   );
 };
