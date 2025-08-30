@@ -34,11 +34,16 @@ export const RemanejamentosPendentesBloco = ({
           .startsWith("risco de contaminação cruzada")
       ) {
         motivoBase = "Risco de Contaminação Cruzada";
-        // Remove o prefixo para exibição no item
-        (paciente.motivoRemanejamento as any).detalhes = motivoCompleto.replace(
+        const detalhes = motivoCompleto.replace(
           /Risco de contaminação cruzada: /i,
           ""
         );
+        if (
+          paciente.motivoRemanejamento &&
+          typeof paciente.motivoRemanejamento === "object"
+        ) {
+          (paciente.motivoRemanejamento as any).detalhes = detalhes;
+        }
       }
       if (!acc[motivoBase]) acc[motivoBase] = [];
       acc[motivoBase].push(paciente);
