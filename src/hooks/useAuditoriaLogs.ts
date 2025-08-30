@@ -1,14 +1,22 @@
 
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, writeBatch, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  writeBatch,
+  getDocs,
+  Timestamp,
+} from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export interface Log {
   id: string;
+  usuario: string;
   acao: string;
-  origem: string;
-  data: any; // Firestore Timestamp
-  usuario: { nome: string; uid: string; };
+  detalhes: string;
+  timestamp: Timestamp; // Firestore Timestamp
 }
 
 export const useAuditoriaLogs = () => {
@@ -16,9 +24,14 @@ export const useAuditoriaLogs = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'logsAuditoria'), orderBy('data', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Log));
+    const q = query(
+      collection(db, 'auditoriaRegulaFacil'),
+      orderBy('timestamp', 'desc'),
+    );
+    const unsubscribe = onSnapshot(q, snapshot => {
+      const logsData = snapshot.docs.map(
+        doc => ({ id: doc.id, ...(doc.data() as Omit<Log, 'id'>) }),
+      );
       setLogs(logsData);
       setLoading(false);
     });
@@ -28,7 +41,7 @@ export const useAuditoriaLogs = () => {
   const deleteAllLogs = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'logsAuditoria'));
+      const q = query(collection(db, 'auditoriaRegulaFacil'));
       const snapshot = await getDocs(q);
       const batch = writeBatch(db);
       snapshot.docs.forEach(doc => batch.delete(doc.ref));
