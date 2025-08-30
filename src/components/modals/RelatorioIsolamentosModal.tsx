@@ -43,10 +43,15 @@ export const RelatorioIsolamentosModal = ({ open, onOpenChange }: Props) => {
         leito: leito.codigoLeito,
         nome: paciente.nomeCompleto, // CORREÇÃO: Usa nomeCompleto
         sexo: paciente.sexoPaciente.charAt(0),
-        isolamentos: paciente.isolamentosVigentes!.map(i => ({
-          sigla: i.sigla,
-          dataInicio: i.dataInicio
-        }))
+        isolamentos: paciente.isolamentosVigentes!.map(i => {
+          const dataCorrigida = new Date(i.dataInicio);
+          dataCorrigida.setDate(dataCorrigida.getDate() + 1);
+          return {
+            sigla: i.sigla,
+            dataInicio: dataCorrigida.toLocaleDateString('pt-BR'),
+            status: i.status === 'suspeita' ? 'Suspeito' : 'Confirmado'
+          };
+        })
       };
 
       if (!agrupados[setor.nomeSetor]) {
@@ -86,7 +91,7 @@ export const RelatorioIsolamentosModal = ({ open, onOpenChange }: Props) => {
                                 <ul className="list-disc list-inside pl-4 mt-1">
                                   {p.isolamentos.map((iso: any) => (
                                     <li key={iso.sigla}>
-                                      <span className="font-semibold text-red-600">{iso.sigla}:</span> Incluído em {new Date(iso.dataInicio).toLocaleDateString('pt-BR')}
+                                      <span className="font-semibold text-red-600">{iso.sigla}:</span> Incluído em {iso.dataInicio} ({iso.status})
                                     </li>
                                   ))}
                                 </ul>

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSetores } from './useSetores';
+import { useAuditoria } from './useAuditoria';
 
 export interface AlertaIncompatibilidade {
   pacienteId: string;
@@ -16,6 +17,7 @@ export const useAlertasIsolamento = () => {
   const { setores, loading: setoresLoading } = useSetores();
   const [alertas, setAlertas] = useState<AlertaIncompatibilidade[]>([]);
   const [loading, setLoading] = useState(true);
+  const { registrarLog } = useAuditoria();
 
   useEffect(() => {
     if (setoresLoading) {
@@ -74,6 +76,11 @@ export const useAlertasIsolamento = () => {
             motivo,
             status
         });
+
+        registrarLog(
+          'Alerta de incompatibilidade',
+          `Paciente ${dadosPaciente.nomeCompleto} no setor ${leitoComIsolamento.setorNome} leito ${leitoComIsolamento.codigoLeito}`
+        );
       }
     });
 

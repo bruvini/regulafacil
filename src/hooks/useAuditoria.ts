@@ -1,31 +1,19 @@
-
-import { addDoc, collection } from 'firebase/firestore';
+import { useAuth } from './useAuth';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useAuth } from '@/hooks/useAuth';
 
 export const useAuditoria = () => {
-  const { userData } = useAuth();
+  const { currentUser } = useAuth();
 
-  /**
-   * Registra uma nova entrada de log no Firestore.
-   * @param acao A descrição detalhada da ação realizada.
-   * @param origem A página ou módulo onde a ação ocorreu.
-   */
-  const registrarLog = async (acao: string, origem: string) => {
-    if (!userData) {
-      console.error("Tentativa de registrar log sem usuário autenticado.");
-      return;
-    }
+  const registrarLog = async (acao: string, detalhes: string) => {
+    if (!currentUser) return;
 
     try {
-      await addDoc(collection(db, 'logsAuditoria'), {
+      await addDoc(collection(db, 'auditoriaRegulaFacil'), {
+        usuario: currentUser.displayName || currentUser.email,
         acao,
-        origem,
-        data: new Date(),
-        usuario: {
-          nome: userData.nomeCompleto,
-          uid: userData.uid,
-        },
+        detalhes,
+        timestamp: serverTimestamp(),
       });
     } catch (error) {
       console.error("Erro ao registrar log de auditoria:", error);
