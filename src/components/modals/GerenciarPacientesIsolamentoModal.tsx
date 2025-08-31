@@ -36,10 +36,13 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange, mode = '
   const [setorFiltro, setSetorFiltro] = useState<string>('todos');
   const [etapa, setEtapa] = useState<'lista' | 'isolamentos'>('lista');
   const [pacienteSelecionado, setPacienteSelecionado] = useState<any>(paciente || null);
-  const [isolamentosSelecionados, setIsolamentosSelecionados] = useState<string[]>([]);
-  const [datasIsolamentos, setDatasIsolamentos] = useState<Record<string, string>>({});
+  interface DetalheIsolamento {
+    id: string;
+    dataInicio: string;
+    status: 'suspeita' | 'confirmada';
+  }
+  const [isolamentosSelecionados, setIsolamentosSelecionados] = useState<Record<string, DetalheIsolamento>>({});
   const [buscaIsolamento, setBuscaIsolamento] = useState('');
-  const [statusIsolamento, setStatusIsolamento] = useState<'suspeita' | 'confirmada'>('suspeita');
   const [dataEdicao, setDataEdicao] = useState<string>(isolamento?.dataInicio || '');
 
   // CORREÇÃO: Usando os hooks corretos
@@ -112,45 +115,45 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange, mode = '
       return;
     }
 
-    if (!pacienteSelecionado || isolamentosSelecionados.length === 0) return;
+    if (!pacienteSelecionado || Object.keys(isolamentosSelecionados).length === 0) return;
 
-    const temDatasCompletas = isolamentosSelecionados.every(isolamentoId =>
-      datasIsolamentos[isolamentoId] && datasIsolamentos[isolamentoId].trim() !== ''
+    const temDatasCompletas = Object.values(isolamentosSelecionados).every(
+      iso => iso.dataInicio && iso.dataInicio.trim() !== ''
     );
 
     if (!temDatasCompletas) {
-        toast({ title: "Atenção", description: "Preencha a data de início para todos os isolamentos selecionados.", variant: "destructive" });
-        return;
+      toast({ title: 'Atenção', description: 'Preencha a data de início para todos os isolamentos selecionados.', variant: 'destructive' });
+      return;
     }
 
-    const isolamentosParaAdicionar = isolamentosSelecionados.map(isolamentoId => {
-        const tipoIsolamento = isolamentos.find(t => t.id === isolamentoId);
-        return {
-          isolamentoId,
-          sigla: tipoIsolamento!.sigla,
-          dataInicio: datasIsolamentos[isolamentoId],
-          status: statusIsolamento,
-          regrasCumpridas: []
-        };
+    const isolamentosParaAdicionar = Object.values(isolamentosSelecionados).map(det => {
+      const tipoIsolamento = isolamentos.find(t => t.id === det.id);
+      return {
+        isolamentoId: det.id,
+        sigla: tipoIsolamento!.sigla,
+        dataInicio: det.dataInicio,
+        status: det.status,
+        regrasCumpridas: []
+      };
     });
 
     try {
-        const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteSelecionado.id);
-        await updateDoc(pacienteRef, {
-            isolamentosVigentes: arrayUnion(...isolamentosParaAdicionar)
-        });
-        toast({ title: "Sucesso!", description: "Isolamentos adicionados ao paciente." });
-        registrarLog(
-          'Isolamento adicionado',
-          `Paciente ${pacienteSelecionado.nomeCompleto} - isolamentos ${isolamentosParaAdicionar.map(i => i.sigla).join(', ')}`
-        );
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', pacienteSelecionado.id);
+      await updateDoc(pacienteRef, {
+        isolamentosVigentes: arrayUnion(...isolamentosParaAdicionar)
+      });
+      toast({ title: 'Sucesso!', description: 'Isolamentos adicionados ao paciente.' });
+      registrarLog(
+        'Isolamento adicionado',
+        `Paciente ${pacienteSelecionado.nomeCompleto} - isolamentos ${isolamentosParaAdicionar.map(i => i.sigla).join(', ')}`
+      );
 
-        // Reset do modal
-        voltarParaLista();
-        onOpenChange(false);
+      // Reset do modal
+      voltarParaLista();
+      onOpenChange(false);
     } catch (error) {
-        console.error("Erro ao adicionar isolamento:", error);
-        toast({ title: "Erro", description: "Não foi possível adicionar os isolamentos.", variant: "destructive" });
+      console.error('Erro ao adicionar isolamento:', error);
+      toast({ title: 'Erro', description: 'Não foi possível adicionar os isolamentos.', variant: 'destructive' });
     }
   };
 
@@ -158,34 +161,32 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange, mode = '
   const voltarParaLista = () => {
     setEtapa('lista');
     setPacienteSelecionado(null);
-    setIsolamentosSelecionados([]);
-    setDatasIsolamentos({});
+    setIsolamentosSelecionados({});
     setBuscaIsolamento('');
-    setStatusIsolamento('suspeita');
   };
 
   const handleIsolamentoToggle = (isolamentoId: string, checked: boolean) => {
+    const novosSelecionados = { ...isolamentosSelecionados };
     if (checked) {
-      setIsolamentosSelecionados([...isolamentosSelecionados, isolamentoId]);
+      novosSelecionados[isolamentoId] = { id: isolamentoId, dataInicio: '', status: 'suspeita' };
     } else {
-      setIsolamentosSelecionados(isolamentosSelecionados.filter(id => id !== isolamentoId));
-      const novasDatas = { ...datasIsolamentos };
-      delete novasDatas[isolamentoId];
-      setDatasIsolamentos(novasDatas);
+      delete novosSelecionados[isolamentoId];
     }
+    setIsolamentosSelecionados(novosSelecionados);
   };
 
-  const handleDataChange = (isolamentoId: string, data: string) => {
-    setDatasIsolamentos(prev => ({
+  const handleDetalheChange = (isolamentoId: string, campo: 'dataInicio' | 'status', valor: string) => {
+    setIsolamentosSelecionados(prev => ({
       ...prev,
-      [isolamentoId]: data
+      [isolamentoId]: {
+        ...prev[isolamentoId],
+        [campo]: valor,
+      },
     }));
   };
 
-  const todasDatasPreenchidas = isolamentosSelecionados.length > 0 && 
-    isolamentosSelecionados.every(isolamentoId => 
-      datasIsolamentos[isolamentoId] && datasIsolamentos[isolamentoId].trim() !== ''
-    );
+  const todasDatasPreenchidas = Object.values(isolamentosSelecionados).length > 0 &&
+    Object.values(isolamentosSelecionados).every(iso => iso.dataInicio && iso.dataInicio.trim() !== '');
 
   if (mode === 'editar' && pacienteSelecionado && isolamento) {
     return (
@@ -301,20 +302,6 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange, mode = '
             </div>
 
             <div>
-              <div className="space-y-2 mb-4">
-                <Label>Status do Isolamento</Label>
-                <RadioGroup required value={statusIsolamento} onValueChange={(v) => setStatusIsolamento(v as 'suspeita' | 'confirmada')} className="flex gap-4">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="suspeita" id="suspeita" />
-                    <Label htmlFor="suspeita">Suspeita</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="confirmada" id="confirmada" />
-                    <Label htmlFor="confirmada">Confirmado</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
               <Label>Tipos de Isolamento</Label>
               <ScrollArea className="h-48 border rounded-md p-4 mt-2">
                 <div className="space-y-4">
@@ -328,7 +315,7 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange, mode = '
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id={tipo.id}
-                            checked={jaTemEsteIsolamento || isolamentosSelecionados.includes(tipo.id!)}
+                            checked={jaTemEsteIsolamento || Boolean(isolamentosSelecionados[tipo.id!])}
                             disabled={jaTemEsteIsolamento}
                             onCheckedChange={(checked) => handleIsolamentoToggle(tipo.id!, !!checked)}
                           />
@@ -347,18 +334,35 @@ export const GerenciarPacientesIsolamentoModal = ({ open, onOpenChange, mode = '
                           </Label>
                         </div>
 
-                        {isolamentosSelecionados.includes(tipo.id!) && (
-                          <div className="ml-6 mt-2">
-                            <Label htmlFor={`data-${tipo.id}`} className="text-sm">
-                              Data de Início do Isolamento
-                            </Label>
-                            <Input
-                              id={`data-${tipo.id}`}
-                              type="date"
-                              value={datasIsolamentos[tipo.id!] || ''}
-                              onChange={(e) => handleDataChange(tipo.id!, e.target.value)}
-                              className="mt-1"
-                            />
+                        {isolamentosSelecionados[tipo.id!] && (
+                          <div className="ml-6 mt-2 grid grid-cols-2 gap-4 items-end">
+                            <div>
+                              <Label htmlFor={`data-${tipo.id}`} className="text-sm">Data de Início</Label>
+                              <Input
+                                id={`data-${tipo.id}`}
+                                type="date"
+                                value={isolamentosSelecionados[tipo.id!].dataInicio}
+                                onChange={(e) => handleDetalheChange(tipo.id!, 'dataInicio', e.target.value)}
+                                className="mt-1"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm">Status</Label>
+                              <RadioGroup
+                                value={isolamentosSelecionados[tipo.id!].status}
+                                onValueChange={(value) => handleDetalheChange(tipo.id!, 'status', value)}
+                                className="flex gap-4 mt-2"
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="suspeita" id={`suspeita-${tipo.id}`} />
+                                  <Label htmlFor={`suspeita-${tipo.id}`}>Suspeita</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="confirmada" id={`confirmada-${tipo.id}`} />
+                                  <Label htmlFor={`confirmada-${tipo.id}`}>Confirmado</Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
                           </div>
                         )}
                       </div>
