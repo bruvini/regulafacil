@@ -112,7 +112,7 @@ const LeitoCard = ({ leito, todosLeitosDoSetor, actions }: LeitoCardProps) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="font-medium text-sm leading-tight truncate">{paciente.nomeCompleto}</p>
+                    <p className="font-semibold text-sm truncate" title={paciente.nomeCompleto}>{paciente.nomeCompleto}</p>
                   </div>
                   {/* ÍCONES DE STATUS DO PACIENTE */}
                   <div className="flex items-center space-x-1">

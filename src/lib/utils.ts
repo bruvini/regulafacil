@@ -101,3 +101,9 @@ export const descreverMotivoRemanejamento = (
       return '';
   }
 };
+export const formatarInputData = (valor: string): string => {
+  const digitos = valor.replace(/\D/g, '');
+  if (digitos.length <= 2) return digitos;
+  if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+  return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4, 8)}`;
+};
