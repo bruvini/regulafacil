@@ -10,9 +10,10 @@ interface Props {
   paciente: any;
   onCancel: () => void;
   onGerenciar?: () => void;
+  siglaSetorOrigem: string;
 }
 
-export const AguardandoTransferenciaItem = ({ paciente, onCancel, onGerenciar }: Props) => {
+export const AguardandoTransferenciaItem = ({ paciente, onCancel, onGerenciar, siglaSetorOrigem }: Props) => {
   const tempoAguardando = formatarDuracao(paciente.dataTransferencia);
   
   return (
@@ -20,7 +21,9 @@ export const AguardandoTransferenciaItem = ({ paciente, onCancel, onGerenciar }:
       <div>
         <p className="font-bold text-sm">{paciente.nomeCompleto} → {paciente.destinoTransferencia}</p>
         <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs text-muted-foreground">Motivo: {paciente.motivoTransferencia}</p>
+          <p className="text-sm text-muted-foreground truncate">
+            <span className="font-semibold">{siglaSetorOrigem} - {paciente.leitoCodigo}</span> / Motivo: {paciente.motivoTransferencia}
+          </p>
         </div>
       </div>
       <div className="flex items-center gap-2">

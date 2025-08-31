@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { AguardandoUTIItem } from "@/components/AguardandoUTIItem";
 import { AguardandoTransferenciaItem } from "@/components/AguardandoTransferenciaItem";
+import { useSetores } from "@/hooks/useSetores";
 
 interface EsperaUTITransferenciasProps {
   pacientesAguardandoUTI: any[];
@@ -26,6 +27,8 @@ export const EsperaUTITransferencias = ({
 }: EsperaUTITransferenciasProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const totalPacientes = pacientesAguardandoUTI.length + pacientesAguardandoTransferencia.length;
+  const { setores } = useSetores();
+  const mapaSetores = new Map(setores.map((s) => [s.id, s]));
 
   return (
     <Card className="shadow-card border border-border/50">
@@ -77,14 +80,18 @@ export const EsperaUTITransferencias = ({
                 </div>
                 {pacientesAguardandoTransferencia.length > 0 ? (
                   <div className="space-y-2">
-                    {pacientesAguardandoTransferencia.map((paciente) => (
-                      <AguardandoTransferenciaItem
-                        key={paciente.id}
-                        paciente={paciente}
-                        onCancel={() => onTransferirExterna(paciente)}
-                        onGerenciar={() => onGerenciarTransferencia(paciente)}
-                      />
-                    ))}
+                    {pacientesAguardandoTransferencia.map((paciente) => {
+                      const setorDoPaciente = mapaSetores.get(paciente.setorId);
+                      return (
+                        <AguardandoTransferenciaItem
+                          key={paciente.id}
+                          paciente={paciente}
+                          onCancel={() => onTransferirExterna(paciente)}
+                          onGerenciar={() => onGerenciarTransferencia(paciente)}
+                          siglaSetorOrigem={setorDoPaciente?.siglaSetor || 'N/A'}
+                        />
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground italic text-center py-4">
