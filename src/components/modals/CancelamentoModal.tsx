@@ -36,7 +36,7 @@ export const CancelamentoModal = ({ open, onOpenChange, onConfirm, paciente }: P
 
   const getMensagemCancelamento = () => {
     if (!paciente) return "";
-    return `*❌ REGULAÇÃO CANCELADA ❌*
+    return `*❌ REGULAÇÃO CANCELADA*
 
 Paciente: ${paciente.nomeCompleto}
 Origem: ${paciente.setorOrigem} - ${paciente.leitoCodigo}

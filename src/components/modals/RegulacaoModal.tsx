@@ -95,7 +95,7 @@ const getMensagemConfirmacao = () => {
 
     // Lógica para Nova Regulação
     if (!isAlteracao) {
-        let mensagem = `*✨ LEITO REGULADO ✨*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *Origem:* _${origem.setor} - ${origem.leito}_ → *Destino:* _${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}_`;
+        let mensagem = `*LEITO REGULADO*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *De:* _${origem.setor} - ${origem.leito}_ \n→ *Para:* _${leitoSelecionado.setorNome} - ${leitoSelecionado.codigoLeito}_`;
 
         const isolamentos = paciente.isolamentosVigentes?.map(i => i.sigla).join(', ');
         if (isolamentos) {
@@ -110,18 +110,18 @@ const getMensagemConfirmacao = () => {
                 mensagem += `\n- *Motivo Remanejamento:* _${motivo}_`;
             }
         }
-        mensagem += `\n\n- _${new Date().toLocaleString('pt-BR')}_`;
+        mensagem += `\n- _${new Date().toLocaleString('pt-BR')}_`;
         return mensagem;
     }
 
     // Lógica para Alteração de Regulação
     if (isAlteracao) {
-        let mensagem = `*🔄 REGULAÇÃO ALTERADA 🔄*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *Origem:* _${origem.setor} - ${origem.leito}_\n- *Novo Destino:* _${leitoSelecionado.setorNome} ${leitoSelecionado.codigoLeito}_`;
+        let mensagem = `*🔄 REGULAÇÃO ALTERADA*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *Origem:* _${origem.setor} - ${origem.leito}_\n- *Novo Destino:* _${leitoSelecionado.setorNome} ${leitoSelecionado.codigoLeito}_`;
 
         if (motivoAlteracao) {
             mensagem += `\n- *Motivo:* _${motivoAlteracao}_`;
         }
-        mensagem += `\n\n- _${new Date().toLocaleString('pt-BR')}_`;
+        mensagem += `\n- _${new Date().toLocaleString('pt-BR')}_`;
         return mensagem;
     }
 
