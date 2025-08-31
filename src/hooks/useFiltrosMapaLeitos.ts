@@ -13,6 +13,9 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
     status: '',
     provavelAlta: '',
     aguardaUTI: '',
+    pcp: 'todos',
+    altaNoLeito: 'todos',
+    solicitacaoRemanejamento: 'todos',
     isolamentos: [] as string[],
   });
 
@@ -41,9 +44,13 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
     }
 
     // 2. Filtros Avançados
-    const { especialidade, setor, sexo, status, provavelAlta, aguardaUTI, isolamentos } = filtrosAvancados;
+    const { especialidade, setor, sexo, status, provavelAlta, aguardaUTI, pcp, altaNoLeito, solicitacaoRemanejamento, isolamentos } = filtrosAvancados;
 
-    if (especialidade || setor || sexo || status || provavelAlta || aguardaUTI || isolamentos.length > 0) {
+      if (
+        especialidade || setor || sexo || status || provavelAlta || aguardaUTI ||
+        pcp !== 'todos' || altaNoLeito !== 'todos' || solicitacaoRemanejamento !== 'todos' ||
+        isolamentos.length > 0
+      ) {
       setoresFiltrados = setoresFiltrados
         .map(s => {
           const leitosFiltrados = s.leitos.filter(l => {
@@ -86,6 +93,18 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
               const deveAguardarUTI = aguardaUTI === 'sim';
               if (!!l.dadosPaciente?.aguardaUTI !== deveAguardarUTI) return false;
             }
+            // Filtro PCP
+            if (pcp === 'sim' && !l.leitoPCP) return false;
+            if (pcp === 'nao' && l.leitoPCP) return false;
+
+            // Filtro Alta no Leito
+            if (altaNoLeito === 'sim' && !l.dadosPaciente?.altaNoLeito) return false;
+            if (altaNoLeito === 'nao' && l.dadosPaciente?.altaNoLeito) return false;
+
+            // Filtro Remanejamento
+            if (solicitacaoRemanejamento === 'sim' && !l.dadosPaciente?.remanejarPaciente) return false;
+            if (solicitacaoRemanejamento === 'nao' && l.dadosPaciente?.remanejarPaciente) return false;
+
 
             if (especialidade && l.dadosPaciente?.especialidadePaciente !== especialidade) return false;
             if (isolamentos.length > 0) {
@@ -104,7 +123,7 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
 
   const resetFiltros = () => {
     setSearchTerm('');
-    setFiltrosAvancados({ especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', aguardaUTI: '', isolamentos: [] });
+    setFiltrosAvancados({ especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', aguardaUTI: '', pcp: 'todos', altaNoLeito: 'todos', solicitacaoRemanejamento: 'todos', isolamentos: [] });
   };
   
   return { 

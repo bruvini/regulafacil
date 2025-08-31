@@ -26,6 +26,9 @@ interface FiltrosMapaLeitosProps {
     status: string;
     provavelAlta: string;
     aguardaUTI: string;
+    pcp: string;
+    altaNoLeito: string;
+    solicitacaoRemanejamento: string;
     isolamentos: string[];
   };
   setFiltrosAvancados: (filtros: any) => void;
@@ -157,8 +160,40 @@ export const FiltrosMapaLeitos = ({
                   <SelectItem value="nao">Não</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+              <Select value={filtrosAvancados.pcp} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, pcp: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Leito PCP?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="sim">Sim</SelectItem>
+                  <SelectItem value="nao">Não</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filtrosAvancados.altaNoLeito} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, altaNoLeito: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Alta no Leito?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="sim">Sim</SelectItem>
+                  <SelectItem value="nao">Não</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filtrosAvancados.solicitacaoRemanejamento} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, solicitacaoRemanejamento: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Solicitação de Remanejamento?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="sim">Sim</SelectItem>
+                  <SelectItem value="nao">Não</SelectItem>
+                </SelectContent>
+              </Select>
             
+                </div>
             <div className="lg:col-span-3">
               <Label>Isolamento</Label>
               <Popover>

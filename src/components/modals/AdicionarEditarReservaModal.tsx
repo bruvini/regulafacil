@@ -23,6 +23,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { ReservaOncologia } from '@/types/reservaOncologia';
+import { formatarInputData } from '@/lib/utils';
 
 const schema = z.object({
   nomeCompleto: z.string().min(1, 'Nome é obrigatório'),
@@ -97,7 +98,7 @@ export const AdicionarEditarReservaModal = ({ open, onOpenChange, onSubmit, rese
                 <FormItem>
                   <FormLabel>Nome Completo</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} onChange={(e) => field.onChange(e.target.value.toUpperCase())} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -111,7 +112,7 @@ export const AdicionarEditarReservaModal = ({ open, onOpenChange, onSubmit, rese
                 <FormItem>
                   <FormLabel>Data de Nascimento</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} maxLength={10} onChange={(e) => field.onChange(formatarInputData(e.target.value))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -162,7 +163,7 @@ export const AdicionarEditarReservaModal = ({ open, onOpenChange, onSubmit, rese
                 <FormItem>
                   <FormLabel>Data Prevista Internação</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} maxLength={10} onChange={(e) => field.onChange(formatarInputData(e.target.value))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
