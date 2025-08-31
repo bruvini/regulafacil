@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { Leito, Paciente, HistoricoLeito } from '@/types/hospital';
+import * as XLSX from 'xlsx';
 
 // Tipagem mínima esperada pela planilha (campos podem vir com nomes levemente diferentes)
 export interface PacientePlanilha {
@@ -330,4 +331,45 @@ export const reconciliarPacientesComPlanilha = async (
   }
 
   return resumo;
+};
+
+export const importarPacientesMV = async (
+  arquivo: File,
+  onProgress: (percentual: number) => void
+): Promise<ImportacaoResumo> => {
+  const data = await arquivo.arrayBuffer();
+  const workbook = XLSX.read(data, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+  const linhas = jsonData.slice(3); // ignora cabeçalhos
+  const totalLinhas = linhas.length;
+  const pacientesDaPlanilha: PacientePlanilha[] = [];
+
+  for (let i = 0; i < totalLinhas; i++) {
+    const row = linhas[i];
+    const sexo = row[2]?.trim().toUpperCase() === 'F' ? 'Feminino' : 'Masculino';
+
+    const paciente: PacientePlanilha = {
+      nomeCompleto: row[0]?.trim(),
+      dataNascimento: row[1]?.trim(),
+      sexo: sexo as 'Masculino' | 'Feminino',
+      dataInternacao: row[3]?.trim(),
+      setorNome: row[4]?.trim(),
+      leitoCodigo: row[6]?.trim(),
+      especialidade: row[7]?.trim(),
+    };
+
+    if (paciente.nomeCompleto && paciente.leitoCodigo && paciente.setorNome) {
+      pacientesDaPlanilha.push(paciente);
+    }
+
+    const percentual = Math.round(((i + 1) / totalLinhas) * 100);
+    onProgress(percentual);
+  }
+
+  const resultado = await reconciliarPacientesComPlanilha(pacientesDaPlanilha);
+  onProgress(100);
+  return resultado;
 };
