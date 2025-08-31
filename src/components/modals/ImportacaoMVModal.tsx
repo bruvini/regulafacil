@@ -1,100 +1,131 @@
+
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/hooks/use-toast';
-import { importarPacientesMV } from '@/services/importacaoPacientes';
+import { FileUp, Info } from 'lucide-react';
+import { ValidacaoImportacao, ResultadoValidacao, SyncSummary } from './ValidacaoImportacao';
 
 interface ImportacaoMVModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onProcessFileRequest: (file: File) => void;
+  validationResult: ResultadoValidacao | null;
+  syncSummary: SyncSummary | null;
+  processing: boolean;
+  isSyncing: boolean;
+  onConfirmSync: () => void;
 }
 
-export const ImportacaoMVModal = ({ open, onOpenChange }: ImportacaoMVModalProps) => {
-  const { toast } = useToast();
-  const [arquivo, setArquivo] = useState<File | null>(null);
-  const [estaImportando, setEstaImportando] = useState(false);
-  const [progresso, setProgresso] = useState(0);
-  const [mensagemCarregamento, setMensagemCarregamento] = useState('');
+export const ImportacaoMVModal = ({ 
+  open, 
+  onOpenChange, 
+  onProcessFileRequest, 
+  validationResult, 
+  syncSummary,
+  processing, 
+  isSyncing,
+  onConfirmSync 
+}: ImportacaoMVModalProps) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const mensagensDivertidas = [
-    'Ajustando os lençóis dos leitos...',
-    'Calculando a taxa de ocupação ideal...',
-    'Procurando vagas na UTI (tomara que ache!)...',
-    'Higienizando leitos em tempo recorde...',
-    'Evitando superlotação no pronto-socorro...',
-    'Alocando pacientes com maestria...',
-    'Organizando a fila da regulação...',
-    'Conferindo os prontuários...',
-    'Planejando altas para otimizar o fluxo...',
-    'Garantindo que nenhum paciente fique sem leito!',
-  ];
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setArquivo(file);
-  };
-
-  const handleProgresso = (percentual: number) => {
-    setProgresso(percentual);
-    if (percentual % 20 === 0 && percentual > 0) {
-      const indiceAleatorio = Math.floor(Math.random() * mensagensDivertidas.length);
-      setMensagemCarregamento(mensagensDivertidas[indiceAleatorio]);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && (file.name.endsWith('.xls') || file.type === 'application/vnd.ms-excel')) {
+      setSelectedFile(file);
+    } else {
+      alert("Por favor, selecione um arquivo no formato XLS.");
+      setSelectedFile(null);
+      if (event.target) event.target.value = '';
     }
   };
 
-  const handleImportar = async () => {
-    if (!arquivo) return;
-    setEstaImportando(true);
-    setProgresso(0);
-    setMensagemCarregamento('Iniciando a importação...');
-    try {
-      await importarPacientesMV(arquivo, handleProgresso);
-      toast({ title: 'Sucesso!', description: 'Pacientes importados e atualizados.' });
-    } catch (error) {
-      toast({ title: 'Erro!', description: 'Falha na importação.', variant: 'destructive' });
-    } finally {
-      setEstaImportando(false);
-      setProgresso(0);
-      onOpenChange(false);
+  const handleProcessClick = () => {
+    if (selectedFile) {
+      onProcessFileRequest(selectedFile);
     }
   };
+  
+  const handleContinue = () => {
+    // This triggers the sync summary generation
+    if (selectedFile) {
+      onProcessFileRequest(selectedFile);
+    }
+  };
+
+  const isShowingResults = validationResult || syncSummary;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      onOpenChange(isOpen);
+      if (!isOpen) {
+        setSelectedFile(null);
+      }
+    }}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-medical-primary">
-            Importar Pacientes do Soul MV
+            {syncSummary 
+              ? "Confirmação de Sincronização" 
+              : validationResult 
+                ? "Validação de Dados da Planilha" 
+                : "Importar Pacientes do Soul MV"
+            }
           </DialogTitle>
+          {!isShowingResults && (
+            <DialogDescription>
+              Siga os passos para exportar os dados e importe o arquivo gerado.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        {estaImportando ? (
-          <div className="flex flex-col items-center justify-center space-y-4 p-8">
-            <h3 className="text-lg font-medium text-gray-700">Importando Pacientes</h3>
-            <p className="text-sm text-gray-500 italic">{mensagemCarregamento}</p>
-            <Progress value={progresso} className="w-full" />
-            <span className="text-sm font-semibold">{progresso}%</span>
-          </div>
-        ) : (
-          <div className="flex flex-col space-y-4 p-4">
-            <Input type="file" accept=".xls,.xlsx,application/vnd.ms-excel" onChange={handleFileChange} />
-            <DialogFooter>
-              <Button onClick={handleImportar} disabled={!arquivo}>
-                Importar
-              </Button>
-            </DialogFooter>
-          </div>
+        <div className="flex-1 overflow-y-auto pr-6 -mr-6">
+          {isShowingResults ? (
+              <ValidacaoImportacao 
+                resultado={validationResult} 
+                syncSummary={syncSummary}
+                onContinue={handleContinue} 
+                onConfirmSync={onConfirmSync}
+                isSyncing={isSyncing}
+              />
+          ) : (
+              <>
+                  <div className="grid md:grid-cols-2 gap-6 py-4">
+                      <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+                          <h3 className="font-semibold text-foreground flex items-center"><Info className="h-4 w-4 mr-2 text-blue-600" />Como Obter o Arquivo</h3>
+                          <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                              <li>Acesse o painel do Soul MV: <a href="http://1495prd.cloudmv.com.br/Painel/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-medium underline">Acessar Painel</a></li>
+                              <li>Login: <code className="font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">NIR</code>, Senha: <code className="font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">nir@2025</code>.</li>
+                              <li>Em "Indicadores", localize o painel <span className="font-semibold text-foreground">"NIR - Ocupação Setores"</span>.</li>
+                              <li>Clique no ícone de banco de dados, depois em "Exportar".</li>
+                              <li>Selecione o formato <span className="font-semibold text-foreground">"XLS"</span> e clique no disquete para salvar.</li>
+                              <li>Volte para esta tela e selecione o arquivo salvo.</li>
+                          </ol>
+                      </div>
+
+                      <div className="flex flex-col items-center justify-center space-y-4 p-4 border-2 border-dashed border-border rounded-lg">
+                          <FileUp className="h-12 w-12 text-muted-foreground" />
+                          <p className="text-sm text-center text-muted-foreground">Arraste e solte o arquivo XLS ou clique para selecionar.</p>
+                          <label htmlFor="file-upload" className="cursor-pointer">
+                              <Button asChild><span className="pointer-events-none">Selecionar Arquivo</span></Button>
+                              <Input id="file-upload" type="file" className="hidden" accept=".xls,application/vnd.ms-excel" onChange={handleFileChange} />
+                          </label>
+                          {selectedFile && <p className="text-sm font-medium text-green-700">Arquivo: {selectedFile.name}</p>}
+                      </div>
+                  </div>
+              </>
+          )}
+        </div>
+
+        {!isShowingResults && (
+          <DialogFooter className="pt-4 border-t mt-4">
+            <Button onClick={handleProcessClick} disabled={!selectedFile || processing}>
+              {processing ? "Processando..." : "Validar Dados do Arquivo"}
+            </Button>
+          </DialogFooter>
         )}
+
       </DialogContent>
     </Dialog>
   );
 };
-
