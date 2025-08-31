@@ -27,6 +27,7 @@ const options: { value: TipoRemanejamento; label: string }[] = [
   { value: 'liberado_isolamento', label: 'Liberado de Isolamento' },
   { value: 'reserva_oncologia', label: 'Reserva para Oncologia' },
   { value: 'alta_uti', label: 'Alta da UTI' },
+  { value: 'alta_avc_agudo', label: 'Alta da Unidade de AVC Agudo' },
 ];
 
 export const RemanejamentoModal = ({ open, onOpenChange, onConfirm }: RemanejamentoModalProps) => {

@@ -89,6 +89,8 @@ export const descreverMotivoRemanejamento = (
       return 'Reserva para Oncologia';
     case 'alta_uti':
       return 'Alta da UTI';
+    case 'alta_avc_agudo':
+      return 'Alta da Unidade de AVC Agudo';
     default:
       return '';
   }

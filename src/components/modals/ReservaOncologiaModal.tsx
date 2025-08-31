@@ -75,10 +75,12 @@ export const ReservaOncologiaModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
-        <DialogHeader className="flex justify-between">
+        <DialogHeader>
           <DialogTitle>Reservas Oncologia</DialogTitle>
-          <Button onClick={openAdicionar}>Adicionar Reserva</Button>
         </DialogHeader>
+        <div className="flex justify-end mt-4">
+          <Button onClick={openAdicionar}>Adicionar Reserva</Button>
+        </div>
         <div className="max-h-[60vh] overflow-auto mt-4">
           <Table>
             <TableHeader>
@@ -91,11 +93,17 @@ export const ReservaOncologiaModal = ({
             </TableHeader>
             <TableBody>
               {reservas.map((r) => {
-                const atrasado = new Date(r.dataPrevistaInternacao) < new Date();
+                const partes = r.dataPrevistaInternacao.split('/');
+                const dataPrevista = new Date(
+                  parseInt(partes[2]),
+                  parseInt(partes[1]) - 1,
+                  parseInt(partes[0])
+                );
+                const atrasado = dataPrevista < new Date();
                 return (
                   <TableRow key={r.id} className={atrasado ? 'text-red-500' : ''}>
                     <TableCell>{r.nomeCompleto}</TableCell>
-                    <TableCell>{new Date(r.dataPrevistaInternacao).toLocaleDateString()}</TableCell>
+                    <TableCell>{dataPrevista.toLocaleDateString()}</TableCell>
                     <TableCell>
                       {r.tentativasContato?.map((t, i) => (
                         <div key={i} className="text-xs">
