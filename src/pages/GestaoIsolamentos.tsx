@@ -139,7 +139,7 @@ const GestaoIsolamentos = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:divide-x lg:divide-gray-200">
         <div className="lg:pr-6">
           <h2 className="text-lg font-semibold mb-3 text-amber-600">Pacientes em Investigação (Suspeitos)</h2>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pacientesSuspeitos.map(paciente => (
               <CardPacienteSuspeito key={paciente.id} paciente={paciente} onEdit={(p) => abrirModalEditar(p, p.isolamento)} />
             ))}

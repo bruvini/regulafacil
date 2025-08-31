@@ -21,6 +21,12 @@ export const parseDateFromString = (dateString: string): Date | null => {
   return isValid(parsedDate) ? parsedDate : null;
 };
 
+export const formatarDataSemFuso = (dataString: string): string => {
+  if (!dataString) return 'N/A';
+  const data = new Date(`${dataString}T00:00:00`);
+  return data.toLocaleDateString('pt-BR');
+};
+
 export const formatarDuracao = (dataISOouString: string | Date | undefined | null): string => {
   if (!dataISOouString) return 'N/A';
 
