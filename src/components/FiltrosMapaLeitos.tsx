@@ -29,6 +29,7 @@ interface FiltrosMapaLeitosProps {
     pcp: string;
     altaNoLeito: string;
     solicitacaoRemanejamento: string;
+    transferenciaExterna: string;
     isolamentos: string[];
   };
   setFiltrosAvancados: (filtros: any) => void;
@@ -165,7 +166,6 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Leito PCP?" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="sim">Sim</SelectItem>
                   <SelectItem value="nao">Não</SelectItem>
                 </SelectContent>
@@ -176,7 +176,6 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Alta no Leito?" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="sim">Sim</SelectItem>
                   <SelectItem value="nao">Não</SelectItem>
                 </SelectContent>
@@ -187,7 +186,16 @@ export const FiltrosMapaLeitos = ({
                   <SelectValue placeholder="Solicitação de Remanejamento?" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="sim">Sim</SelectItem>
+                  <SelectItem value="nao">Não</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={filtrosAvancados.transferenciaExterna} onValueChange={(v) => setFiltrosAvancados({...filtrosAvancados, transferenciaExterna: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Transf. Externa?" />
+                </SelectTrigger>
+                <SelectContent>
                   <SelectItem value="sim">Sim</SelectItem>
                   <SelectItem value="nao">Não</SelectItem>
                 </SelectContent>

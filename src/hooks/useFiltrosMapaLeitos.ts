@@ -13,9 +13,10 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
     status: '',
     provavelAlta: '',
     aguardaUTI: '',
-    pcp: 'todos',
-    altaNoLeito: 'todos',
-    solicitacaoRemanejamento: 'todos',
+    pcp: '',
+    altaNoLeito: '',
+    solicitacaoRemanejamento: '',
+    transferenciaExterna: '',
     isolamentos: [] as string[],
   });
 
@@ -44,11 +45,11 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
     }
 
     // 2. Filtros Avançados
-    const { especialidade, setor, sexo, status, provavelAlta, aguardaUTI, pcp, altaNoLeito, solicitacaoRemanejamento, isolamentos } = filtrosAvancados;
+    const { especialidade, setor, sexo, status, provavelAlta, aguardaUTI, pcp, altaNoLeito, solicitacaoRemanejamento, transferenciaExterna, isolamentos } = filtrosAvancados;
 
       if (
         especialidade || setor || sexo || status || provavelAlta || aguardaUTI ||
-        pcp !== 'todos' || altaNoLeito !== 'todos' || solicitacaoRemanejamento !== 'todos' ||
+        pcp || altaNoLeito || solicitacaoRemanejamento || transferenciaExterna ||
         isolamentos.length > 0
       ) {
       setoresFiltrados = setoresFiltrados
@@ -105,6 +106,10 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
             if (solicitacaoRemanejamento === 'sim' && !l.dadosPaciente?.remanejarPaciente) return false;
             if (solicitacaoRemanejamento === 'nao' && l.dadosPaciente?.remanejarPaciente) return false;
 
+            // Filtro Transferência Externa
+            if (transferenciaExterna === 'sim' && !l.dadosPaciente?.transferirPaciente) return false;
+            if (transferenciaExterna === 'nao' && l.dadosPaciente?.transferirPaciente) return false;
+
 
             if (especialidade && l.dadosPaciente?.especialidadePaciente !== especialidade) return false;
             if (isolamentos.length > 0) {
@@ -123,7 +128,7 @@ export const useFiltrosMapaLeitos = (setores: SetorComLeitos[]) => {
 
   const resetFiltros = () => {
     setSearchTerm('');
-    setFiltrosAvancados({ especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', aguardaUTI: '', pcp: 'todos', altaNoLeito: 'todos', solicitacaoRemanejamento: 'todos', isolamentos: [] });
+    setFiltrosAvancados({ especialidade: '', setor: '', sexo: '', status: '', provavelAlta: '', aguardaUTI: '', pcp: '', altaNoLeito: '', solicitacaoRemanejamento: '', transferenciaExterna: '', isolamentos: [] });
   };
   
   return { 
