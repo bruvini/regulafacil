@@ -9,6 +9,7 @@ import { CirurgiaEletivaItem } from './CirurgiaEletivaItem';
 import { Paciente } from '@/types/hospital';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useSetores } from '@/hooks/useSetores';
 
 interface ListasLateraisProps {
   pacientesAguardandoUTI: any[];
@@ -35,6 +36,8 @@ export const ListasLaterais = ({
     const pacienteRef = doc(db, "pacientesRegulaFacil", paciente.id);
     await updateDoc(pacienteRef, { transferirPaciente: false });
   };
+  const { setores } = useSetores();
+  const mapaSetores = new Map(setores.map((s) => [s.id, s]));
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -76,14 +79,18 @@ export const ListasLaterais = ({
           </CardHeader>
           <CardContent className="p-2">
             <div className="space-y-1 max-h-64 overflow-y-auto">
-              {pacientesAguardandoTransferencia.map((p) => (
-                <AguardandoTransferenciaItem
-                  key={p.id}
-                  paciente={p}
-                  onCancel={() => handleCancelarTransferencia(p)}
-                  onGerenciar={() => onGerenciarTransferencia(p)}
-                />
-              ))}
+              {pacientesAguardandoTransferencia.map((p) => {
+                const setorDoPaciente = mapaSetores.get(p.setorId);
+                return (
+                  <AguardandoTransferenciaItem
+                    key={p.id}
+                    paciente={p}
+                    onCancel={() => handleCancelarTransferencia(p)}
+                    onGerenciar={() => onGerenciarTransferencia(p)}
+                    siglaSetorOrigem={setorDoPaciente?.siglaSetor || 'N/A'}
+                  />
+                );
+              })}
             </div>
           </CardContent>
         </Card>

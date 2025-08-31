@@ -4,6 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Settings, CheckCircle, X, Loader2 } from 'lucide-react';
 import { formatarDuracao } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface Props {
   paciente: any;
@@ -54,15 +65,32 @@ export const PacienteReguladoItem = ({
       </div>
       
       <div className="flex items-center gap-1">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => onConcluir(paciente)}
-          disabled={isActing}
-        >
-          <CheckCircle className="h-4 w-4 mr-1" />
-          Concluir
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isActing}
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Concluir
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Conclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja concluir a regulação para o paciente <strong>{paciente.nomeCompleto}</strong>? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => onConcluir(paciente)}>
+                Confirmar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         <Button 
           variant="ghost" 
           size="sm" 
