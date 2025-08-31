@@ -17,6 +17,8 @@ import { CardPacienteSuspeito } from '@/components/CardPacienteSuspeito';
 import { CardPacienteConfirmado } from '@/components/CardPacienteConfirmado';
 import { Paciente } from '@/types/hospital';
 import { PacienteIsolamento } from '@/types/isolamento';
+import FiltrosGestaoIsolamentos from '@/components/FiltrosGestaoIsolamentos';
+import { differenceInDays } from 'date-fns';
 
 const GestaoIsolamentos = () => {
   const [modalTiposOpen, setModalTiposOpen] = useState(false);
@@ -24,6 +26,13 @@ const GestaoIsolamentos = () => {
   const [modalPacientesMode, setModalPacientesMode] = useState<'adicionar' | 'editar'>('adicionar');
   const [pacienteEdicao, setPacienteEdicao] = useState<Paciente | null>(null);
   const [isolamentoEdicao, setIsolamentoEdicao] = useState<PacienteIsolamento | null>(null);
+  const [filtros, setFiltros] = useState({
+    nome: '',
+    setor: '',
+    sexo: '',
+    isolamentos: [] as string[],
+    dias: '',
+  });
 
   const { setores } = useSetores();
   const { leitos } = useLeitos();
@@ -46,12 +55,30 @@ const GestaoIsolamentos = () => {
           setorId: setor?.id || '',
           leitoId: leito?.id || '',
         };
+      })
+      .filter(paciente => {
+        const matchNome = paciente.nomeCompleto.toLowerCase().includes(filtros.nome.toLowerCase());
+        const matchSetor = !filtros.setor || filtros.setor === 'todos' || paciente.setorId === filtros.setor;
+        const matchSexo = !filtros.sexo || filtros.sexo === 'todos' || paciente.sexoPaciente === filtros.sexo;
+        const matchIso = filtros.isolamentos.length === 0 || paciente.isolamentosVigentes?.some((iso: PacienteIsolamento) => filtros.isolamentos.includes(iso.isolamentoId));
+        const diasFiltro = filtros.dias ? parseInt(filtros.dias) : null;
+        const matchDias = !diasFiltro || paciente.isolamentosVigentes?.some((iso: PacienteIsolamento) => {
+          const diff = differenceInDays(new Date(), new Date(iso.dataInicio));
+          return diff >= diasFiltro;
+        });
+        return matchNome && matchSetor && matchSexo && matchIso && matchDias;
       });
-  }, [pacientes, leitos, setores]);
+  }, [pacientes, leitos, setores, filtros]);
 
-  const pacientesSuspeitos = pacientesEmVigilancia
-    .filter(p => p.isolamentosVigentes?.some((iso: any) => iso.status === 'suspeita'))
-    .map(p => ({ ...p, isolamento: p.isolamentosVigentes.find((iso: any) => iso.status === 'suspeita') }));
+  const pacientesSuspeitos = pacientesEmVigilancia.flatMap(paciente =>
+    paciente.isolamentosVigentes
+      ?.filter(iso => iso.status === 'suspeita')
+      .map(isolamento => ({
+        ...paciente,
+        idUnico: `${paciente.id}-${isolamento.isolamentoId}`,
+        isolamento: isolamento,
+      })) || []
+  );
 
   const pacientesConfirmados = pacientesEmVigilancia
     .filter(p => p.isolamentosVigentes?.some(iso => iso.status === 'confirmada'));
@@ -106,6 +133,7 @@ const GestaoIsolamentos = () => {
           Novos indicadores de vigilância epidemiológica estão em desenvolvimento para aprimorar sua gestão.
         </AlertDescription>
       </Alert>
+      <FiltrosGestaoIsolamentos filtros={filtros} setFiltros={setFiltros} />
 
       <Card className="shadow-card border border-border/50 mb-6">
         <Collapsible>
@@ -141,7 +169,7 @@ const GestaoIsolamentos = () => {
           <h2 className="text-lg font-semibold mb-3 text-amber-600">Pacientes em Investigação (Suspeitos)</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {pacientesSuspeitos.map(paciente => (
-              <CardPacienteSuspeito key={paciente.id} paciente={paciente} onEdit={(p) => abrirModalEditar(p, p.isolamento)} />
+              <CardPacienteSuspeito key={paciente.idUnico} paciente={paciente} onEdit={(p) => abrirModalEditar(p, p.isolamento)} />
             ))}
           </div>
         </div>
