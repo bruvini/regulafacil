@@ -58,8 +58,8 @@ const GestaoIsolamentos = () => {
       })
       .filter(paciente => {
         const matchNome = paciente.nomeCompleto.toLowerCase().includes(filtros.nome.toLowerCase());
-        const matchSetor = !filtros.setor || paciente.setorId === filtros.setor;
-        const matchSexo = !filtros.sexo || paciente.sexoPaciente === filtros.sexo;
+        const matchSetor = !filtros.setor || filtros.setor === 'todos' || paciente.setorId === filtros.setor;
+        const matchSexo = !filtros.sexo || filtros.sexo === 'todos' || paciente.sexoPaciente === filtros.sexo;
         const matchIso = filtros.isolamentos.length === 0 || paciente.isolamentosVigentes?.some((iso: PacienteIsolamento) => filtros.isolamentos.includes(iso.isolamentoId));
         const diasFiltro = filtros.dias ? parseInt(filtros.dias) : null;
         const matchDias = !diasFiltro || paciente.isolamentosVigentes?.some((iso: PacienteIsolamento) => {

@@ -52,7 +52,7 @@ const FiltrosGestaoIsolamentos = ({ filtros, setFiltros }: Props) => {
           <SelectValue placeholder="Setor" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todos</SelectItem>
+          <SelectItem value="todos">Todos</SelectItem>
           {setores.map(setor => (
             <SelectItem key={setor.id} value={setor.id!}>{setor.nomeSetor}</SelectItem>
           ))}
@@ -63,7 +63,7 @@ const FiltrosGestaoIsolamentos = ({ filtros, setFiltros }: Props) => {
           <SelectValue placeholder="Sexo" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Todos</SelectItem>
+          <SelectItem value="todos">Todos</SelectItem>
           <SelectItem value="Masculino">Masculino</SelectItem>
           <SelectItem value="Feminino">Feminino</SelectItem>
         </SelectContent>
