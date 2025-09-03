@@ -120,7 +120,7 @@ const getMensagemConfirmacao = () => {
         let mensagem = `*🔄 REGULAÇÃO ALTERADA*\n\n- *Paciente:* _${paciente.nomeCompleto}_\n- *Origem:* _${origem.setor} - ${origem.leito}_\n- *Novo Destino:* _${leitoSelecionado.setorNome} ${leitoSelecionado.codigoLeito}_`;
 
         if (motivoAlteracao) {
-            mensagem += `\n- *Motivo:* _${motivoAlteracao}_`;
+            mensagem += `\n- *Motivo da Alteração:* _${motivoAlteracao}_`;
         }
         mensagem += `\n- _${new Date().toLocaleString('pt-BR')}_`;
         return mensagem;
@@ -250,10 +250,16 @@ const getMensagemConfirmacao = () => {
                 {/* CORREÇÃO: nomePaciente -> nomeCompleto */}
                 <p className="whitespace-pre-wrap font-mono text-xs">{getMensagemConfirmacao()}</p>
               </div>
-              <Textarea 
-                placeholder={isAlteracao ? "Descreva o motivo da alteração..." : "Adicionar observações do NIR (opcional)..."} 
-                value={observacoes} 
-                onChange={e => setObservacoes(e.target.value)} 
+              <Textarea
+                placeholder={isAlteracao ? "Descreva o motivo da alteração (obrigatório)..." : "Adicionar observações do NIR (opcional)..."}
+                value={isAlteracao ? motivoAlteracao : observacoes}
+                onChange={e => {
+                  if (isAlteracao) {
+                    setMotivoAlteracao(e.target.value);
+                  } else {
+                    setObservacoes(e.target.value);
+                  }
+                }}
               />
             </div>
             <DialogFooter className="mt-4">
@@ -261,7 +267,7 @@ const getMensagemConfirmacao = () => {
               <Button variant="secondary" onClick={copiarParaClipboard}>
                 <Copy className="mr-2 h-4 w-4"/>Copiar
               </Button>
-              <Button onClick={handleConfirmar}>
+              <Button onClick={handleConfirmar} disabled={isAlteracao && !motivoAlteracao.trim()}>
                 <CheckCircle className="mr-2 h-4 w-4"/>
                 {isAlteracao ? 'Confirmar Alteração' : 'Confirmar Regulação'}
               </Button>
