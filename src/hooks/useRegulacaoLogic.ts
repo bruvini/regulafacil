@@ -67,6 +67,7 @@ export const useRegulacaoLogic = () => {
   const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null);
   const [dadosPlanilhaProcessados, setDadosPlanilhaProcessados] = useState<PacienteDaPlanilha[]>([]);
   const [modoRegulacao, setModoRegulacao] = useState<"normal" | "uti">("normal");
+  const [opcoesRegulacao, setOpcoesRegulacao] = useState<{ isContraFluxo?: boolean }>({});
   const [processing, setProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -480,7 +481,8 @@ const registrarHistoricoRegulacao = async (
   // Funções de Ação
   const handleOpenRegulacaoModal = (
     paciente: any,
-    modo: "normal" | "uti" = "normal"
+    modo: "normal" | "uti" = "normal",
+    opcoes: { isContraFluxo?: boolean } = {}
   ) => {
     // 1. Define o Paciente-Alvo:
     // Coloca o paciente que precisa ser remanejado no estado `pacienteParaRegular`.
@@ -488,6 +490,9 @@ const registrarHistoricoRegulacao = async (
 
     // 2. Define o Modo: Garante que o modal abra no modo "normal" (não de UTI).
     setModoRegulacao(modo);
+
+    // 2.1. Define opções adicionais para a regulação
+    setOpcoesRegulacao(opcoes);
 
     // 3. Reseta o Estado de Alteração: Garante que não está no modo de "alterar" regulação.
     setIsAlteracaoMode(false);
@@ -1562,6 +1567,7 @@ const registrarHistoricoRegulacao = async (
       validationResult,
       syncSummary,
       modoRegulacao,
+      opcoesRegulacao,
       actingOnPatientId,
     },
 

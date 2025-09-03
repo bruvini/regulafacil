@@ -33,6 +33,7 @@ interface RegulacaoModalsProps {
   pacientesRegulados: any[];
   sugestoes: any[];
   totalPendentes: number;
+  opcoes?: { isContraFluxo?: boolean };
   
   // Handlers
   onProcessFileRequest: (file: File) => void;
@@ -74,6 +75,7 @@ export const RegulacaoModals = ({
   pacientesRegulados,
   sugestoes,
   totalPendentes,
+  opcoes,
   onProcessFileRequest,
   onConfirmSync,
   onConfirmarRegulacao,
@@ -110,6 +112,7 @@ export const RegulacaoModals = ({
         onConfirmRegulacao={onConfirmarRegulacao}
         isAlteracao={isAlteracaoMode}
         modo={modoRegulacao}
+        opcoes={opcoes}
       />
 
       <CancelamentoModal
