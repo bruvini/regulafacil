@@ -1,124 +1,66 @@
-
-import { useState, useEffect } from 'react';
-import { collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { useState } from 'react';
+import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TipoIsolamento, TipoIsolamentoFormData } from '@/types/isolamento';
+import { TipoIsolamentoFormData } from '@/types/isolamento';
 import { toast } from '@/hooks/use-toast';
 import { useAuditoria } from './useAuditoria';
+import { useCache } from '@/contexts/CacheContext'; // Importe o useCache
 
 export const useIsolamentos = () => {
-  const [isolamentos, setIsolamentos] = useState<TipoIsolamento[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 1. DADOS VÊM DO CACHE, NÃO MAIS DO FIRESTORE DIRETAMENTE
+  const { tiposDeIsolamento, loading: loadingCache } = useCache();
+  const [loadingMutation, setLoadingMutation] = useState(false);
   const { registrarLog } = useAuditoria();
 
-  useEffect(() => {
-    const q = query(collection(db, 'isolamentosRegulaFacil'), orderBy('nomeMicroorganismo'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const isolamentosData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as TipoIsolamento[];
-      
-      setIsolamentos(isolamentosData);
-      console.log('Isolamentos atualizados:', isolamentosData);
-    }, (error) => {
-      console.error('Erro ao buscar isolamentos:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar tipos de isolamento",
-        variant: "destructive",
-      });
-    });
-
-    return () => unsubscribe();
-  }, []);
-
+  // 2. RESTAURE TODAS AS FUNÇÕES DE ESCRITA (CRIAR, ATUALIZAR, EXCLUIR)
   const criarIsolamento = async (data: TipoIsolamentoFormData) => {
+    setLoadingMutation(true);
     try {
-      setLoading(true);
-      
-      const docRef = await addDoc(collection(db, 'isolamentosRegulaFacil'), {
-        ...data,
-        dataAtualizacao: new Date().toISOString()
-      });
-      
-      console.log('Isolamento criado com ID:', docRef.id);
-      
-      toast({
-        title: "Sucesso",
-        description: "Tipo de isolamento criado com sucesso!",
-      });
+      await addDoc(collection(db, 'isolamentosRegulaFacil'), data);
+      toast({ title: "Sucesso", description: "Tipo de isolamento criado!" });
+      registrarLog('Criação de Tipo de Isolamento', `Criado: ${data.nomeMicroorganismo}`);
     } catch (error) {
       console.error('Erro ao criar isolamento:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar tipo de isolamento",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", variant: "destructive" });
     } finally {
-      setLoading(false);
+      setLoadingMutation(false);
     }
   };
 
   const atualizarIsolamento = async (id: string, data: TipoIsolamentoFormData) => {
+    setLoadingMutation(true);
     try {
-      setLoading(true);
-      
-      const docRef = doc(db, 'isolamentosRegulaFacil', id);
-      await updateDoc(docRef, {
-        ...data,
-        dataAtualizacao: new Date().toISOString()
-      });
-      
-      console.log('Isolamento atualizado:', id);
-      
-      toast({
-        title: "Sucesso",
-        description: "Tipo de isolamento atualizado com sucesso!",
-      });
+      await updateDoc(doc(db, 'isolamentosRegulaFacil', id), data as any);
+      toast({ title: "Sucesso", description: "Tipo de isolamento atualizado!" });
+      registrarLog('Atualização de Tipo de Isolamento', `Atualizado: ${data.nomeMicroorganismo}`);
     } catch (error) {
       console.error('Erro ao atualizar isolamento:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar tipo de isolamento",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", variant: "destructive" });
     } finally {
-      setLoading(false);
+      setLoadingMutation(false);
     }
   };
 
   const excluirIsolamento = async (id: string) => {
+    setLoadingMutation(true);
     try {
-      setLoading(true);
-      
-      const docRef = doc(db, 'isolamentosRegulaFacil', id);
-      await deleteDoc(docRef);
-      
-      console.log('Isolamento excluído:', id);
-      
-      toast({
-        title: "Sucesso",
-        description: "Tipo de isolamento excluído com sucesso!",
-      });
+      await deleteDoc(doc(db, 'isolamentosRegulaFacil', id));
+      toast({ title: "Sucesso", description: "Tipo de isolamento excluído!" });
+      registrarLog('Exclusão de Tipo de Isolamento', `Excluído ID: ${id}`);
     } catch (error) {
       console.error('Erro ao excluir isolamento:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao excluir tipo de isolamento",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", variant: "destructive" });
     } finally {
-      setLoading(false);
+      setLoadingMutation(false);
     }
   };
 
   return {
-    isolamentos,
-    loading,
+    isolamentos: tiposDeIsolamento, // Dados do cache
+    loading: loadingCache || loadingMutation, // Combina os loadings
     criarIsolamento,
     atualizarIsolamento,
-    excluirIsolamento
+    excluirIsolamento,
   };
 };
+
