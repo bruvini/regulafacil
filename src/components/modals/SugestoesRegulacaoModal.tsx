@@ -147,19 +147,30 @@ export const SugestoesRegulacaoModal = ({
   todosOsLeitos,
 }: SugestoesRegulacaoModalProps) => {
   const sugestoesCalculadas = useMemo(() => {
+    // Se as sugestões já vierem pré-calculadas, use-as.
     if (sugestoes && sugestoes.length > 0) return sugestoes;
+
+    // Se for para calcular na hora para um leito específico...
     if (!leitoSelecionado || !pacientesPendentes || !todosOsLeitos) return [];
 
+    // 1. Determina o sexo compatível para o leito vago (usando a função centralizada).
     const sexoCompativelComLeito = determinarSexoLeito(
       leitoSelecionado,
       todosOsLeitos
     );
 
+    // 2. Filtra a lista de todos os pacientes pendentes.
     const pacientesCompativeis = pacientesPendentes.filter(paciente => {
-      if (sexoCompativelComLeito === 'Ambos') return true;
+      // APLICAÇÃO DA REGRA DE SEXO
+      // Se o leito pode receber ambos os sexos, o paciente sempre é compatível.
+      if (sexoCompativelComLeito === 'Ambos') {
+        return true;
+      }
+      // Se o leito tem um sexo definido, o sexo do paciente DEVE ser o mesmo.
       return paciente.sexoPaciente === sexoCompativelComLeito;
     });
 
+    // 3. Retorna a estrutura de dados com a lista de pacientes devidamente filtrada.
     return [
       {
         setorNome: leitoSelecionado.setorNome || '',
@@ -169,7 +180,7 @@ export const SugestoesRegulacaoModal = ({
               ...leitoSelecionado,
               sexoCompativel: sexoCompativelComLeito,
             },
-            pacientesElegiveis: pacientesCompativeis,
+            pacientesElegiveis: pacientesCompativeis, // Agora contém apenas pacientes compatíveis.
           },
         ],
       },
