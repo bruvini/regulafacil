@@ -29,6 +29,7 @@ interface RegulacaoModalProps {
   onConfirmRegulacao: (leitoDestino: any, observacoes: string, motivoAlteracao?: string) => void;
   isAlteracao?: boolean;
   modo?: 'normal' | 'uti';
+  opcoes?: { isContraFluxo?: boolean };
 }
 
 const calcularIdade = (dataNascimento?: string): string => {
@@ -40,7 +41,7 @@ const calcularIdade = (dataNascimento?: string): string => {
     return idade.toString();
 };
 
-export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao, isAlteracao = false, modo = 'normal' }: RegulacaoModalProps) => {
+export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirmRegulacao, isAlteracao = false, modo = 'normal', opcoes = {} }: RegulacaoModalProps) => {
   const { findAvailableLeitos } = useLeitoFinder();
   const { toast } = useToast();
   const [leitosDisponiveis, setLeitosDisponiveis] = useState<LeitoCompativel[]>([]);
@@ -68,7 +69,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
 
   useEffect(() => {
     if (open && paciente) {
-      setLeitosDisponiveis(findAvailableLeitos(paciente, modo));
+      setLeitosDisponiveis(findAvailableLeitos(paciente, modo, opcoes));
     }
     if (!open) {
       setEtapa(isAlteracao ? 0 : 1);
@@ -76,7 +77,7 @@ export const RegulacaoModal = ({ open, onOpenChange, paciente, origem, onConfirm
       setObservacoes('');
       setMotivoAlteracao('');
     }
-  }, [open, paciente, findAvailableLeitos, isAlteracao, modo]);
+  }, [open, paciente, findAvailableLeitos, isAlteracao, modo, opcoes]);
 
   const leitosAgrupadosPorSetor = useMemo(() => {
     return leitosDisponiveis.reduce((acc, leito) => {

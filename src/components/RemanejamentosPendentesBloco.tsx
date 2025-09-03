@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RemanejamentoPendenteItem } from "@/components/RemanejamentoPendenteItem";
-import { Paciente } from "@/types/hospital";
+import { Paciente, DetalhesRemanejamento } from "@/types/hospital";
 import { descreverMotivoRemanejamento } from "@/lib/utils";
 import {
   Accordion,
@@ -13,7 +13,7 @@ import {
 
 interface RemanejamentosPendentesBlocoProps {
   remanejamentos: Paciente[];
-  onRemanejar: (paciente: Paciente) => void;
+  onRemanejar: (paciente: Paciente, opcoes?: { isContraFluxo?: boolean }) => void;
   onCancelar: (paciente: Paciente) => void;
 }
 
@@ -22,6 +22,12 @@ export const RemanejamentosPendentesBloco = ({
   onRemanejar,
   onCancelar,
 }: RemanejamentosPendentesBlocoProps) => {
+  const handleRemanejar = (paciente: Paciente) => {
+    const isContraFluxo =
+      (paciente.motivoRemanejamento as DetalhesRemanejamento)?.tipo ===
+      "contra_fluxo";
+    onRemanejar(paciente, { isContraFluxo });
+  };
   const grupos = remanejamentos.reduce(
     (acc, paciente) => {
       const motivoCompleto = descreverMotivoRemanejamento(
@@ -85,7 +91,7 @@ export const RemanejamentosPendentesBloco = ({
                           <RemanejamentoPendenteItem
                             key={paciente.id}
                             paciente={paciente}
-                            onRemanejar={onRemanejar}
+                            onRemanejar={handleRemanejar}
                             onCancelar={onCancelar}
                           />
                         ))}

@@ -301,8 +301,8 @@ const RegulacaoLeitos = () => {
         {/* 7. Bloco: Remanejamentos Pendentes */}
         <RemanejamentosPendentesBloco
           remanejamentos={listas.remanejamentosPendentes}
-          onRemanejar={(paciente) =>
-            handlers.handleOpenRegulacaoModal(paciente, "normal")
+          onRemanejar={(paciente, opcoes) =>
+            handlers.handleOpenRegulacaoModal(paciente, "normal", opcoes)
           }
           onCancelar={handlers.handleCancelarRemanejamento}
         />
@@ -335,6 +335,7 @@ const RegulacaoLeitos = () => {
           pacientesRegulados={listas.pacientesJaRegulados}
           sugestoes={listas.sugestoesDeRegulacao}
           totalPendentes={listas.totalPendentes}
+          opcoes={modals.opcoesRegulacao}
           onProcessFileRequest={handlers.handleProcessFileRequest}
           onConfirmSync={handlers.handleConfirmSync}
           onConfirmarRegulacao={handleConfirmarRegulacao}

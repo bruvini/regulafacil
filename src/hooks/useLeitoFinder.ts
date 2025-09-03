@@ -12,6 +12,12 @@ export interface LeitoCompativel extends Leito {
   temHomonimo: boolean;
 }
 
+const SETORES_CONTRA_FLUXO = [
+  'SALA DE EMERGENCIA',
+  'SALA LARANJA',
+  'UNID. AVC AGUDO'
+];
+
 // Função para calcular idade, já que a usaremos aqui
 const calcularIdade = (dataNascimento: string): number => {
   if (!dataNascimento || !/^\d{2}\/\d{2}\/\d{4}$/.test(dataNascimento)) return 999;
@@ -127,16 +133,42 @@ export const useLeitoFinder = () => {
     const { setores } = useSetores();
 
     const findAvailableLeitos = useCallback(
-        (paciente: DadosPaciente, modo: 'normal' | 'uti' = 'normal'): LeitoCompativel[] => {
+        (
+            paciente: DadosPaciente,
+            modo: 'normal' | 'uti' = 'normal',
+            opcoes: { isContraFluxo?: boolean } = {}
+        ): LeitoCompativel[] => {
             if (!paciente || !setores) return [];
 
-            const primeiroNomePaciente = paciente.nomeCompleto
-                .split(' ')[0]
-                .toUpperCase();
+            const { isContraFluxo } = opcoes;
 
             const todosLeitosComSetor = setores.flatMap(setor =>
                 setor.leitos.map(leito => ({ ...leito, setorNome: setor.nomeSetor, setorId: setor.id! }))
             );
+
+            if (isContraFluxo) {
+                const leitosContraFluxo: LeitoCompativel[] = [];
+                const setoresDeDestino = setores.filter(setor =>
+                    SETORES_CONTRA_FLUXO.includes(setor.nomeSetor.toUpperCase())
+                );
+                setoresDeDestino.forEach(setor => {
+                    setor.leitos.forEach(leito => {
+                        if (leito.statusLeito === 'Vago' || leito.statusLeito === 'Higienizacao') {
+                            leitosContraFluxo.push({
+                                ...leito,
+                                setorNome: setor.nomeSetor,
+                                setorId: setor.id!,
+                                temHomonimo: false,
+                            });
+                        }
+                    });
+                });
+                return leitosContraFluxo;
+            }
+
+            const primeiroNomePaciente = paciente.nomeCompleto
+                .split(' ')[0]
+                .toUpperCase();
 
             // Se o modo for 'uti', filtre apenas leitos da UTI
             if (modo === 'uti') {
