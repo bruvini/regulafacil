@@ -25,6 +25,7 @@ import { Leito, Paciente } from "@/types/hospital";
 import { parse, differenceInHours, isValid } from "date-fns";
 import { useMemo } from 'react';
 import { determinarSexoLeito } from '@/lib/utils';
+import { useSetores } from '@/hooks/useSetores';
 
 interface SugestaoRegulacao {
   leito: Leito & {
@@ -50,7 +51,6 @@ interface SugestoesRegulacaoModalProps {
   totalPendentes?: number;
   leitoSelecionado?: Leito | null;
   pacientesPendentes?: Paciente[];
-  todosOsLeitos?: any[];
 }
 
 const calcularIdade = (dataNascimento: string): string => {
@@ -144,19 +144,25 @@ export const SugestoesRegulacaoModal = ({
   totalPendentes,
   leitoSelecionado,
   pacientesPendentes,
-  todosOsLeitos,
 }: SugestoesRegulacaoModalProps) => {
+  const { setores } = useSetores();
   const sugestoesCalculadas = useMemo(() => {
     // Se as sugestões já vierem pré-calculadas, use-as.
     if (sugestoes && sugestoes.length > 0) return sugestoes;
 
     // Se for para calcular na hora para um leito específico...
-    if (!leitoSelecionado || !pacientesPendentes || !todosOsLeitos) return [];
+    if (!leitoSelecionado || !pacientesPendentes || setores.length === 0)
+      return [];
+
+    // Obtém a lista completa de leitos a partir dos setores disponíveis
+    const todosOsLeitosCompleto = setores.flatMap(s =>
+      s.leitos.map(l => ({ ...l, setorNome: s.nomeSetor }))
+    );
 
     // 1. Determina o sexo compatível para o leito vago (usando a função centralizada).
     const sexoCompativelComLeito = determinarSexoLeito(
       leitoSelecionado,
-      todosOsLeitos
+      todosOsLeitosCompleto
     );
 
     // 2. Filtra a lista de todos os pacientes pendentes.
@@ -185,7 +191,7 @@ export const SugestoesRegulacaoModal = ({
         ],
       },
     ];
-  }, [sugestoes, leitoSelecionado, pacientesPendentes, todosOsLeitos]);
+  }, [sugestoes, leitoSelecionado, pacientesPendentes, setores]);
 
   const totalLeitos = sugestoesCalculadas.reduce(
     (acc, grupo) => acc + grupo.sugestoes.length,
