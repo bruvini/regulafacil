@@ -7,16 +7,12 @@ import { useSetores } from '@/hooks/useSetores';
 import { useToast } from '@/hooks/use-toast';
 import { Copy } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { determinarSexoLeito, getQuartoId } from '@/lib/utils';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const getQuartoId = (codigoLeito: string): string | null => {
-    const match = codigoLeito.match(/^(\d+[\s-]?\w*|\w+[\s-]?\d+)\s/);
-    return match ? match[1].trim() : null;
-};
 
 export const RelatorioVagosModal = ({ open, onOpenChange }: Props) => {
   const { setores } = useSetores();
@@ -34,24 +30,21 @@ export const RelatorioVagosModal = ({ open, onOpenChange }: Props) => {
             .filter(l => ['Vago', 'Higienizacao'].includes(l.statusLeito))
             .map(leito => {
                 const quartoId = getQuartoId(leito.codigoLeito);
-                let sexoQuarto = 'Misto';
-                let bloqueioCoorte = '';
+                const ocupantes = todosLeitos.filter(l =>
+                    getQuartoId(l.codigoLeito) === quartoId &&
+                    l.statusLeito === 'Ocupado' &&
+                    l.dadosPaciente
+                );
 
-                if (quartoId) {
-                    const ocupantes = todosLeitos.filter(l => 
-                        getQuartoId(l.codigoLeito) === quartoId && 
-                        l.statusLeito === 'Ocupado' &&
-                        l.dadosPaciente
-                    );
-                    if (ocupantes.length > 0 && ocupantes[0].dadosPaciente) {
-                        sexoQuarto = ocupantes[0].dadosPaciente.sexoPaciente;
-                        const isolamentosOcupantes = ocupantes[0].dadosPaciente.isolamentosVigentes;
-                        if (isolamentosOcupantes && isolamentosOcupantes.length > 0) {
-                            bloqueioCoorte = isolamentosOcupantes.map(i => i.sigla).join(', ');
-                        }
-                    }
-                }
-                return { ...leito, sexoQuarto: sexoQuarto.charAt(0), bloqueioCoorte };
+                const bloqueioCoorte = ocupantes.length > 0
+                    ? ocupantes[0].dadosPaciente?.isolamentosVigentes
+                        ?.map(i => i.sigla)
+                        .join(', ') || ''
+                    : '';
+
+                const sexoCompativel = determinarSexoLeito(leito, todosLeitos);
+
+                return { ...leito, sexo: sexoCompativel, bloqueioCoorte };
             }).sort((a, b) => a.codigoLeito.localeCompare(b.codigoLeito));
 
         if (disponiveisDoSetor.length > 0) {
@@ -100,8 +93,8 @@ export const RelatorioVagosModal = ({ open, onOpenChange }: Props) => {
                       <ul className="space-y-1 text-sm">
                         {leitos.map(l => (
                           <li key={l.id}>
-                            <strong>{l.codigoLeito}</strong> ({l.sexoQuarto}) - 
-                            {l.bloqueioCoorte ? 
+                            <strong>{l.codigoLeito}</strong> ({l.sexo}) -
+                            {l.bloqueioCoorte ?
                               <span className="font-semibold text-amber-600"> Bloqueado ({l.bloqueioCoorte})</span> :
                               <span className={l.statusLeito === 'Higienizacao' ? 'text-blue-600' : 'text-green-600'}> {l.statusLeito}</span>
                             }
