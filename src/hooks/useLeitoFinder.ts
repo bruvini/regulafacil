@@ -3,6 +3,7 @@ import { useMemo, useCallback } from 'react';
 import { useSetores } from './useSetores';
 import { Leito, DadosPaciente, HistoricoLeito } from '@/types/hospital';
 import { parse, differenceInHours, isValid } from 'date-fns';
+import { getQuartoId } from '@/lib/utils';
 
 export interface LeitoCompativel extends Leito {
   setorNome: string;
@@ -30,11 +31,6 @@ const calcularIdade = (dataNascimento: string): number => {
     idade--;
   }
   return idade;
-};
-
-const getQuartoId = (codigoLeito: string): string => {
-    const match = codigoLeito.match(/^(\d+[\s-]?\w*|\w+[\s-]?\d+)\s/);
-    return match ? match[1].trim() : codigoLeito; // Retorna o prefixo do quarto ou o código do leito se não houver
 };
 
 // Identifica se o leito pertence ao quarto 504 da Clínica Médica (UTQ)

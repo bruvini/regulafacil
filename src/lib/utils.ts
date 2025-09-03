@@ -107,3 +107,19 @@ export const formatarInputData = (valor: string): string => {
   if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
   return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4, 8)}`;
 };
+
+/**
+ * Extrai o identificador do quarto a partir do código de um leito.
+ * Lida com padrões regulares ("320 1") e irregulares ("200 07 P", "318-3PCP").
+ * @param codigoLeito O código completo do leito.
+ * @returns O identificador do quarto (ex: "200", "318").
+ */
+export const getQuartoId = (codigoLeito: string): string => {
+  // A expressão regular busca pela primeira sequência de dígitos no início da string.
+  const match = codigoLeito.match(/^\d+/);
+  if (match) {
+    return match[0];
+  }
+  // Fallback para casos onde o código não começa com número.
+  return codigoLeito;
+};

@@ -1,7 +1,8 @@
+import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import LeitoCard from './LeitoCard';
 import QuartoCard from './QuartoCard';
-import { agruparLeitosPorQuarto } from '@/lib/leitoUtils';
+import { getQuartoId } from '@/lib/utils';
 import { Setor } from '@/types/hospital';
 import { LeitoEnriquecido } from '@/types/hospital';
 
@@ -11,8 +12,36 @@ interface SetorCardProps {
 }
 
 const SetorCard = ({ setor, actions }: SetorCardProps) => {
-  // Agrupar leitos usando a função utilitária - garantindo o tipo correto
-  const { quartos, leitosSoltos } = agruparLeitosPorQuarto(setor.leitos);
+  const { quartos, leitosSoltos } = useMemo(() => {
+    const grupos = setor.leitos.reduce((acc, leito) => {
+      const quartoId = getQuartoId(leito.codigoLeito);
+      if (!acc[quartoId]) {
+        acc[quartoId] = [];
+      }
+      acc[quartoId].push(leito);
+      return acc;
+    }, {} as Record<string, LeitoEnriquecido[]>);
+
+    const resultado: { quartos: Record<string, LeitoEnriquecido[]>; leitosSoltos: LeitoEnriquecido[] } = {
+      quartos: {},
+      leitosSoltos: [],
+    };
+
+    Object.entries(grupos).forEach(([id, leitos]) => {
+      if (leitos.length > 1) {
+        resultado.quartos[id] = leitos;
+      } else {
+        resultado.leitosSoltos.push(leitos[0]);
+      }
+    });
+
+    const nomesDosQuartos = Object.keys(resultado.quartos);
+    if (nomesDosQuartos.length === 1 && resultado.leitosSoltos.length === 0) {
+      return { quartos: {}, leitosSoltos: setor.leitos };
+    }
+
+    return resultado;
+  }, [setor.leitos]);
 
   const comparadorNatural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
