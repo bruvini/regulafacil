@@ -18,12 +18,13 @@ import {
   Shield,
   Users,
   Lightbulb,
-  User,
   Clock,
   Heart,
 } from "lucide-react";
 import { Leito, Paciente } from "@/types/hospital";
 import { parse, differenceInHours, isValid } from "date-fns";
+import { useMemo } from 'react';
+import { determinarSexoLeito } from '@/lib/utils';
 
 interface SugestaoRegulacao {
   leito: Leito & {
@@ -45,8 +46,11 @@ interface SugestaoAgrupada {
 interface SugestoesRegulacaoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sugestoes: SugestaoAgrupada[];
-  totalPendentes: number;
+  sugestoes?: SugestaoAgrupada[];
+  totalPendentes?: number;
+  leitoSelecionado?: Leito | null;
+  pacientesPendentes?: Paciente[];
+  todosOsLeitos?: any[];
 }
 
 const calcularIdade = (dataNascimento: string): string => {
@@ -138,11 +142,47 @@ export const SugestoesRegulacaoModal = ({
   onOpenChange,
   sugestoes,
   totalPendentes,
+  leitoSelecionado,
+  pacientesPendentes,
+  todosOsLeitos,
 }: SugestoesRegulacaoModalProps) => {
-  const totalLeitos = sugestoes.reduce(
+  const sugestoesCalculadas = useMemo(() => {
+    if (sugestoes && sugestoes.length > 0) return sugestoes;
+    if (!leitoSelecionado || !pacientesPendentes || !todosOsLeitos) return [];
+
+    const sexoCompativelComLeito = determinarSexoLeito(
+      leitoSelecionado,
+      todosOsLeitos
+    );
+
+    const pacientesCompativeis = pacientesPendentes.filter(paciente => {
+      if (sexoCompativelComLeito === 'Ambos') return true;
+      return paciente.sexoPaciente === sexoCompativelComLeito;
+    });
+
+    return [
+      {
+        setorNome: leitoSelecionado.setorNome || '',
+        sugestoes: [
+          {
+            leito: {
+              ...leitoSelecionado,
+              sexoCompativel: sexoCompativelComLeito,
+            },
+            pacientesElegiveis: pacientesCompativeis,
+          },
+        ],
+      },
+    ];
+  }, [sugestoes, leitoSelecionado, pacientesPendentes, todosOsLeitos]);
+
+  const totalLeitos = sugestoesCalculadas.reduce(
     (acc, grupo) => acc + grupo.sugestoes.length,
     0
   );
+
+  const totalPendentesValor =
+    totalPendentes ?? pacientesPendentes?.length ?? 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -169,7 +209,7 @@ export const SugestoesRegulacaoModal = ({
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-medical-secondary" />
               <span className="text-sm font-medium">
-                {totalPendentes} pacientes aguardando regulação
+                {totalPendentesValor} pacientes aguardando regulação
               </span>
             </div>
           </div>
@@ -195,9 +235,9 @@ export const SugestoesRegulacaoModal = ({
             </div>
           </div>
 
-          {sugestoes.length > 0 ? (
+          {sugestoesCalculadas.length > 0 ? (
             <div className="space-y-6">
-              {sugestoes.map((grupo, grupoIndex) => (
+              {sugestoesCalculadas.map((grupo, grupoIndex) => (
                 <Card key={grupo.setorNome} className="shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold text-medical-primary">

@@ -123,3 +123,31 @@ export const getQuartoId = (codigoLeito: string): string => {
   // Fallback para casos onde o código não começa com número.
   return codigoLeito;
 };
+
+export const isQuartoUTQ = (leito: { setorNome: string; codigoLeito: string }): boolean => {
+  return (
+    leito.setorNome === 'UNID. CLINICA MEDICA' &&
+    getQuartoId(leito.codigoLeito).startsWith('504')
+  );
+};
+
+export const determinarSexoLeito = (
+  leito: any,
+  todosLeitosComSetor: any[]
+): 'Masculino' | 'Feminino' | 'Ambos' => {
+  if (isQuartoUTQ(leito)) return 'Ambos';
+  const quartoId = getQuartoId(leito.codigoLeito);
+  const companheirosDeQuarto = todosLeitosComSetor.filter(
+    l =>
+      getQuartoId(l.codigoLeito) === quartoId &&
+      l.statusLeito === 'Ocupado' &&
+      l.dadosPaciente
+  );
+
+  if (companheirosDeQuarto.length === 0) {
+    return 'Ambos';
+  }
+
+  const sexoQuarto = companheirosDeQuarto[0].dadosPaciente?.sexoPaciente;
+  return sexoQuarto === 'Masculino' ? 'Masculino' : 'Feminino';
+};

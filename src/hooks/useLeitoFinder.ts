@@ -1,9 +1,9 @@
 
-import { useMemo, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useSetores } from './useSetores';
 import { Leito, DadosPaciente, HistoricoLeito } from '@/types/hospital';
 import { parse, differenceInHours, isValid } from 'date-fns';
-import { getQuartoId } from '@/lib/utils';
+import { getQuartoId, determinarSexoLeito, isQuartoUTQ } from '@/lib/utils';
 
 export interface LeitoCompativel extends Leito {
   setorNome: string;
@@ -33,30 +33,6 @@ const calcularIdade = (dataNascimento: string): number => {
   return idade;
 };
 
-// Identifica se o leito pertence ao quarto 504 da Clínica Médica (UTQ)
-const isQuartoUTQ = (leito: { setorNome: string; codigoLeito: string }): boolean => {
-    return (
-        leito.setorNome === 'UNID. CLINICA MEDICA' &&
-        getQuartoId(leito.codigoLeito).startsWith('504')
-    );
-};
-
-// Nova função para determinar o sexo compatível para um leito
-const determinarSexoLeito = (leito: any, todosLeitosComSetor: any[]): 'Masculino' | 'Feminino' | 'Ambos' => {
-    if (isQuartoUTQ(leito)) return 'Ambos';
-    const quartoId = getQuartoId(leito.codigoLeito);
-    const companheirosDeQuarto = todosLeitosComSetor.filter(
-        l => getQuartoId(l.codigoLeito) === quartoId && l.statusLeito === 'Ocupado' && l.dadosPaciente
-    );
-
-    if (companheirosDeQuarto.length === 0) {
-        return 'Ambos'; // Quarto vazio, pode receber qualquer sexo
-    }
-
-    // Pega o sexo do primeiro paciente do quarto (todos devem ter o mesmo sexo)
-    const sexoQuarto = companheirosDeQuarto[0].dadosPaciente?.sexoPaciente;
-    return sexoQuarto === 'Masculino' ? 'Masculino' : 'Feminino';
-};
 
 // Nova função para priorizar pacientes
 const priorizarPacientes = (pacientes: any[]): any[] => {
