@@ -3,15 +3,32 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Biohazard, Clock, CheckCircle, LogOut } from 'lucide-react'; // Ícones atualizados
 import { formatarDuracao } from '@/lib/utils';
 import { Paciente, IsolamentoVigente } from '@/types/hospital'; // Tipo IsolamentoVigente importado
+import { usePacientes } from '@/hooks/usePacientes';
+import { useAuth } from '@/hooks/useAuth';
 
 // A interface de props permanece a mesma
 interface PacientePendenteItemProps {
   paciente: Paciente;
   onRegularClick: (paciente: Paciente) => void;
-  onAlta: (paciente: Paciente) => void;
+  onConcluir?: (paciente: Paciente) => void;
+  onAlterar?: (paciente: Paciente) => void;
+  onCancelar?: (paciente: Paciente) => void;
+  onAltaDireta?: (paciente: any) => void;
+  onAlta?: (paciente: Paciente) => void;
 }
 
 // A função de calcular idade permanece a mesma
@@ -24,8 +41,10 @@ const calcularIdade = (dataNascimento?: string): string => {
   return idade.toString();
 };
 
-export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: PacientePendenteItemProps) => {
+export const PacientePendenteItem = ({ paciente, onRegularClick }: PacientePendenteItemProps) => {
   const idade = calcularIdade(paciente.dataNascimento);
+  const { darAltaPaciente } = usePacientes();
+  const { currentUser } = useAuth();
 
   // Substitua o return atual por este JSX aprimorado:
   return (
@@ -91,16 +110,34 @@ export const PacientePendenteItem = ({ paciente, onRegularClick, onAlta }: Pacie
           </Tooltip>
         </TooltipProvider>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={() => onAlta(paciente)}>
-                <LogOut className="h-5 w-5 text-destructive" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Dar Alta</p></TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <AlertDialog>
+          <TooltipProvider>
+            <Tooltip>
+              <AlertDialogTrigger asChild>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <LogOut className="h-5 w-5 text-destructive" />
+                  </Button>
+                </TooltipTrigger>
+              </AlertDialogTrigger>
+              <TooltipContent><p>Dar Alta</p></TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Alta do Paciente?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação é irreversível. O paciente "{paciente.nomeCompleto}" será removido do sistema e seu leito ({paciente.leitoId}) será enviado para higienização.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => darAltaPaciente(paciente, currentUser)}>
+                Confirmar Alta
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
