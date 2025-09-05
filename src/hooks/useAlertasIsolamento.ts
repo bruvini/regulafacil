@@ -4,6 +4,8 @@ import { useSetores } from './useSetores';
 import { useAuditoria } from './useAuditoria';
 import { db } from '@/lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { usePacientes } from './usePacientes';
+import { useAuth } from './useAuth';
 
 export interface AlertaIncompatibilidade {
   pacienteId: string;
@@ -20,6 +22,8 @@ export const useAlertasIsolamento = () => {
   const [alertas, setAlertas] = useState<AlertaIncompatibilidade[]>([]);
   const [loading, setLoading] = useState(true);
   const { registrarLog } = useAuditoria();
+  const { solicitarRemanejamento } = usePacientes();
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     if (setoresLoading) {
@@ -67,7 +71,7 @@ export const useAlertasIsolamento = () => {
       });
 
       if (temIncompatibilidade) {
-        const motivo = `Risco de contaminação cruzada. Paciente com isolamento por [${isolamentosPaciente.join(', ')}]`;
+        const motivoRemanejamento = `Risco de contaminação cruzada. Paciente com isolamento por [${isolamentosPaciente.join(', ')}]`;
         const status = dadosPaciente.isolamentosVigentes!.some(iso => iso.status === 'suspeita') ? 'suspeita' : 'confirmada';
         novosAlertas.push({
             pacienteId: dadosPaciente.id,
@@ -75,18 +79,21 @@ export const useAlertasIsolamento = () => {
             setorNome: leitoComIsolamento.setorNome,
             leitoCodigo: leitoComIsolamento.codigoLeito,
             isolamentos: isolamentosPaciente,
-            motivo,
+            motivo: motivoRemanejamento,
             status
         });
 
-        if (!dadosPaciente.alertaIncompatibilidadeLogado) {
+        if (!dadosPaciente.remanejamentoPorIncompatibilidadeSolicitado) {
           registrarLog(
-            `Alerta de incompatibilidade: Paciente ${dadosPaciente.nomeCompleto} no leito ${leitoComIsolamento.codigoLeito} com isolamento ${isolamentosPaciente.join(', ')} incompatível com vizinho.`,
+            `Alerta de incompatibilidade para ${dadosPaciente.nomeCompleto}. Motivo: ${motivoRemanejamento}`,
             'Gestão de Isolamentos'
           );
+
+          solicitarRemanejamento(dadosPaciente, currentUser, motivoRemanejamento);
+
           updateDoc(
             doc(db, 'pacientesRegulaFacil', dadosPaciente.id),
-            { alertaIncompatibilidadeLogado: true }
+            { remanejamentoPorIncompatibilidadeSolicitado: true }
           );
         }
       }
@@ -95,7 +102,7 @@ export const useAlertasIsolamento = () => {
     setAlertas(novosAlertas);
     setLoading(false);
 
-  }, [setores, setoresLoading]);
+  }, [setores, setoresLoading, solicitarRemanejamento, currentUser]);
 
   return { alertas, loading };
 };

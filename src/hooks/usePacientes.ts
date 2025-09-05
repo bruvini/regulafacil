@@ -190,6 +190,63 @@ export const usePacientes = () => {
     }
   };
 
+  const solicitarRemanejamento = async (
+    paciente: Paciente,
+    usuario: User | null,
+    motivo: string
+  ) => {
+    try {
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+      await updateDoc(pacienteRef, {
+        remanejarPaciente: true,
+        motivoRemanejamento: motivo,
+        dataPedidoRemanejamento: new Date().toISOString(),
+      });
+
+      const solicitante = usuario?.displayName || usuario?.email || 'Sistema';
+      registrarLog(
+        `Solicitou remanejamento para ${paciente.nomeCompleto}. Motivo: ${motivo}. Solicitante: ${solicitante}`,
+        'Gestão de Isolamentos'
+      );
+    } catch (error) {
+      console.error('Erro ao solicitar remanejamento:', error);
+    }
+  };
+
+  const concluirRemanejamento = async (paciente: Paciente) => {
+    try {
+      await updateDoc(doc(db, 'pacientesRegulaFacil', paciente.id), {
+        remanejamentoPorIncompatibilidadeSolicitado: false,
+        remanejarPaciente: false,
+      });
+
+      registrarLog(
+        `Concluiu remanejamento para ${paciente.nomeCompleto}.`,
+        'Gestão de Isolamentos'
+      );
+    } catch (error) {
+      console.error('Erro ao concluir remanejamento:', error);
+    }
+  };
+
+  const cancelarRemanejamento = async (paciente: Paciente) => {
+    try {
+      await updateDoc(doc(db, 'pacientesRegulaFacil', paciente.id), {
+        remanejamentoPorIncompatibilidadeSolicitado: false,
+        remanejarPaciente: false,
+        motivoRemanejamento: null,
+        dataPedidoRemanejamento: null,
+      });
+
+      registrarLog(
+        `Cancelou remanejamento para ${paciente.nomeCompleto}.`,
+        'Gestão de Isolamentos'
+      );
+    } catch (error) {
+      console.error('Erro ao cancelar remanejamento:', error);
+    }
+  };
+
   return {
     pacientes,
     loading,
@@ -197,5 +254,8 @@ export const usePacientes = () => {
     importarPacientesDaPlanilha, // exposto para uso na UI
     atualizarStatusAltaPendente,
     darAltaPaciente,
+    solicitarRemanejamento,
+    concluirRemanejamento,
+    cancelarRemanejamento,
   };
 };

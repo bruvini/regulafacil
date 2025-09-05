@@ -50,10 +50,11 @@ export interface Paciente {
   destinoTransferencia?: string;
   motivoTransferencia?: string;
   dataTransferencia?: string;
-  remanejarPaciente?: boolean;
-  motivoRemanejamento?: DetalhesRemanejamento | string | null;
-  dataPedidoRemanejamento?: string;
-  provavelAlta?: boolean;
+    remanejarPaciente?: boolean;
+    motivoRemanejamento?: DetalhesRemanejamento | string | null;
+    dataPedidoRemanejamento?: string;
+    remanejamentoPorIncompatibilidadeSolicitado?: boolean;
+    provavelAlta?: boolean;
   altaNoLeito?: AltaLeitoInfo;
   altaPendente?: InfoAltaPendente | null;
   origem?: {
