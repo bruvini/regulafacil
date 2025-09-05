@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   collection,
   onSnapshot,
@@ -190,28 +190,45 @@ export const usePacientes = () => {
     }
   };
 
-  const solicitarRemanejamento = async (
-    paciente: Paciente,
-    usuario: User | null,
-    motivo: string
-  ) => {
-    try {
-      const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
-      await updateDoc(pacienteRef, {
-        remanejarPaciente: true,
-        motivoRemanejamento: motivo,
-        dataPedidoRemanejamento: new Date().toISOString(),
-      });
+  const solicitarRemanejamento = useCallback(
+    async (paciente: Paciente, usuario: User | null, motivo: string) => {
+      if (!usuario) {
+        toast({
+          title: 'Erro',
+          description: 'Usuário não autenticado.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-      const solicitante = usuario?.displayName || usuario?.email || 'Sistema';
-      registrarLog(
-        `Solicitou remanejamento para ${paciente.nomeCompleto}. Motivo: ${motivo}. Solicitante: ${solicitante}`,
-        'Gestão de Isolamentos'
-      );
-    } catch (error) {
-      console.error('Erro ao solicitar remanejamento:', error);
-    }
-  };
+      try {
+        const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+        await updateDoc(pacienteRef, {
+          remanejarPaciente: true,
+          motivoRemanejamento: motivo,
+          dataPedidoRemanejamento: new Date().toISOString(),
+        });
+
+        registrarLog(
+          `Solicitou remanejamento para ${paciente.nomeCompleto}. Motivo: ${motivo}`,
+          'Regulação de Leitos'
+        );
+
+        toast({
+          title: 'Sucesso',
+          description: 'Solicitação de remanejamento registrada.',
+        });
+      } catch (error) {
+        console.error('Erro ao solicitar remanejamento:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível solicitar o remanejamento.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [registrarLog]
+  );
 
   const concluirRemanejamento = async (paciente: Paciente) => {
     try {
