@@ -10,7 +10,10 @@ import {
   doc,
   getDoc,
   updateDoc,
+  writeBatch,
+  deleteField,
 } from 'firebase/firestore';
+import { User } from 'firebase/auth';
 import { db } from '@/lib/firebase';
 import { Leito, Paciente, InfoAltaPendente } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
@@ -147,11 +150,52 @@ export const usePacientes = () => {
     }
   };
 
+  const darAltaPaciente = async (paciente: Paciente, usuario: User | null) => {
+    if (!paciente.leitoId) {
+      toast({ title: 'Erro', description: 'Paciente sem leito associado.', variant: 'destructive' });
+      return;
+    }
+
+    if (!usuario) {
+      toast({ title: 'Erro', description: 'Usuário não autenticado.', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+      const leitoRef = doc(db, 'leitosRegulaFacil', paciente.leitoId);
+
+      const batch = writeBatch(db);
+      batch.delete(pacienteRef);
+      batch.update(leitoRef, {
+        status: 'Higienizacao',
+        dadosPaciente: deleteField(),
+      });
+
+      await batch.commit();
+
+      registrarLog(
+        `Paciente ${paciente.nomeCompleto} (ID: ${paciente.id}) recebeu alta do leito ${paciente.leitoId}. Leito movido para higienização.`,
+        'Regulação de Leitos'
+      );
+
+      toast({ title: 'Sucesso', description: 'Alta realizada com sucesso!' });
+    } catch (error) {
+      console.error('Erro ao dar alta no paciente:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível processar a alta. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return {
     pacientes,
     loading,
     criarPacienteManual,
     importarPacientesDaPlanilha, // exposto para uso na UI
     atualizarStatusAltaPendente,
+    darAltaPaciente,
   };
 };
