@@ -84,6 +84,10 @@ export const useAuditoriaLogs = (filtros: FiltrosLogs) => {
 
   const logs = useMemo(() => {
     return todosLogs.filter(log => {
+      if (!log.timestamp) {
+        return false
+      }
+
       const dataLog = log.timestamp.toDate()
       if (
         filtros.texto &&
