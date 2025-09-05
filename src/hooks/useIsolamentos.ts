@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { TipoIsolamentoFormData } from '@/types/isolamento';
+import { TipoIsolamentoFormData, PacienteIsolamento } from '@/types/isolamento';
+import { Paciente } from '@/types/hospital';
 import { toast } from '@/hooks/use-toast';
 import { useAuditoria } from './useAuditoria';
 import { useCache } from '@/contexts/CacheContext'; // Importe o useCache
@@ -55,12 +56,33 @@ export const useIsolamentos = () => {
     }
   };
 
+  const adicionarIsolamentoPaciente = async (
+    paciente: Paciente,
+    isolamento: PacienteIsolamento
+  ) => {
+    try {
+      const pacienteRef = doc(db, 'pacientesRegulaFacil', paciente.id);
+      await updateDoc(pacienteRef, {
+        isolamentosVigentes: arrayUnion(isolamento)
+      });
+
+      registrarLog(
+        `Isolamento '${isolamento.sigla}' adicionado ao paciente ${paciente.nomeCompleto}.`,
+        'Gestão de Isolamentos'
+      );
+    } catch (error) {
+      console.error('Erro ao adicionar isolamento ao paciente:', error);
+      toast({ title: 'Erro', variant: 'destructive' });
+    }
+  };
+
   return {
     isolamentos: tiposDeIsolamento, // Dados do cache
     loading: loadingCache || loadingMutation, // Combina os loadings
     criarIsolamento,
     atualizarIsolamento,
     excluirIsolamento,
+    adicionarIsolamentoPaciente,
   };
 };
 
