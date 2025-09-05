@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useSetores } from './useSetores';
 import { useAuditoria } from './useAuditoria';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 export interface AlertaIncompatibilidade {
   pacienteId: string;
@@ -68,7 +70,7 @@ export const useAlertasIsolamento = () => {
         const motivo = `Risco de contaminação cruzada. Paciente com isolamento por [${isolamentosPaciente.join(', ')}]`;
         const status = dadosPaciente.isolamentosVigentes!.some(iso => iso.status === 'suspeita') ? 'suspeita' : 'confirmada';
         novosAlertas.push({
-            pacienteId: dadosPaciente.nomeCompleto, // Usando nomeCompleto como ID temporário
+            pacienteId: dadosPaciente.id,
             nomePaciente: dadosPaciente.nomeCompleto,
             setorNome: leitoComIsolamento.setorNome,
             leitoCodigo: leitoComIsolamento.codigoLeito,
@@ -77,10 +79,16 @@ export const useAlertasIsolamento = () => {
             status
         });
 
-        registrarLog(
-          'Alerta de incompatibilidade',
-          `Paciente ${dadosPaciente.nomeCompleto} no setor ${leitoComIsolamento.setorNome} leito ${leitoComIsolamento.codigoLeito}`
-        );
+        if (!dadosPaciente.alertaIncompatibilidadeLogado) {
+          registrarLog(
+            `Alerta de incompatibilidade: Paciente ${dadosPaciente.nomeCompleto} no leito ${leitoComIsolamento.codigoLeito} com isolamento ${isolamentosPaciente.join(', ')} incompatível com vizinho.`,
+            'Gestão de Isolamentos'
+          );
+          updateDoc(
+            doc(db, 'pacientesRegulaFacil', dadosPaciente.id),
+            { alertaIncompatibilidadeLogado: true }
+          );
+        }
       }
     });
 

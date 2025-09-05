@@ -71,6 +71,7 @@ export interface Paciente {
   leitoNecessario?: 'Enfermaria' | 'UTI';
   condicaoClinica?: string;
   dataSolicitacao?: string;
+  alertaIncompatibilidadeLogado?: boolean;
 }
 
 export type IsolamentoVigente = PacienteIsolamento;

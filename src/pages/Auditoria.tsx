@@ -37,6 +37,7 @@ import { useAuditoriaLogs, FiltrosLogs } from '@/hooks/useAuditoriaLogs'
 import { useUsuarios } from '@/hooks/useUsuarios'
 import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
+import { PAGINAS_SISTEMA } from '@/lib/constants'
 
 const Auditoria = () => {
   const [filtros, setFiltros] = useState<FiltrosLogs>({
@@ -70,28 +71,34 @@ const Auditoria = () => {
         <CardContent className="space-y-6">
           {/* Filtros */}
           <div className="space-y-4">
-            <Input
-              placeholder="Buscar..."
-              value={filtros.texto}
-              onChange={e => handleChange('texto', e.target.value)}
-            />
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm font-medium">Buscar</label>
+              <Input
+                placeholder="Buscar..."
+                value={filtros.texto}
+                onChange={e => handleChange('texto', e.target.value)}
+              />
+            </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Select
-                value={filtros.usuarioId}
-                onValueChange={v => handleChange('usuarioId', v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os Usuários" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os Usuários</SelectItem>
-                  {usuarios.map(u => (
-                    <SelectItem key={u.uid} value={u.uid!}>
-                      {u.nomeCompleto}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-medium">Usuário</label>
+                <Select
+                  value={filtros.usuarioId}
+                  onValueChange={v => handleChange('usuarioId', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os Usuários" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os Usuários</SelectItem>
+                    {usuarios.map(u => (
+                      <SelectItem key={u.uid} value={u.uid!}>
+                        {u.nomeCompleto}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex flex-col space-y-1">
                 <label className="text-sm font-medium">Data de Início</label>
                 <Input
@@ -126,11 +133,25 @@ const Auditoria = () => {
                   }
                 />
               </div>
-              <Input
-                placeholder="Filtrar por página..."
-                value={filtros.pagina}
-                onChange={e => handleChange('pagina', e.target.value)}
-              />
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-medium">Página</label>
+                <Select
+                  value={filtros.pagina}
+                  onValueChange={v => handleChange('pagina', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as Páginas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas as Páginas</SelectItem>
+                    {PAGINAS_SISTEMA.map(p => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={resetFiltros}>

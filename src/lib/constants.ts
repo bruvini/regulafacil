@@ -5,3 +5,11 @@ export const ESPECIALIDADES_MEDICAS = [
   "ONCOLOGIA CIRURGICA", "ONCOLOGIA CLINICA/CANCEROLOGIA",
   "ORTOPEDIA/TRAUMATOLOGIA", "PROCTOLOGIA", "UROLOGIA", 'BUCOMAXILO', 'HEPATOLOGISTA', 'MASTOLOGIA', 'RESIDENTE'
 ];
+
+export const PAGINAS_SISTEMA = [
+  'Mapa de Leitos',
+  'Regulação de Leitos',
+  'Gestão de Isolamentos',
+  'Central de Higienização',
+  'Auditoria',
+];

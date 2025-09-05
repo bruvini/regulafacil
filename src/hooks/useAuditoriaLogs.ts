@@ -14,6 +14,7 @@ import { db } from '@/lib/firebase'
 import { useUsuarios } from './useUsuarios'
 import { useAuth } from './useAuth'
 import { toast } from '@/hooks/use-toast'
+import { useCache } from '@/contexts/CacheContext'
 
 export interface Log {
   id: string
@@ -37,6 +38,7 @@ export const useAuditoriaLogs = (filtros: FiltrosLogs) => {
   const [loading, setLoading] = useState(true)
   const { usuarios } = useUsuarios()
   const { currentUser } = useAuth()
+  const { getCachedData, setCachedData } = useCache()
 
   const mapaUsuarios = useMemo(() => {
     const mapa = new Map<string, string>()
@@ -47,6 +49,12 @@ export const useAuditoriaLogs = (filtros: FiltrosLogs) => {
   }, [usuarios])
 
   useEffect(() => {
+    const cached = getCachedData<Log[]>('auditoriaLogs')
+    if (cached) {
+      setTodosLogs(cached)
+      setLoading(false)
+    }
+
     const q = query(
       collection(db, 'auditoriaRegulaFacil'),
       orderBy('timestamp', 'desc')
@@ -68,10 +76,11 @@ export const useAuditoriaLogs = (filtros: FiltrosLogs) => {
         }
       })
       setTodosLogs(logsData)
+      setCachedData('auditoriaLogs', logsData)
       setLoading(false)
     })
     return () => unsubscribe()
-  }, [mapaUsuarios])
+  }, [mapaUsuarios, getCachedData, setCachedData])
 
   const logs = useMemo(() => {
     return todosLogs.filter(log => {
@@ -87,12 +96,7 @@ export const useAuditoriaLogs = (filtros: FiltrosLogs) => {
       if (filtros.usuarioId && filtros.usuarioId !== 'todos' && log.usuarioId !== filtros.usuarioId) return false
       if (filtros.dataInicio && dataLog < filtros.dataInicio) return false
       if (filtros.dataFim && dataLog > filtros.dataFim) return false
-      if (
-        filtros.pagina &&
-        !log.pagina.toLowerCase().includes(filtros.pagina.toLowerCase())
-      ) {
-        return false
-      }
+      if (filtros.pagina && log.pagina !== filtros.pagina) return false
       return true
     })
   }, [todosLogs, filtros])
