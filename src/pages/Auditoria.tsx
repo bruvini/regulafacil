@@ -1,209 +1,207 @@
-
-import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState } from 'react'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { FileText, Trash2, Search } from 'lucide-react';
-import { useAuditoriaLogs } from '@/hooks/useAuditoriaLogs';
-import { format } from 'date-fns';
-import { 
-  AlertDialog, 
-  AlertDialogTrigger, 
-  AlertDialogContent, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogCancel, 
-  AlertDialogAction 
-} from '@/components/ui/alert-dialog';
+} from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { useAuditoriaLogs, FiltrosLogs } from '@/hooks/useAuditoriaLogs'
+import { useUsuarios } from '@/hooks/useUsuarios'
+import { useAuth } from '@/hooks/useAuth'
+import { format } from 'date-fns'
 
 const Auditoria = () => {
-  const { logs, loading, deleteAllLogs } = useAuditoriaLogs();
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<FiltrosLogs>({
     texto: '',
-    usuario: '',
-    dataInicio: '',
-    dataFim: '',
-  });
+    usuarioId: '',
+    dataInicio: null,
+    dataFim: null,
+    pagina: '',
+  })
+  const { logs, loading, limparTodosOsLogs } = useAuditoriaLogs(filtros)
+  const { usuarios } = useUsuarios()
+  const { userData } = useAuth()
 
-  const usuariosUnicos = useMemo(
-    () => Array.from(new Set(logs.map(log => log.usuario))),
-    [logs],
-  );
+  const handleChange = (
+    field: keyof FiltrosLogs,
+    value: string | Date | null
+  ) => {
+    setFiltros(prev => ({ ...prev, [field]: value }))
+  }
 
-  const filteredLogs = useMemo(() => {
-    return logs.filter(log => {
-      const dataLog = log.timestamp.toDate();
-      if (
-        filtros.texto &&
-        !log.acao.toLowerCase().includes(filtros.texto.toLowerCase()) &&
-        !log.detalhes.toLowerCase().includes(filtros.texto.toLowerCase()) &&
-        !log.usuario.toLowerCase().includes(filtros.texto.toLowerCase())
-      )
-        return false;
-      if (filtros.usuario && log.usuario !== filtros.usuario) return false;
-      if (filtros.dataInicio && dataLog < new Date(filtros.dataInicio)) return false;
-      if (filtros.dataFim && dataLog > new Date(filtros.dataFim)) return false;
-      return true;
-    });
-  }, [logs, filtros]);
-
-  const handleFiltroChange = (field: string, value: string) => {
-    setFiltros(prev => ({ ...prev, [field]: value }));
-  };
+  const resetFiltros = () => {
+    setFiltros({ texto: '', usuarioId: '', dataInicio: null, dataFim: null, pagina: '' })
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div className="text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start mb-4">
-                <div className="w-16 h-16 rounded-lg bg-purple-600 flex items-center justify-center">
-                  <FileText className="h-8 w-8 text-white" />
-                </div>
+    <div className="container mx-auto py-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Registros de Auditoria</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Filtros */}
+          <div className="space-y-4">
+            <Input
+              placeholder="Buscar..."
+              value={filtros.texto}
+              onChange={e => handleChange('texto', e.target.value)}
+            />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Select
+                value={filtros.usuarioId}
+                onValueChange={v => handleChange('usuarioId', v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os Usuários" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos os Usuários</SelectItem>
+                  {usuarios.map(u => (
+                    <SelectItem key={u.uid} value={u.uid!}>
+                      {u.nomeCompleto}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-medium">Data de Início</label>
+                <Input
+                  type="datetime-local"
+                  value={
+                    filtros.dataInicio
+                      ? format(filtros.dataInicio, "yyyy-MM-dd'T'HH:mm")
+                      : ''
+                  }
+                  onChange={e =>
+                    handleChange(
+                      'dataInicio',
+                      e.target.value ? new Date(e.target.value) : null
+                    )
+                  }
+                />
               </div>
-              <h1 className="text-3xl font-bold text-medical-primary mb-2">
-                Trilha de Auditoria
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Monitoramento de todas as ações realizadas no sistema
-              </p>
+              <div className="flex flex-col space-y-1">
+                <label className="text-sm font-medium">Data de Fim</label>
+                <Input
+                  type="datetime-local"
+                  value={
+                    filtros.dataFim
+                      ? format(filtros.dataFim, "yyyy-MM-dd'T'HH:mm")
+                      : ''
+                  }
+                  onChange={e =>
+                    handleChange(
+                      'dataFim',
+                      e.target.value ? new Date(e.target.value) : null
+                    )
+                  }
+                />
+              </div>
+              <Input
+                placeholder="Filtrar por página..."
+                value={filtros.pagina}
+                onChange={e => handleChange('pagina', e.target.value)}
+              />
             </div>
-            
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="flex items-center gap-2">
-                  <Trash2 className="h-4 w-4" />
-                  Limpar Logs
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirmar Limpeza?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação irá apagar permanentemente todos os registros de auditoria. 
-                    Não pode ser desfeita.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={deleteAllLogs}>
-                    Confirmar e Apagar Tudo
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={resetFiltros}>
+                Limpar Filtros
+              </Button>
+              {userData?.tipoAcesso === 'Administrador' && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">Limpar Logs</Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação é irreversível e removerá todos os registros.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={limparTodosOsLogs}>
+                        Confirmar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
 
-          <Card className="shadow-card border border-border/50 mb-6">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold text-medical-primary">
-                Filtros de Pesquisa
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar por ação, usuário ou detalhes..."
-                  className="pl-10"
-                  value={filtros.texto}
-                  onChange={(e) => handleFiltroChange('texto', e.target.value)}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Select
-                  value={filtros.usuario}
-                  onValueChange={v => handleFiltroChange('usuario', v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por Usuário" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {usuariosUnicos.map(u => (
-                      <SelectItem key={u} value={u}>
-                        {u}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="datetime-local"
-                  placeholder="Data Início"
-                  value={filtros.dataInicio}
-                  onChange={e => handleFiltroChange('dataInicio', e.target.value)}
-                />
-                <Input
-                  type="datetime-local"
-                  placeholder="Data Fim"
-                  value={filtros.dataFim}
-                  onChange={e => handleFiltroChange('dataFim', e.target.value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card border border-border/50 bg-slate-900 text-slate-200 font-mono">
-            <CardHeader>
-              <CardTitle className="text-slate-200 flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Logs do Sistema ({filteredLogs.length} registros)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="h-[60vh] overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
-                {loading && (
-                  <div className="flex items-center justify-center py-8">
-                    <p className="text-slate-400">Carregando logs...</p>
-                  </div>
-                )}
-
-                {!loading && filteredLogs.length === 0 && (
-                  <div className="flex items-center justify-center py-8">
-                    <p className="text-slate-400">Nenhum log encontrado</p>
-                  </div>
-                )}
-
-                {!loading &&
-                  filteredLogs.map(log => (
-                    <div
-                      key={log.id}
-                      className="flex flex-col lg:flex-row lg:items-start gap-2 text-sm py-1 hover:bg-slate-800/50 px-2 rounded"
-                    >
-                      <span className="text-green-400 whitespace-nowrap font-medium">
-                        [
-                        {log.timestamp?.toDate
-                          ? format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss')
-                          : 'Data inválida'}
-                        ]
-                      </span>
-                      <span className="text-cyan-400 whitespace-nowrap font-medium">
-                        [{log.usuario}]
-                      </span>
-                      <span className="text-yellow-400 whitespace-nowrap font-medium">
-                        [{log.acao}]
-                      </span>
-                      <span className="text-slate-200 flex-1 break-words">
-                        {log.detalhes}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+          {/* Tabela */}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data/Hora</TableHead>
+                <TableHead>Usuário</TableHead>
+                <TableHead>Página</TableHead>
+                <TableHead>Ação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">
+                    Carregando...
+                  </TableCell>
+                </TableRow>
+              ) : logs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center">
+                    Nenhum registro encontrado
+                  </TableCell>
+                </TableRow>
+              ) : (
+                logs.map(log => (
+                  <TableRow key={log.id}>
+                    <TableCell>
+                      {format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss')}
+                    </TableCell>
+                    <TableCell>{log.usuario}</TableCell>
+                    <TableCell>{log.pagina}</TableCell>
+                    <TableCell className="break-all">{log.acao}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
-  );
-};
+  )
+}
 
-export default Auditoria;
+export default Auditoria
+
