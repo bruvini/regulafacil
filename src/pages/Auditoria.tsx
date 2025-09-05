@@ -137,13 +137,13 @@ const Auditoria = () => {
                 <label className="text-sm font-medium">Página</label>
                 <Select
                   value={filtros.pagina}
-                  onValueChange={v => handleChange('pagina', v)}
+                  onValueChange={v => handleChange('pagina', v === 'todas' ? '' : v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as Páginas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as Páginas</SelectItem>
+                    <SelectItem value="todas">Todas as Páginas</SelectItem>
                     {PAGINAS_SISTEMA.map(p => (
                       <SelectItem key={p} value={p}>
                         {p}
