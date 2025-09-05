@@ -84,7 +84,7 @@ export const useAuditoriaLogs = (filtros: FiltrosLogs) => {
       ) {
         return false
       }
-      if (filtros.usuarioId && log.usuarioId !== filtros.usuarioId) return false
+      if (filtros.usuarioId && filtros.usuarioId !== 'todos' && log.usuarioId !== filtros.usuarioId) return false
       if (filtros.dataInicio && dataLog < filtros.dataInicio) return false
       if (filtros.dataFim && dataLog > filtros.dataFim) return false
       if (

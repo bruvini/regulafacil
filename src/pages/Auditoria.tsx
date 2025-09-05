@@ -41,7 +41,7 @@ import { format } from 'date-fns'
 const Auditoria = () => {
   const [filtros, setFiltros] = useState<FiltrosLogs>({
     texto: '',
-    usuarioId: '',
+    usuarioId: 'todos',
     dataInicio: null,
     dataFim: null,
     pagina: '',
@@ -58,7 +58,7 @@ const Auditoria = () => {
   }
 
   const resetFiltros = () => {
-    setFiltros({ texto: '', usuarioId: '', dataInicio: null, dataFim: null, pagina: '' })
+    setFiltros({ texto: '', usuarioId: 'todos', dataInicio: null, dataFim: null, pagina: '' })
   }
 
   return (
@@ -84,7 +84,7 @@ const Auditoria = () => {
                   <SelectValue placeholder="Todos os Usuários" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os Usuários</SelectItem>
+                  <SelectItem value="todos">Todos os Usuários</SelectItem>
                   {usuarios.map(u => (
                     <SelectItem key={u.uid} value={u.uid!}>
                       {u.nomeCompleto}
