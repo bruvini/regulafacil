@@ -56,6 +56,7 @@ export const BoletimDiarioModal = ({ open, onOpenChange, gerarTextoBoletim }: Bo
 
   const handleSubmit = (data: FormData) => {
     const t = gerarTextoBoletim(data);
+    // o texto já contém a formatação da previsão de altas da UTI, com "UTI" substituído por "L "
     setTexto(t);
     setStep(2);
   };

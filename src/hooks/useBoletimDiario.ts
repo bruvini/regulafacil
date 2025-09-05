@@ -112,7 +112,10 @@ export const useBoletimDiario = ({ pacientes: _pacientes, leitos, setores, nivel
       '🔴 PCP Nível 3\n✅ Focar na resolução das pendências na enfermaria! Acionar equipe residentes / Staff para auxiliar na tomada de decisão!\n✅ Selecionar os pacientes e realizar as transferências para o leito de PCP!\n✅ Altas planejadas, focar para o período matutino. Prioridade máxima',
   };
 
-  const formatarAltas = (lista: string[]) => (lista.length ? lista.join(', ') : 'SEM PREVISÃO DE ALTA');
+  const formatarAltas = (lista: string[]) =>
+    lista.length
+      ? lista.map((l) => l.replace(/^UTI\s*/i, 'L ')).join(', ')
+      : 'SEM PREVISÃO DE ALTA';
 
   const gerarTextoBoletim = (dados: DadosManuaisBoletim) => {
     const dataHora = new Date().toLocaleString('pt-BR');
